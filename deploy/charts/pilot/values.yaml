@@ -50,7 +50,11 @@ ingress:
     alb.ingress.kubernetes.io/ssl-redirect: "443"
     alb.ingress.kubernetes.io/group.name: rho-alb-group
     alb.ingress.kubernetes.io/healthcheck-path: /api/health
-    alb.ingress.kubernetes.io/success-codes: "200"
+    alb.ingress.kubernetes.io/success-codes: "403"
+    # The app's private-hostname guard 403s the ELB health checker's
+    # Host=<target-ip> requests (guard only allows loopback + configured
+    # hostnames), so treat 403 as healthy for target registration; real
+    # client traffic arrives via Host: pilot.patty.io and is served 200.
 
 resources:
   requests:
