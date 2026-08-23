@@ -240,3 +240,40 @@ Then the first CI dispatch builds and deploys end-to-end.
 | Confirm ingress hostname (`pilot.patty.io`?) | Patrick | DNS record via external-dns or Route53 |
 | First-boot permission smoke (non-root vs initContainer chown) | Implementer | See §3.4 security context |
 | GitHub secrets present in `patrickrho-patty/pilot` repo | Patrick | Copy same key pair used by buzz repo |
+
+---
+
+## 7. Implementation Log (2026-08-23)
+
+Deployed and verified end-to-end:
+
+- Workflow `.github/workflows/ecr-build-deploy.yml` ran successfully: build → ECR push (`v0.0.1-smoke`, `sha-dcf4954a`) → helm deploy.
+- Bootstrap done: `pilot` namespace, `pilot-secrets` secret, ECR `pilot` repo (scan-on-push).
+- Pod healthy (`1/1 Running`), in-pod health check 200.
+
+Issues found & fixed during first deploy:
+
+1. **Kubelet probes 403**: the private-hostname guard rejects Host=<pod-ip> headers.
+   Fix: exec probes via curl-over-loopback inside the container.
+2. **ALB health checks 403**: ELB health checker sends Host=<target-ip> (same guard).
+   Fix: `alb.ingress.kubernetes.io/success-codes: "403"` for target registration.
+3. **ACM cert coverage**: shared cert only covers `griddle.patty.io`. Requested a
+   dedicated cert for `pilot.patty.io`
+   (`arn:...certificate/3c72e864-81b9-4257-804e-d904c1fbf635`) — currently
+   **PENDING_VALIDATION**; ingress temporarily reverted to the griddle cert so
+   reconciliation succeeds.
+
+## 8. Remaining Manual Steps (Cloudflare DNS)
+
+patty.io is hosted on Cloudflare; no Route53 zone exists. Add in Cloudflare:
+
+| Type | Name | Target |
+|---|---|---|
+| CNAME | `_870f50942f09df7d79310f7ea4b0d09c.pilot` | `_7c96631fd1a0db135b08f22ecabc1b9c.jkddzztszm.acm-validations.aws.` (ACM validation — required) |
+| CNAME | `pilot` | `k8s-rhoalbgroup-f192075463-959482985.ap-northeast-2.elb.amazonaws.com` (app traffic) |
+
+Note: Cloudflare proxy (orange cloud) must be **off** (DNS only) for the ACM
+HTTP/DNS validation and ALB TLS to work cleanly; ALB terminates TLS itself.
+
+After validation completes: flip the ingress certificate-arn back to
+`3c72e864-81b9-4257-804e-d904c1fbf635` and redeploy.
