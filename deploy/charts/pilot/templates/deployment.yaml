@@ -52,26 +52,26 @@ spec:
               value: "true"
             - name: PAPERCLIP_HOME
               value: /paperclip
+          # Exec probes, not httpGet: the private-hostname guard (403s any
+          # non-loopback Host header in authenticated/private mode) blocks
+          # kubelet httpGet probes, which arrive with Host=<pod-ip>.
           startupProbe:
             # Server + embedded PostgreSQL cold start can take a while.
-            httpGet:
-              path: /api/health
-              port: http
+            exec:
+              command: ["curl", "-fsS", "-o", "/dev/null", "http://localhost:3100/api/health"]
             periodSeconds: 10
-            failureThreshold: 30
+            failureThreshold: 60
           livenessProbe:
-            httpGet:
-              path: /api/health
-              port: http
+            exec:
+              command: ["curl", "-fsS", "-o", "/dev/null", "http://localhost:3100/api/health"]
             periodSeconds: 20
-            timeoutSeconds: 5
+            timeoutSeconds: 10
             failureThreshold: 5
           readinessProbe:
-            httpGet:
-              path: /api/health
-              port: http
+            exec:
+              command: ["curl", "-fsS", "-o", "/dev/null", "http://localhost:3100/api/health"]
             periodSeconds: 10
-            timeoutSeconds: 5
+            timeoutSeconds: 10
             failureThreshold: 3
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

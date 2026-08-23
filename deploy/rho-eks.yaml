@@ -20,6 +20,7 @@ ingress:
 config:
   PAPERCLIP_PUBLIC_URL: https://pilot.patty.io
   PAPERCLIP_DEPLOYMENT_MODE: authenticated
+  TRUST_PROXY: loopback
 
 resources:
   requests:

@@ -64,6 +64,9 @@ resources:
 config:
   PAPERCLIP_PUBLIC_URL: https://pilot.patty.io
   PAPERCLIP_DEPLOYMENT_MODE: authenticated
+  # The ALB is the TLS terminator; trust it so X-Forwarded-Host is honored
+  # by the private-hostname guard and auth origin checks.
+  TRUST_PROXY: loopback
 
 # Secret values are NEVER rendered by this chart. Create an Opaque secret
 # out-of-band and reference it:
