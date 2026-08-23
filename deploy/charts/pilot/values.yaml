@@ -1,0 +1,80 @@
+# Default values for the Pilot chart.
+# Environment-specific values live in deploy/rho-eks.yaml; CI overrides
+# image.tag at upgrade time with the dispatched tag.
+
+image:
+  repository: 361645878435.dkr.ecr.ap-northeast-2.amazonaws.com/pilot
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 3100
+
+persistence:
+  enabled: true
+  # Holds /paperclip: embedded PostgreSQL data, uploaded assets, local secrets
+  # key, agent workspace state (see doc/DOCKER.md persistence contract).
+  size: 20Gi
+  storageClass: ""   # cluster default (gp2)
+
+ingress:
+  enabled: true
+  className: alb
+  host: pilot.patty.io
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:361645878435:certificate/5cca1da8-9d23-468c-b623-c4aa774d9789
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/group.name: rho-alb-group
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/success-codes: "200"
+
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+# Non-secret runtime configuration.
+config:
+  PAPERCLIP_PUBLIC_URL: https://pilot.patty.io
+  PAPERCLIP_DEPLOYMENT_MODE: authenticated
+
+# Secret values are NEVER rendered by this chart. Create an Opaque secret
+# out-of-band and reference it:
+#   kubectl create secret generic pilot-secrets -n pilot \
+#     --from-literal=BETTER_AUTH_SECRET=$(openssl rand -hex 32) \
+#     --from-literal=PAPERCLIP_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32)
+existingSecret: pilot-secrets
+existingSecretKeys:
+  betterAuth: BETTER_AUTH_SECRET
+  toolActionSigning: PAPERCLIP_TOOL_ACTION_SIGNING_SECRET
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

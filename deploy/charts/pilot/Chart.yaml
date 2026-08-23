@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pilot
+description: Pilot — control plane for AI-agent companies (Patty custom build of Paperclip)
+type: application
+version: 0.1.0
+appVersion: "v0.1.0"
