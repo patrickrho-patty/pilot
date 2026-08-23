@@ -24,7 +24,7 @@ No product-core code changes are required. This is CI + deploy scaffolding only.
 | EKS | `rho-cluster` v1.35 ACTIVE, 4× amd64 nodes, public+private API endpoint |
 | Namespaces | `production`, `staging`, `forge`, `nexus`, `search`, `griddle` — we add `pilot` |
 | Storage | `gp2` StorageClass is cluster default; PVCs bind without extra config |
-| Ingress | `aws-load-balancer-controller` + `external-dns` installed; shared ALB group `rho-alb-group`; ACM cert `arn:aws:acm:ap-northeast-2:361645878435:certificate/5cca1da8-9d23-468c-b623-c4aa774d9789` covers patty.io hosts |
+| Ingress | `aws-load-balancer-controller` + `external-dns` installed; shared ALB group `rho-alb-group`; ACM cert `arn:aws:acm:ap-northeast-2:361645878435:certificate/3c72e864-81b9-4257-804e-d904c1fbf635` covers patty.io hosts |
 | Precedent | Buzz/griddle: manual-dispatch GH workflow builds amd64 image → ECR; human runs `helm upgrade --install griddle deploy/charts/buzz -n griddle -f deploy/griddle-eks.yaml` from workstation |
 
 **Decision (user-approved):** mirror the buzz/griddle pattern but with **deploy also automated from GitHub Actions** (helm upgrade in CI), not left as a local-only step.
@@ -137,7 +137,7 @@ ingress:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:361645878435:certificate/5cca1da8-9d23-468c-b623-c4aa774d9789
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:361645878435:certificate/3c72e864-81b9-4257-804e-d904c1fbf635
     alb.ingress.kubernetes.io/ssl-redirect: "443"
     alb.ingress.kubernetes.io/group.name: rho-alb-group
     alb.ingress.kubernetes.io/healthcheck-path: /api/health

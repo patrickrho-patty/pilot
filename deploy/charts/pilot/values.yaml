@@ -46,7 +46,7 @@ ingress:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:361645878435:certificate/5cca1da8-9d23-468c-b623-c4aa774d9789
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:361645878435:certificate/3c72e864-81b9-4257-804e-d904c1fbf635
     alb.ingress.kubernetes.io/ssl-redirect: "443"
     alb.ingress.kubernetes.io/group.name: rho-alb-group
     alb.ingress.kubernetes.io/healthcheck-path: /api/health
