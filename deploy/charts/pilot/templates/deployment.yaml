@@ -27,6 +27,29 @@ spec:
       serviceAccountName: {{ include "pilot.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        # Embedded PostgreSQL refuses any data-dir mode other than 0700/0750.
+        # A pod that once ran with fsGroup leaves the EBS-mounted tree with
+        # setgid+group-rwx dirs, which crashes the server on every start; this
+        # initContainer repairs ownership/modes before the server launches.
+        - name: db-perm-init
+          image: busybox:stable
+          command:
+            - sh
+            - -c
+            - >-
+              if [ -d /paperclip/instances/default/db ]; then
+                chown -R 1000:1000 /paperclip/instances/default/db;
+                chmod 700 /paperclip/instances/default/db;
+                chmod -R go-rwx /paperclip/instances/default/db;
+              fi;
+              echo "[db-perm-init] $(stat -c '%A %u:%g' /paperclip/instances/default/db 2>/dev/null || echo no-db-dir)";
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /paperclip
       containers:
         - name: pilot
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
