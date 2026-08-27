@@ -8,7 +8,7 @@ Get Pilot running locally in under 5 minutes.
 ## Quick Start (Recommended)
 
 ```sh
-npx pilotai onboard --yes
+npx paperclipai onboard --yes
 ```
 
 This walks you through setup, configures your environment, and gets Pilot running.
@@ -18,10 +18,10 @@ If you already have a Pilot install, rerunning `onboard` keeps your current conf
 To start Pilot again later:
 
 ```sh
-npx pilotai run
+npx paperclipai run
 ```
 
-> **Note:** If you used `npx` for setup, always use `npx pilotai` to run commands. The `pnpm pilotai` form only works inside a cloned copy of the Pilot repository (see Local Development below).
+> **Note:** If you used `npx` for setup, always use `npx paperclipai` to run commands. The `pnpm pilotai` form only works inside a cloned copy of the Pilot repository (see Local Development below).
 
 ## Local Development
 

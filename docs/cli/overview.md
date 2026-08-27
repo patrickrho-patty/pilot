@@ -29,7 +29,7 @@ Company-scoped commands also accept `--company-id <id>`.
 For clean local instances, pass `--data-dir` on the command you run:
 
 ```sh
-npx pilotai run --data-dir ./tmp/paperclip-dev
+npx paperclipai run --data-dir ./tmp/paperclip-dev
 ```
 
 ## Context Profiles
@@ -38,7 +38,7 @@ Store defaults to avoid repeating flags:
 
 ```sh
 # Set defaults
-npx pilotai context set --api-base http://localhost:3100 --company-id <id>
+npx paperclipai context set --api-base http://localhost:3100 --company-id <id>
 
 # View current context
 pnpm pilotai context show
@@ -47,24 +47,24 @@ pnpm pilotai context show
 pnpm pilotai context list
 
 # Switch profile
-npx pilotai context use default
+npx paperclipai context use default
 ```
 
 To avoid storing secrets in context, use an env var:
 
 ```sh
-npx pilotai context set --api-key-env-var-name PILOT_API_KEY
+npx paperclipai context set --api-key-env-var-name PILOT_API_KEY
 export PILOT_API_KEY=...
 ```
 
 Secret operations are available under `pilotai secrets`:
 
 ```sh
-npx pilotai secrets declarations --company-id <company-id> --kind secret
-npx pilotai secrets create --company-id <company-id> --name anthropic-api-key --value-env ANTHROPIC_API_KEY
-npx pilotai secrets link --company-id <company-id> --name prod-stripe-key --provider aws_secrets_manager --external-ref <provider-ref>
-npx pilotai secrets doctor --company-id <company-id>
-npx pilotai secrets migrate-inline-env --company-id <company-id> --apply
+npx paperclipai secrets declarations --company-id <company-id> --kind secret
+npx paperclipai secrets create --company-id <company-id> --name anthropic-api-key --value-env ANTHROPIC_API_KEY
+npx paperclipai secrets link --company-id <company-id> --name prod-stripe-key --provider aws_secrets_manager --external-ref <provider-ref>
+npx paperclipai secrets doctor --company-id <company-id>
+npx paperclipai secrets migrate-inline-env --company-id <company-id> --apply
 ```
 
 Context is stored at `~/.paperclip/context.json`.

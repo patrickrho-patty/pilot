@@ -230,7 +230,7 @@ pnpm dev --authenticated-private
 Allow additional private hostnames (for example custom Tailscale hostnames):
 
 ```sh
-npx pilotai allowed-hostname dotta-macbook-pro
+npx paperclipai allowed-hostname dotta-macbook-pro
 ```
 
 ## Test Commands
@@ -268,7 +268,7 @@ pnpm pilotai run
 
 > **Note: private npm registry `.npmrc` + first-run onboarding**
 >
-> The first-run experience often starts with `npx pilotai onboard --yes` (before you have a repo checkout). If your global `~/.npmrc` sets `registry` to a private registry (for example GitHub Packages), `npx` may try to resolve `pilotai` from that private registry and fail with `E404`.
+> The first-run experience often starts with `npx paperclipai onboard --yes` (before you have a repo checkout). If your global `~/.npmrc` sets `registry` to a private registry (for example GitHub Packages), `npx` may try to resolve `paperclipai` from that private registry and fail with `E404`.
 >
 > Diagnostic:
 >
@@ -451,7 +451,7 @@ Instead, create a repo-local Pilot config plus an isolated instance for the work
 ```sh
 pilotai worktree init
 # or create the git worktree and initialize it in one step:
-npx pilotai worktree:make pilot-pr-432
+npx paperclipai worktree:make pilot-pr-432
 ```
 
 This command:
@@ -551,7 +551,7 @@ The workspace UI surfaces `Provisioning database`, `Validating clone`, `Ready`, 
 
 ### Worktree CLI Reference
 
-**`npx pilotai worktree init [options]`** — Create repo-local config/env and an isolated instance for the current worktree.
+**`npx paperclipai worktree init [options]`** — Create repo-local config/env and an isolated instance for the current worktree.
 
 | Option | Description |
 |---|---|
@@ -581,7 +581,7 @@ Repair an already-created repo-managed worktree and reseed its isolated instance
 
 ```sh
 cd /path/to/paperclip/.paperclip/worktrees/PAP-884-ai-commits-component
-npx pilotai worktree init --force --seed-mode minimal \
+npx paperclipai worktree init --force --seed-mode minimal \
   --name PAP-884-ai-commits-component \
   --from-config ~/.paperclip/instances/default/config.json
 ```
@@ -590,7 +590,7 @@ That rewrites the worktree-local `.paperclip/config.json` + `.paperclip/.env`, r
 
 For an already-created worktree where you want the CLI to decide whether to rebuild missing worktree metadata or just reseed the isolated DB, use `worktree repair`.
 
-**`npx pilotai worktree repair [options]`** — Repair the current linked worktree by default, or create/repair a named linked worktree under `.paperclip/worktrees/` when `--branch` is provided. The command never targets the primary checkout unless you explicitly pass `--branch`.
+**`npx paperclipai worktree repair [options]`** — Repair the current linked worktree by default, or create/repair a named linked worktree under `.paperclip/worktrees/` when `--branch` is provided. The command never targets the primary checkout unless you explicitly pass `--branch`.
 
 | Option | Description |
 |---|---|
@@ -618,7 +618,7 @@ node cli/node_modules/tsx/dist/cli.mjs cli/src/index.ts worktree repair --branch
 
 For an already-created worktree where you want to keep the existing repo-local config/env and only overwrite the isolated database, use `worktree reseed` instead. Stop the target worktree's Pilot server first so the command can replace the DB safely.
 
-**`npx pilotai worktree reseed [options]`** — Re-seed an existing worktree-local instance from another Pilot instance or worktree while preserving the target worktree's current config, ports, and instance identity.
+**`npx paperclipai worktree reseed [options]`** — Re-seed an existing worktree-local instance from another Pilot instance or worktree while preserving the target worktree's current config, ports, and instance identity.
 
 | Option | Description |
 |---|---|
@@ -637,7 +637,7 @@ Examples:
 ```sh
 # From the main repo, reseed a worktree from the current default/master instance.
 cd /path/to/paperclip
-npx pilotai worktree reseed \
+npx paperclipai worktree reseed \
   --from current \
   --to PAP-1132-assistant-ui-pap-1131-make-issues-comments-be-like-a-chat \
   --seed-mode full \
@@ -645,14 +645,14 @@ npx pilotai worktree reseed \
 
 # From inside a worktree, reseed it from the default instance config.
 cd /path/to/paperclip/.paperclip/worktrees/PAP-1132-assistant-ui-pap-1131-make-issues-comments-be-like-a-chat
-npx pilotai worktree reseed \
+npx paperclipai worktree reseed \
   --from-instance default \
   --seed-mode full
 ```
 
 Managed workspace repair uses this same verified full-reseed contract through `POST /api/execution-workspaces/:id/runtime-commands/repair`. The exclusive, audited operation stops managed services, writes a recoverable pre-repair database backup under the isolated instance's backup directory, performs the full seed/migration/quarantine/rebinding sequence, and restarts only after terminal manifest and service-health validation. It preserves the worktree filesystem. On failure, services remain stopped while the database backup, seed manifest, bounded phase diagnostics, and operation log are retained for inspection; repair never retries itself in a loop.
 
-**`npx pilotai worktree:make <name> [options]`** — Create `~/NAME` as a git worktree, then initialize an isolated Pilot instance inside it. This combines `git worktree add` with `worktree init` in a single step.
+**`npx paperclipai worktree:make <name> [options]`** — Create `~/NAME` as a git worktree, then initialize an isolated Pilot instance inside it. This combines `git worktree add` with `worktree init` in a single step.
 
 | Option | Description |
 |---|---|
@@ -671,12 +671,12 @@ Managed workspace repair uses this same verified full-reseed contract through `P
 Examples:
 
 ```sh
-npx pilotai worktree:make pilot-pr-432
-npx pilotai worktree:make my-feature --start-point origin/main
-npx pilotai worktree:make experiment --no-seed
+npx paperclipai worktree:make pilot-pr-432
+npx paperclipai worktree:make my-feature --start-point origin/main
+npx paperclipai worktree:make experiment --no-seed
 ```
 
-**`npx pilotai worktree env [options]`** — Print shell exports for the current worktree-local Pilot instance.
+**`npx paperclipai worktree env [options]`** — Print shell exports for the current worktree-local Pilot instance.
 
 | Option | Description |
 |---|---|
@@ -688,7 +688,7 @@ Examples:
 ```sh
 pnpm pilotai worktree env
 pnpm pilotai worktree env --json
-eval "$(npx pilotai worktree env)"
+eval "$(npx paperclipai worktree env)"
 ```
 
 For project execution worktrees, Pilot can also run a project-defined provision command after it creates or reuses an isolated git worktree. Configure this on the project's execution workspace policy (`workspaceStrategy.provisionCommand`). The command runs inside the derived worktree and receives `PILOT_WORKSPACE_*`, `PILOT_PROJECT_ID`, `PILOT_AGENT_ID`, and `PILOT_ISSUE_*` environment variables so each repo can bootstrap itself however it wants.
@@ -946,15 +946,15 @@ Pilot CLI now includes client-side control-plane commands in addition to setup c
 Quick examples:
 
 ```sh
-npx pilotai issue list --company-id <company-id>
-npx pilotai issue create --company-id <company-id> --title "Investigate checkout conflict"
-npx pilotai issue update <issue-id> --status in_progress --comment "Started triage"
+npx paperclipai issue list --company-id <company-id>
+npx paperclipai issue create --company-id <company-id> --title "Investigate checkout conflict"
+npx paperclipai issue update <issue-id> --status in_progress --comment "Started triage"
 ```
 
 Set defaults once with context profiles:
 
 ```sh
-npx pilotai context set --api-base http://localhost:3100 --company-id <company-id>
+npx paperclipai context set --api-base http://localhost:3100 --company-id <company-id>
 ```
 
 Then run commands without repeating flags:
@@ -1038,4 +1038,4 @@ Networking behavior for this smoke script:
 
 - auto-detects and prints a Pilot host URL reachable from inside OpenClaw Docker
 - default container-side host alias is `host.docker.internal` (override with `PILOT_HOST_FROM_CONTAINER` / `PILOT_HOST_PORT`)
-- if Pilot rejects container hostnames in authenticated/private mode, allow `host.docker.internal` via `npx pilotai allowed-hostname host.docker.internal` and restart Pilot
+- if Pilot rejects container hostnames in authenticated/private mode, allow `host.docker.internal` via `npx paperclipai allowed-hostname host.docker.internal` and restart Pilot

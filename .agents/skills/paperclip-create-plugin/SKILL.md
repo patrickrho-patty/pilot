@@ -55,7 +55,7 @@ Useful flags (all optional):
 
 On success the command prints the exact next commands (`cd`, `pnpm install`, `pnpm dev`, `pilotai plugin install <abs-path>`). Run them in order.
 
-If `pilotai` is not on PATH in your environment, fall back to:
+If `paperclipai` is not on PATH in your environment, fall back to:
 
 ```bash
 pnpm --filter @paperclipai/create-paperclip-plugin build

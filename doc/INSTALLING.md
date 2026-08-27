@@ -76,7 +76,7 @@ Managed code is separate from instance data:
 ~/.local/bin/paperclipai
 ```
 
-The `pilotai` shim remains stable while `current` switches atomically
+The `paperclipai` shim remains stable while `current` switches atomically
 between complete payloads. Pilot keeps the two previous managed payloads
 for rollback. Configuration, databases, uploads, logs, secrets, and workspaces
 remain under `~/.paperclip/instances/` and are not stored inside CLI payloads.

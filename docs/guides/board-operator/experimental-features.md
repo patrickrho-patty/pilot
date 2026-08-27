@@ -23,7 +23,7 @@ The CLI exposes the same surface:
 
 ```sh
 pnpm pilotai instance settings:experimental
-npx pilotai instance settings:experimental:update --payload-json '{...}'
+npx paperclipai instance settings:experimental:update --payload-json '{...}'
 ```
 
 Those commands change the same opt-in settings that the UI manages.

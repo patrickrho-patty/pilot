@@ -9,39 +9,39 @@ Client-side commands for managing issues, agents, approvals, and more.
 
 ```sh
 # List issues
-npx pilotai issue list [--status todo,in_progress] [--assignee-agent-id <id>] [--match text]
+npx paperclipai issue list [--status todo,in_progress] [--assignee-agent-id <id>] [--match text]
 
 # Get issue details
-npx pilotai issue get <issue-id-or-identifier>
+npx paperclipai issue get <issue-id-or-identifier>
 
 # Create issue
-npx pilotai issue create --title "..." [--description "..."] [--status todo] [--priority high]
+npx paperclipai issue create --title "..." [--description "..."] [--status todo] [--priority high]
 
 # Update issue
-npx pilotai issue update <issue-id> [--status in_progress] [--comment "..."]
+npx paperclipai issue update <issue-id> [--status in_progress] [--comment "..."]
 
 # Add comment
-npx pilotai issue comment <issue-id> --body "..." [--reopen]
+npx paperclipai issue comment <issue-id> --body "..." [--reopen]
 
 # Checkout task
-npx pilotai issue checkout <issue-id> --agent-id <agent-id>
+npx paperclipai issue checkout <issue-id> --agent-id <agent-id>
 
 # Release task
-npx pilotai issue release <issue-id>
+npx paperclipai issue release <issue-id>
 ```
 
 ## Company Commands
 
 ```sh
-npx pilotai company list
-npx pilotai company get <company-id>
-npx pilotai company current [--company-id <company-id>]
+npx paperclipai company list
+npx paperclipai company get <company-id>
+npx paperclipai company current [--company-id <company-id>]
 
 # Export to portable folder package (writes manifest + markdown files)
-npx pilotai company export <company-id> --out ./exports/acme --include company,agents
+npx paperclipai company export <company-id> --out ./exports/acme --include company,agents
 
 # Preview import (no writes)
-npx pilotai company import \
+npx paperclipai company import \
   <owner>/<repo>/<path> \
   --target existing \
   --company-id <company-id> \
@@ -50,7 +50,7 @@ npx pilotai company import \
   --dry-run
 
 # Apply import
-npx pilotai company import \
+npx paperclipai company import \
   ./exports/acme \
   --target new \
   --new-company-name "Acme Imported" \
@@ -67,80 +67,80 @@ command.
 ## Agent Commands
 
 ```sh
-npx pilotai agent list
-npx pilotai agent get <agent-id>
+npx paperclipai agent list
+npx paperclipai agent get <agent-id>
 ```
 
 ## Skills Commands
 
 ```sh
 # Browse app-shipped catalog skills without changing company state
-npx pilotai skills browse [--kind bundled|optional] [--category software-development] [--query github]
-npx pilotai skills search "pull request" [--json]
+npx paperclipai skills browse [--kind bundled|optional] [--category software-development] [--query github]
+npx paperclipai skills search "pull request" [--json]
 
 # Inspect catalog metadata and file inventory before install
-npx pilotai skills inspect github-pr-workflow
+npx paperclipai skills inspect github-pr-workflow
 
 # Install a catalog skill into the company skill library
 # This does not attach the skill to any agent.
-npx pilotai skills install github-pr-workflow --company-id <company-id>
-npx pilotai skills install github-pr-workflow --as pr-flow --force --company-id <company-id>
+npx paperclipai skills install github-pr-workflow --company-id <company-id>
+npx paperclipai skills install github-pr-workflow --as pr-flow --force --company-id <company-id>
 
 # External sources still use import instead of catalog install
-npx pilotai skills import ./skills/my-skill --company-id <company-id>
-npx pilotai skills import owner/repo/path/to/skill --company-id <company-id>
+npx paperclipai skills import ./skills/my-skill --company-id <company-id>
+npx paperclipai skills import owner/repo/path/to/skill --company-id <company-id>
 
 # Attach desired company skills to an agent after install/import
-npx pilotai skills agent sync <agent-id> --skill github-pr-workflow --mode add --company-id <company-id>
+npx paperclipai skills agent sync <agent-id> --skill github-pr-workflow --mode add --company-id <company-id>
 ```
 
 ## Approval Commands
 
 ```sh
 # List approvals
-npx pilotai approval list [--status pending]
+npx paperclipai approval list [--status pending]
 
 # Get approval
-npx pilotai approval get <approval-id>
+npx paperclipai approval get <approval-id>
 
 # Create approval
-npx pilotai approval create --type hire_agent --payload '{"name":"..."}' [--issue-ids <id1,id2>]
+npx paperclipai approval create --type hire_agent --payload '{"name":"..."}' [--issue-ids <id1,id2>]
 
 # Approve
-npx pilotai approval approve <approval-id> [--decision-note "..."]
+npx paperclipai approval approve <approval-id> [--decision-note "..."]
 
 # Reject
-npx pilotai approval reject <approval-id> [--decision-note "..."]
+npx paperclipai approval reject <approval-id> [--decision-note "..."]
 
 # Request revision
-npx pilotai approval request-revision <approval-id> [--decision-note "..."]
+npx paperclipai approval request-revision <approval-id> [--decision-note "..."]
 
 # Resubmit
-npx pilotai approval resubmit <approval-id> [--payload '{"..."}']
+npx paperclipai approval resubmit <approval-id> [--payload '{"..."}']
 
 # Comment
-npx pilotai approval comment <approval-id> --body "..."
+npx paperclipai approval comment <approval-id> --body "..."
 ```
 
 ## Activity Commands
 
 ```sh
-npx pilotai activity list [--agent-id <id>] [--entity-type issue] [--entity-id <id>]
+npx paperclipai activity list [--agent-id <id>] [--entity-type issue] [--entity-id <id>]
 ```
 
 ## Dashboard
 
 ```sh
-npx pilotai dashboard get
+npx paperclipai dashboard get
 ```
 
 ## Instance Settings
 
 ```sh
-npx pilotai instance settings:general
-npx pilotai instance settings:general:update --payload-json '{...}'
-npx pilotai instance settings:experimental
-npx pilotai instance settings:experimental:update --payload-json '{...}'
+npx paperclipai instance settings:general
+npx paperclipai instance settings:general:update --payload-json '{...}'
+npx paperclipai instance settings:experimental
+npx paperclipai instance settings:experimental:update --payload-json '{...}'
 ```
 
 Experimental features are opt-in and are provided without compatibility guarantees. They may break, change, or be removed at any time. Use them at your own risk.
@@ -148,5 +148,5 @@ Experimental features are opt-in and are provided without compatibility guarante
 ## Heartbeat
 
 ```sh
-npx pilotai heartbeat run --agent-id <agent-id> [--api-base http://localhost:3100]
+npx paperclipai heartbeat run --agent-id <agent-id> [--api-base http://localhost:3100]
 ```

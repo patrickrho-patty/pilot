@@ -64,7 +64,7 @@ pnpm dev --authenticated-private
 Allow additional private hostnames:
 
 ```sh
-npx pilotai allowed-hostname dotta-macbook-pro
+npx paperclipai allowed-hostname dotta-macbook-pro
 ```
 
 For full setup and troubleshooting, see [Tailscale Private Access](/deploy/tailscale-private-access).
@@ -84,10 +84,10 @@ curl http://localhost:3100/api/companies
 For safer parallel local experiments, initialize a dedicated worktree instance instead of reusing your main checkout:
 
 ```sh
-npx pilotai worktree:make local-lab --seed-mode minimal
+npx paperclipai worktree:make local-lab --seed-mode minimal
 cd ~/paperclip-local-lab
 pnpm pilotai worktree env                       # inspect generated env exports
-eval "$(npx pilotai worktree env)"             # bash/zsh
+eval "$(npx paperclipai worktree env)"             # bash/zsh
 pnpm pilotai run
 pnpm pilotai doctor
 ```
@@ -97,13 +97,13 @@ If the experiment gets noisy, repair or reseed the worktree without touching the
 ```sh
 # worktree repair rebuilds the local checkout metadata, so run the checked-out CLI through the direct-exec form.
 node cli/node_modules/tsx/dist/cli.mjs cli/src/index.ts worktree repair --branch pilot-local-lab
-npx pilotai worktree reseed --from . --to pilot-local-lab
+npx paperclipai worktree reseed --from . --to pilot-local-lab
 ```
 
 When done, shut it down and remove the isolated state explicitly:
 
 ```sh
-npx pilotai worktree:cleanup local-lab --force
+npx paperclipai worktree:cleanup local-lab --force
 ```
 
 ## Reset Dev Data

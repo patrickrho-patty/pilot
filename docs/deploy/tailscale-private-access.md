@@ -58,7 +58,7 @@ http://my-macbook.tailnet.ts.net:3100
 If you access Pilot with a custom private hostname, add it to the allowlist:
 
 ```sh
-npx pilotai allowed-hostname my-macbook.tailnet.ts.net
+npx paperclipai allowed-hostname my-macbook.tailnet.ts.net
 ```
 
 ## 5. Verify the server is reachable

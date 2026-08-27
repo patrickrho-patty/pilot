@@ -281,15 +281,15 @@ Pilot is a full control plane, not a wrapper. Before you build any of this yours
 Open source. Self-hosted. No Pilot account required.
 
 ```bash
-npx pilotai onboard --yes
+npx paperclipai onboard --yes
 ```
 
 That quickstart path now defaults to trusted local loopback mode for the fastest first run. To start in authenticated/private mode instead, choose a bind preset explicitly:
 
 ```bash
-npx pilotai onboard --yes --bind lan
+npx paperclipai onboard --yes --bind lan
 # or:
-npx pilotai onboard --yes --bind tailnet
+npx paperclipai onboard --yes --bind tailnet
 ```
 
 If you already have Pilot configured, rerunning `onboard` keeps the existing config in place. Use `pilotai configure` to edit settings.

@@ -31,7 +31,7 @@ Before making changes, read in this order:
 - `packages/plugins/`: plugin system packages
 - `packages/skills-catalog/`: app-shipped skills catalog (`@paperclipai/skills-catalog`)
 - `packages/teams-catalog/`: app-shipped teams catalog (`@paperclipai/teams-catalog`)
-- `cli/`: `pilotai` CLI package (published bin, agent-facing commands)
+- `cli/`: `paperclipai` CLI package (published bin, agent-facing commands)
 - `skills/`: Pilot runtime/operational skills (not part of the app catalog)
 - `doc/`: operational and product docs
 

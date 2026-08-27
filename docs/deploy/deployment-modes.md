@@ -42,7 +42,7 @@ pnpm pilotai onboard
 Allow custom Tailscale hostnames:
 
 ```sh
-npx pilotai allowed-hostname my-machine
+npx paperclipai allowed-hostname my-machine
 ```
 
 ### `authenticated` + `public`

@@ -22,7 +22,7 @@ Does:
 Choose a specific instance:
 
 ```sh
-npx pilotai run --instance dev
+npx paperclipai run --instance dev
 ```
 
 ## `pilotai onboard`
@@ -104,7 +104,7 @@ This now includes bind-oriented deployment settings such as `PILOT_BIND` and `PI
 Allow a private hostname for authenticated/private mode:
 
 ```sh
-npx pilotai allowed-hostname my-tailscale-host
+npx paperclipai allowed-hostname my-tailscale-host
 ```
 
 ## Local Storage Paths
@@ -126,6 +126,6 @@ PILOT_HOME=/custom/home PILOT_INSTANCE_ID=dev pnpm pilotai run
 Or pass `--data-dir` directly on any command:
 
 ```sh
-npx pilotai run --data-dir ./tmp/paperclip-dev
-npx pilotai doctor --data-dir ./tmp/paperclip-dev
+npx paperclipai run --data-dir ./tmp/paperclip-dev
+npx paperclipai doctor --data-dir ./tmp/paperclip-dev
 ```

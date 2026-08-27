@@ -59,7 +59,7 @@ stable images additionally get `:YYYY.MDD.P` version tags.
 ## Seeing where you are
 
 ```bash
-npx pilotai channels
+npx paperclipai channels
 ```
 
 prints every channel with the version it currently resolves to, the install

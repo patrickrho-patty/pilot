@@ -14,7 +14,7 @@ pnpm test
 ## Install Into Pilot
 
 ```bash
-npx pilotai plugin install ./
+npx paperclipai plugin install ./
 ```
 
 ## Build Options

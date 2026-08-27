@@ -33,7 +33,7 @@ Do this for every public package that Pilot publishes.
 
 At minimum that includes:
 
-- `pilotai`
+- `paperclipai`
 - `@paperclipai/server`
 - `@paperclipai/ui`
 - public packages under `packages/`
@@ -266,7 +266,7 @@ npm install --prefix "$(mktemp -d)" pilotai@canary --no-audit --no-fund
 ```
 
 The release script runs this clean-prefix install after publishing every workspace
-package dependency-first and publishing `pilotai` last. A package that is not
+package dependency-first and publishing `paperclipai` last. A package that is not
 yet registry-visible stops the train before the channel entrypoint can advance.
 
 ## 12. Verify the Stable Workflow

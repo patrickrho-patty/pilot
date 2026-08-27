@@ -82,7 +82,7 @@ PILOT_COOKIE="your_session_cookie=..." pnpm smoke:openclaw-join
 - If Pilot rejects the container-visible host with a hostname error, allow it from host:
 
 ```bash
-npx pilotai allowed-hostname host.docker.internal
+npx paperclipai allowed-hostname host.docker.internal
 ```
 
 Then restart Pilot and rerun the smoke script.
@@ -90,7 +90,7 @@ Then restart Pilot and rerun the smoke script.
 - Authenticated/private mode: ensure hostnames are in the allowed list when required:
 
 ```bash
-npx pilotai allowed-hostname <host>
+npx paperclipai allowed-hostname <host>
 ```
 
 ## Prerequisites

@@ -338,7 +338,7 @@ npx --registry https://registry.npmjs.org pilotai onboard --yes
 
 > **Troubleshooting: private npm registry `.npmrc`**
 >
-> If this fails with an `E404` for `pilotai` (or similar) and you use a private npm registry (for example GitHub Packages) via a global `~/.npmrc`, `npx` may be resolving `pilotai` against that private registry instead of the public npm registry.
+> If this fails with an `E404` for `paperclipai` (or similar) and you use a private npm registry (for example GitHub Packages) via a global `~/.npmrc`, `npx` may be resolving `paperclipai` against that private registry instead of the public npm registry.
 >
 > Diagnostic:
 >

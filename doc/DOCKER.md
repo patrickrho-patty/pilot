@@ -229,7 +229,7 @@ systemctl --user stop pilot-pod      # Stop all
 
 Use this when you want to mimic a fresh machine that only has Ubuntu + npm and verify:
 
-- `npx pilotai onboard --yes` completes
+- `npx paperclipai onboard --yes` completes
 - the server binds to `0.0.0.0:3100` so host access works
 - onboard/run banners and startup logs are visible in your terminal
 

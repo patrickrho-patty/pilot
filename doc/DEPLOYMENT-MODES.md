@@ -87,8 +87,8 @@ Examples:
 
 ```sh
 pnpm pilotai onboard --yes
-npx pilotai onboard --yes --bind lan
-npx pilotai run --bind tailnet
+npx paperclipai onboard --yes --bind lan
+npx paperclipai run --bind tailnet
 ```
 
 `configure --section server` follows the same interactive behavior.

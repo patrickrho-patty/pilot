@@ -267,7 +267,7 @@ pnpm pilotai configure --section secrets
 Inline secret migration command:
 
 ```sh
-npx pilotai secrets migrate-inline-env --company-id <company-id> --apply
+npx paperclipai secrets migrate-inline-env --company-id <company-id> --apply
 
 # direct database maintenance fallback
 pnpm secrets:migrate-inline-env --apply

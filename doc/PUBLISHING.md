@@ -17,7 +17,7 @@ Pilot no longer uses release branches or Changesets for publishing.
 
 ## Why the CLI needs special packaging
 
-The CLI package, `pilotai`, imports code from workspace packages such as:
+The CLI package, `paperclipai`, imports code from workspace packages such as:
 
 - `@paperclipai/server`
 - `@paperclipai/db`
@@ -111,7 +111,7 @@ Notes:
 If the first real publish returns npm `E404`, check npm-side prerequisites before retrying:
 
 - `npm whoami` must succeed first. An expired or missing npm login will block the publish.
-- For an organization-scoped package like `@paperclipai/ui`, the `pilotai` npm organization must exist and the publisher must be a member with permission to publish to that scope.
+- For an organization-scoped package like `@paperclipai/ui`, the `paperclipai` npm organization must exist and the publisher must be a member with permission to publish to that scope.
 - The initial publish must include `--access public` for a public scoped package.
 - npm also requires either account 2FA for publishing or a granular token that is allowed to bypass 2FA.
 

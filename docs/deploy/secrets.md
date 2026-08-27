@@ -203,7 +203,7 @@ Validate secrets config:
 
 ```sh
 pnpm pilotai doctor
-npx pilotai secrets doctor --company-id <company-id>
+npx paperclipai secrets doctor --company-id <company-id>
 ```
 
 ### Environment Overrides
@@ -475,8 +475,8 @@ store.
 If you have existing agents with inline API keys in their config, migrate them to encrypted secret refs:
 
 ```sh
-npx pilotai secrets migrate-inline-env --company-id <company-id>
-npx pilotai secrets migrate-inline-env --company-id <company-id> --apply
+npx paperclipai secrets migrate-inline-env --company-id <company-id>
+npx paperclipai secrets migrate-inline-env --company-id <company-id> --apply
 
 # low-level script for direct database maintenance
 pnpm secrets:migrate-inline-env         # dry run
@@ -493,7 +493,7 @@ Company exports include only environment declarations. They do not include
 secret IDs, provider references, encrypted material, or plaintext values.
 
 ```sh
-npx pilotai secrets declarations --company-id <company-id> --kind secret
+npx paperclipai secrets declarations --company-id <company-id> --kind secret
 ```
 
 Before importing a package into another instance, use those declarations to

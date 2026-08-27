@@ -493,12 +493,12 @@ Create secrets from environment variables so values do not land in shell history
 export PILOT_PAGE_AWS_ACCESS_KEY_ID="$(jq -r '.AccessKey.AccessKeyId' /tmp/paperclip-page-uploader-key.json)"
 export PILOT_PAGE_AWS_SECRET_ACCESS_KEY="$(jq -r '.AccessKey.SecretAccessKey' /tmp/paperclip-page-uploader-key.json)"
 
-npx pilotai secrets create \
+npx paperclipai secrets create \
   --company-id <company-id> \
   --name paperclip-page-aws-access-key-id \
   --value-env PILOT_PAGE_AWS_ACCESS_KEY_ID
 
-npx pilotai secrets create \
+npx paperclipai secrets create \
   --company-id <company-id> \
   --name paperclip-page-aws-secret-access-key \
   --value-env PILOT_PAGE_AWS_SECRET_ACCESS_KEY
@@ -532,7 +532,7 @@ host `AWS_PROFILE` identity for the entire agent run:
 Create or update the company skill from this package:
 
 ```bash
-npx pilotai skills create \
+npx paperclipai skills create \
   --company-id <company-id> \
   --name "Pilot Page" \
   --slug paperclip-page \
@@ -543,7 +543,7 @@ npx pilotai skills create \
 Attach it to an agent:
 
 ```bash
-npx pilotai skills agent sync <agent-id-or-shortname> \
+npx paperclipai skills agent sync <agent-id-or-shortname> \
   --company-id <company-id> \
   --skill paperclip-page
 ```
