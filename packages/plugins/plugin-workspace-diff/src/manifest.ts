@@ -1,9 +1,9 @@
-import type { PaperclipPluginManifestV1 } from "@paperclipai/plugin-sdk";
+import type { PilotPluginManifestV1 } from "@paperclipai/plugin-sdk";
 
 const PLUGIN_ID = "paperclip.workspace-diff";
 const CHANGES_TAB_SLOT_ID = "workspace-changes-tab";
 
-const manifest: PaperclipPluginManifestV1 = {
+const manifest: PilotPluginManifestV1 = {
   id: PLUGIN_ID,
   apiVersion: 1,
   version: "0.1.0",

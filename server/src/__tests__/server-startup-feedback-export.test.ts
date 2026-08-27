@@ -3,11 +3,11 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, syml
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const ORIGINAL_PAPERCLIP_API_URL = process.env.PAPERCLIP_API_URL;
-const ORIGINAL_PAPERCLIP_RUNTIME_API_URL = process.env.PAPERCLIP_RUNTIME_API_URL;
-const ORIGINAL_PAPERCLIP_RUNTIME_API_CANDIDATES_JSON = process.env.PAPERCLIP_RUNTIME_API_CANDIDATES_JSON;
-const ORIGINAL_PAPERCLIP_LISTEN_HOST = process.env.PAPERCLIP_LISTEN_HOST;
-const ORIGINAL_PAPERCLIP_LISTEN_PORT = process.env.PAPERCLIP_LISTEN_PORT;
+const ORIGINAL_PILOT_API_URL = process.env.PAPERCLIP_API_URL;
+const ORIGINAL_PILOT_RUNTIME_API_URL = process.env.PAPERCLIP_RUNTIME_API_URL;
+const ORIGINAL_PILOT_RUNTIME_API_CANDIDATES_JSON = process.env.PAPERCLIP_RUNTIME_API_CANDIDATES_JSON;
+const ORIGINAL_PILOT_LISTEN_HOST = process.env.PAPERCLIP_LISTEN_HOST;
+const ORIGINAL_PILOT_LISTEN_PORT = process.env.PAPERCLIP_LISTEN_PORT;
 
 const {
   createAppMock,
@@ -644,23 +644,23 @@ describe("startServer PAPERCLIP_API_URL handling", () => {
   });
 
   afterEach(() => {
-    if (ORIGINAL_PAPERCLIP_API_URL === undefined) delete process.env.PAPERCLIP_API_URL;
-    else process.env.PAPERCLIP_API_URL = ORIGINAL_PAPERCLIP_API_URL;
+    if (ORIGINAL_PILOT_API_URL === undefined) delete process.env.PAPERCLIP_API_URL;
+    else process.env.PAPERCLIP_API_URL = ORIGINAL_PILOT_API_URL;
 
-    if (ORIGINAL_PAPERCLIP_RUNTIME_API_URL === undefined) delete process.env.PAPERCLIP_RUNTIME_API_URL;
-    else process.env.PAPERCLIP_RUNTIME_API_URL = ORIGINAL_PAPERCLIP_RUNTIME_API_URL;
+    if (ORIGINAL_PILOT_RUNTIME_API_URL === undefined) delete process.env.PAPERCLIP_RUNTIME_API_URL;
+    else process.env.PAPERCLIP_RUNTIME_API_URL = ORIGINAL_PILOT_RUNTIME_API_URL;
 
-    if (ORIGINAL_PAPERCLIP_RUNTIME_API_CANDIDATES_JSON === undefined) {
+    if (ORIGINAL_PILOT_RUNTIME_API_CANDIDATES_JSON === undefined) {
       delete process.env.PAPERCLIP_RUNTIME_API_CANDIDATES_JSON;
     } else {
-      process.env.PAPERCLIP_RUNTIME_API_CANDIDATES_JSON = ORIGINAL_PAPERCLIP_RUNTIME_API_CANDIDATES_JSON;
+      process.env.PAPERCLIP_RUNTIME_API_CANDIDATES_JSON = ORIGINAL_PILOT_RUNTIME_API_CANDIDATES_JSON;
     }
 
-    if (ORIGINAL_PAPERCLIP_LISTEN_HOST === undefined) delete process.env.PAPERCLIP_LISTEN_HOST;
-    else process.env.PAPERCLIP_LISTEN_HOST = ORIGINAL_PAPERCLIP_LISTEN_HOST;
+    if (ORIGINAL_PILOT_LISTEN_HOST === undefined) delete process.env.PAPERCLIP_LISTEN_HOST;
+    else process.env.PAPERCLIP_LISTEN_HOST = ORIGINAL_PILOT_LISTEN_HOST;
 
-    if (ORIGINAL_PAPERCLIP_LISTEN_PORT === undefined) delete process.env.PAPERCLIP_LISTEN_PORT;
-    else process.env.PAPERCLIP_LISTEN_PORT = ORIGINAL_PAPERCLIP_LISTEN_PORT;
+    if (ORIGINAL_PILOT_LISTEN_PORT === undefined) delete process.env.PAPERCLIP_LISTEN_PORT;
+    else process.env.PAPERCLIP_LISTEN_PORT = ORIGINAL_PILOT_LISTEN_PORT;
   });
 
   it("uses the externally set PAPERCLIP_API_URL when provided", async () => {

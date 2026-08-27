@@ -6,7 +6,7 @@ import type { AcpRuntimeOptions } from "acpx/runtime";
 import type { AdapterExecutionContext, AdapterRuntimeMcpAccess } from "@paperclipai/adapter-utils";
 import {
   prepareAdapterExecutionTargetRuntime,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
   startAdapterExecutionTargetProcessSessionBridge,
 } from "@paperclipai/adapter-utils/execution-target";
 
@@ -19,7 +19,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", async (importActual) => {
   return {
     ...actual,
     prepareAdapterExecutionTargetRuntime: vi.fn(actual.prepareAdapterExecutionTargetRuntime),
-    startAdapterExecutionTargetPaperclipBridge: vi.fn(actual.startAdapterExecutionTargetPaperclipBridge),
+    startAdapterExecutionTargetPilotBridge: vi.fn(actual.startAdapterExecutionTargetPilotBridge),
     startAdapterExecutionTargetProcessSessionBridge: vi.fn(actual.startAdapterExecutionTargetProcessSessionBridge),
   };
 });
@@ -534,10 +534,10 @@ describe("ACPX engine startup characterization", () => {
       expect(typeof processArgs.env).toBe("function");
 
       // Both bridges receive the SAME real (non-null) runtimeRootDir from staging.
-      const paperclipArgs = vi.mocked(startAdapterExecutionTargetPaperclipBridge).mock.calls[0]![0];
-      expect(paperclipArgs.runtimeRootDir).toBeTruthy();
-      expect(String(paperclipArgs.runtimeRootDir)).toContain(".paperclip-runtime");
-      expect(processArgs.runtimeRootDir).toBe(paperclipArgs.runtimeRootDir);
+      const pilotArgs = vi.mocked(startAdapterExecutionTargetPilotBridge).mock.calls[0]![0];
+      expect(pilotArgs.runtimeRootDir).toBeTruthy();
+      expect(String(pilotArgs.runtimeRootDir)).toContain(".paperclip-runtime");
+      expect(processArgs.runtimeRootDir).toBe(pilotArgs.runtimeRootDir);
 
       // The ACP runtime + session/new both bind to the in-sandbox workspace cwd,
       // which the run resolves only after the bridges bring the sandbox up.
@@ -554,10 +554,10 @@ describe("ACPX engine startup characterization", () => {
 
     it("create_runtime failure: settles an error result, stops both bridges, releases the lease", async () => {
       const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
-      const paperclipStop = vi.fn(async () => {});
+      const pilotStop = vi.fn(async () => {});
       const processStop = vi.fn(async () => {});
-      vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementationOnce(
-        async () => ({ env: {}, stop: paperclipStop }) as never,
+      vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementationOnce(
+        async () => ({ env: {}, stop: pilotStop }) as never,
       );
       vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementationOnce(
         async () => ({ agentCommand: null, stop: processStop }) as never,
@@ -589,7 +589,7 @@ describe("ACPX engine startup characterization", () => {
       expect(result.exitCode).toBe(1);
       expect(result.resultJson?.phase).toBe("create_runtime");
       // Both live bridges stop exactly once and the per-session lease releases.
-      expect(paperclipStop).toHaveBeenCalledTimes(1);
+      expect(pilotStop).toHaveBeenCalledTimes(1);
       expect(processStop).toHaveBeenCalledTimes(1);
       expect(stagingLocks.size).toBe(0);
     });
@@ -597,7 +597,7 @@ describe("ACPX engine startup characterization", () => {
     it("partial-bridge failure: throws and stops the concurrently-started bridge exactly once", async () => {
       const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
       const stop = vi.fn(async () => {});
-      vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementationOnce(async () => {
+      vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementationOnce(async () => {
         throw new Error("paperclip bridge boom");
       });
       vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementationOnce(
@@ -816,7 +816,7 @@ describe("ACPX engine startup characterization", () => {
       });
 
       expect(vi.mocked(prepareAdapterExecutionTargetRuntime)).not.toHaveBeenCalled();
-      expect(vi.mocked(startAdapterExecutionTargetPaperclipBridge)).not.toHaveBeenCalled();
+      expect(vi.mocked(startAdapterExecutionTargetPilotBridge)).not.toHaveBeenCalled();
       expect(vi.mocked(startAdapterExecutionTargetProcessSessionBridge)).not.toHaveBeenCalled();
       expect(sessionInputs[0]?.cwd).toBe(localCwd);
       expect(runtimeOptions[0]?.cwd).toBe(localCwd);

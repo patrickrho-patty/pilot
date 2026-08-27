@@ -27,7 +27,7 @@ import { registerSecretCommands } from "./commands/client/secrets.js";
 import { registerSkillsCommands } from "./commands/client/skills.js";
 import { registerTeamCommands } from "./commands/client/teams.js";
 import { applyDataDirOverride, type DataDirOptionLike } from "./config/data-dir.js";
-import { loadPaperclipEnvFile } from "./config/env.js";
+import { loadPilotEnvFile } from "./config/env.js";
 import { initTelemetryFromConfigFile, flushTelemetry } from "./telemetry.js";
 import { registerWorktreeCommands } from "./commands/worktree.js";
 import { registerPluginCommands } from "./commands/client/plugin.js";
@@ -97,7 +97,7 @@ program.hook("preAction", (_thisCommand, actionCommand) => {
     hasConfigOption: optionNames.has("config"),
     hasContextOption: optionNames.has("context"),
   });
-  loadPaperclipEnvFile(options.config);
+  loadPilotEnvFile(options.config);
   initTelemetryFromConfigFile(options.config);
 });
 

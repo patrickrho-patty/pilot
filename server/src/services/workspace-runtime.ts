@@ -407,7 +407,7 @@ function isManagedHttpsDefaultCandidate(input: {
   serviceName: string;
   command: string | null;
 }): boolean {
-  return isPaperclipDevRuntimeService(input);
+  return isPilotDevRuntimeService(input);
 }
 
 export type ResolvedRuntimeServiceExposure = {
@@ -5167,7 +5167,7 @@ async function waitForAllocatedPortBind(input: {
   throw new Error(`Runtime service did not bind allocated port ${input.port} before timeout`);
 }
 
-function isPaperclipDevRuntimeService(input: { serviceName?: string | null; command?: string | null }) {
+function isPilotDevRuntimeService(input: { serviceName?: string | null; command?: string | null }) {
   const serviceName = (input.serviceName ?? "").trim().toLowerCase();
   const command = (input.command ?? "").trim().toLowerCase();
   return (
@@ -5181,7 +5181,7 @@ function resolveRuntimeServiceHealthUrl(
   url: string | null,
   input?: { serviceName?: string | null; command?: string | null },
 ) {
-  if (!url || !isPaperclipDevRuntimeService(input ?? {})) return url;
+  if (!url || !isPilotDevRuntimeService(input ?? {})) return url;
   try {
     const parsed = new URL(url);
     if (parsed.pathname === "/" || parsed.pathname === "") {
@@ -5231,7 +5231,7 @@ async function probeManagedWorkspaceRuntimeReadiness(
   healthUrl: string,
   input: RuntimeServiceHealthProbeInput,
 ): Promise<boolean | null> {
-  if (!isPaperclipDevRuntimeService(input)) return null;
+  if (!isPilotDevRuntimeService(input)) return null;
   const identity = resolveManagedWorkspaceIdentity({
     workspaceCwd: input.cwd ?? null,
     executionWorkspaceId: input.executionWorkspaceId ?? null,
@@ -5265,7 +5265,7 @@ async function isRuntimeServiceUrlHealthy(
   url: string | null,
   input?: RuntimeServiceHealthProbeInput,
 ) {
-  const localProbeUrl = input?.provider === "local_process" && input.port && isPaperclipDevRuntimeService(input)
+  const localProbeUrl = input?.provider === "local_process" && input.port && isPilotDevRuntimeService(input)
     ? `http://127.0.0.1:${input.port}`
     : null;
   const probeUrl = localProbeUrl ?? url;
@@ -5279,7 +5279,7 @@ async function isRuntimeServiceUrlHealthy(
   try {
     const response = await fetch(healthUrl, { signal: AbortSignal.timeout(2_000) });
     if (!response.ok) return false;
-    if (!isPaperclipDevRuntimeService(input ?? {})) return true;
+    if (!isPilotDevRuntimeService(input ?? {})) return true;
     const payload = await response.json().catch(() => null) as { status?: unknown } | null;
     return payload?.status === "ok";
   } catch {
@@ -5967,7 +5967,7 @@ async function spawnLocalRuntimeService(input: StartLocalRuntimeServiceInput): P
   // the Paperclip dev runtime whether or not it is HTTPS-exposed, because the
   // password-independent login handoff and the protected readiness probe are
   // both needed for a plain-HTTP loopback workspace too (PAP-17572).
-  const managedWorkspaceIdentity = isPaperclipDevRuntimeService({ serviceName, command })
+  const managedWorkspaceIdentity = isPilotDevRuntimeService({ serviceName, command })
     ? resolveManagedWorkspaceIdentity({
         workspaceCwd: input.workspace.cwd,
         executionWorkspaceId: input.executionWorkspaceId ?? null,

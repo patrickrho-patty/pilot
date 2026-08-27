@@ -1474,7 +1474,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
     expect(retries).toHaveLength(0);
   });
 
-  async function withTempPaperclipHome<T>(fn: (home: string) => Promise<T>): Promise<T> {
+  async function withTempPilotHome<T>(fn: (home: string) => Promise<T>): Promise<T> {
     const home = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-hot-restart-"));
     const previousHome = process.env.PAPERCLIP_HOME;
     process.env.PAPERCLIP_HOME = home;
@@ -1501,7 +1501,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       },
     });
 
-    await withTempPaperclipHome(async () => {
+    await withTempPilotHome(async () => {
       await writeHotRestartIntent({
         previousServerPid: process.pid,
         previousServerVersion: "old-version",
@@ -1565,7 +1565,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       },
     });
 
-    await withTempPaperclipHome(async (home) => {
+    await withTempPilotHome(async (home) => {
       await writeHotRestartIntent({
         previousServerPid: process.pid,
         previousServerVersion: "old-acp-version",
@@ -1653,7 +1653,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       },
     });
 
-    await withTempPaperclipHome(async (home) => {
+    await withTempPilotHome(async (home) => {
       await writeHotRestartIntent({
         previousServerPid: process.pid,
         previousServerVersion: "old-acp-persistence-failure-version",
@@ -1721,7 +1721,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       },
     });
 
-    await withTempPaperclipHome(async (home) => {
+    await withTempPilotHome(async (home) => {
       await writeHotRestartIntent({
         previousServerPid: process.pid,
         previousServerVersion: "old-mixed-version",
@@ -1801,7 +1801,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       processGroupId: null,
     });
 
-    await withTempPaperclipHome(async (home) => {
+    await withTempPilotHome(async (home) => {
       await writeHotRestartIntent({
         previousServerPid: process.pid,
         previousServerVersion: "old-home-root-version",
@@ -1859,7 +1859,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       processGroupId: null,
     });
 
-    await withTempPaperclipHome(async (home) => {
+    await withTempPilotHome(async (home) => {
       await writeHotRestartIntent({
         previousServerPid: process.pid,
         previousServerVersion: "missing-snapshot-version",
@@ -1896,7 +1896,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       processGroupId: null,
     });
 
-    await withTempPaperclipHome(async (home) => {
+    await withTempPilotHome(async (home) => {
       await writeHotRestartIntent({
         previousServerPid: process.pid,
         previousServerVersion: "preflight-race-version",
@@ -2009,7 +2009,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       processStartedAt: new Date("2026-07-30T07:00:00.000Z"),
     });
 
-    await withTempPaperclipHome(async (home) => {
+    await withTempPilotHome(async (home) => {
       await writeHotRestartIntent({
         previousServerPid: process.pid,
         previousServerVersion: "old-version",
@@ -2068,7 +2068,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       },
     });
 
-    await withTempPaperclipHome(async (home) => {
+    await withTempPilotHome(async (home) => {
       const heartbeat = heartbeatService(db);
       await writeHotRestartIntent({
         previousServerPid: process.pid,
@@ -2140,7 +2140,7 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
       },
     });
 
-    await withTempPaperclipHome(async () => {
+    await withTempPilotHome(async () => {
       const heartbeat = heartbeatService(db);
       await writeHotRestartIntent({
         previousServerPid: process.pid,

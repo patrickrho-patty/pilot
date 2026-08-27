@@ -258,7 +258,7 @@ describe("cursor execute", () => {
     await fs.mkdir(workspace, { recursive: true });
     await writeFakeCursorCommand(commandPath);
 
-    const paperclipDir = await createSkillDir(runtimeSkillsRoot, "paperclip");
+    const pilotDir = await createSkillDir(runtimeSkillsRoot, "paperclip");
     const asciiHeartDir = await createSkillDir(runtimeSkillsRoot, "ascii-heart");
 
     const previousHome = process.env.HOME;
@@ -287,7 +287,7 @@ describe("cursor execute", () => {
           paperclipRuntimeSkills: [
             {
               name: "paperclip",
-              source: paperclipDir,
+              source: pilotDir,
             },
             {
               name: "ascii-heart",

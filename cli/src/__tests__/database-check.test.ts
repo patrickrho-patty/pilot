@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { databaseCheck } from "../checks/database-check.js";
-import type { PaperclipConfig } from "../config/schema.js";
+import type { PilotConfig } from "../config/schema.js";
 
 const created: string[] = [];
 const ORIGINAL_IN_WORKTREE = process.env.PAPERCLIP_IN_WORKTREE;
@@ -14,14 +14,14 @@ function makeBase(): string {
   return base;
 }
 
-function embeddedConfig(dataDir: string): PaperclipConfig {
+function embeddedConfig(dataDir: string): PilotConfig {
   return {
     database: {
       mode: "embedded-postgres",
       embeddedPostgresDataDir: dataDir,
       embeddedPostgresPort: 54321,
     },
-  } as unknown as PaperclipConfig;
+  } as unknown as PilotConfig;
 }
 
 afterEach(() => {

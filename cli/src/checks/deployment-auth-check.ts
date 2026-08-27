@@ -1,8 +1,8 @@
 import { inferBindModeFromHost } from "@paperclipai/shared";
-import type { PaperclipConfig } from "../config/schema.js";
+import type { PilotConfig } from "../config/schema.js";
 import type { CheckResult } from "./index.js";
 
-export function deploymentAuthCheck(config: PaperclipConfig): CheckResult {
+export function deploymentAuthCheck(config: PilotConfig): CheckResult {
   const mode = config.server.deploymentMode;
   const exposure = config.server.exposure;
   const auth = config.auth;

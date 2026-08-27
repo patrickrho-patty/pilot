@@ -7,7 +7,7 @@ import type { AdapterExecutionContext, AdapterRuntimeMcpAccess } from "@papercli
 import {
   DEFAULT_REMOTE_SANDBOX_ADAPTER_TIMEOUT_SEC,
   prepareAdapterExecutionTargetRuntime,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
   startAdapterExecutionTargetProcessSessionBridge,
 } from "@paperclipai/adapter-utils/execution-target";
 
@@ -21,7 +21,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", async (importActual) => {
   return {
     ...actual,
     prepareAdapterExecutionTargetRuntime: vi.fn(actual.prepareAdapterExecutionTargetRuntime),
-    startAdapterExecutionTargetPaperclipBridge: vi.fn(actual.startAdapterExecutionTargetPaperclipBridge),
+    startAdapterExecutionTargetPilotBridge: vi.fn(actual.startAdapterExecutionTargetPilotBridge),
     startAdapterExecutionTargetProcessSessionBridge: vi.fn(actual.startAdapterExecutionTargetProcessSessionBridge),
   };
 });
@@ -1203,12 +1203,12 @@ describe("shared ACPX engine runtime behavior", () => {
   it.skipIf(process.platform === "win32")("replaces stale managed Codex auth files with source symlinks", async () => {
     const root = await makeTempRoot();
     const sourceCodexHome = path.join(root, "source-codex-home");
-    const paperclipHome = path.join(root, "paperclip-home");
-    const paperclipInstanceId = "test-instance";
+    const pilotHome = path.join(root, "paperclip-home");
+    const pilotInstanceId = "test-instance";
     const managedCodexHome = path.join(
-      paperclipHome,
+      pilotHome,
       "instances",
-      paperclipInstanceId,
+      pilotInstanceId,
       "companies",
       "company-1",
       "codex-home",
@@ -1221,12 +1221,12 @@ describe("shared ACPX engine runtime behavior", () => {
     await fs.writeFile(managedAuth, "{\"stale\":true}", "utf8");
 
     const previousCodexHome = process.env.CODEX_HOME;
-    const previousPaperclipHome = process.env.PAPERCLIP_HOME;
-    const previousPaperclipInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
+    const previousPilotHome = process.env.PAPERCLIP_HOME;
+    const previousPilotInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
     try {
       process.env.CODEX_HOME = sourceCodexHome;
-      process.env.PAPERCLIP_HOME = paperclipHome;
-      process.env.PAPERCLIP_INSTANCE_ID = paperclipInstanceId;
+      process.env.PAPERCLIP_HOME = pilotHome;
+      process.env.PAPERCLIP_INSTANCE_ID = pilotInstanceId;
       await runExecutor({
         agent: "codex",
         stateDir: path.join(root, "state"),
@@ -1236,10 +1236,10 @@ describe("shared ACPX engine runtime behavior", () => {
     } finally {
       if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
       else process.env.CODEX_HOME = previousCodexHome;
-      if (previousPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
-      else process.env.PAPERCLIP_HOME = previousPaperclipHome;
-      if (previousPaperclipInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-      else process.env.PAPERCLIP_INSTANCE_ID = previousPaperclipInstanceId;
+      if (previousPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
+      else process.env.PAPERCLIP_HOME = previousPilotHome;
+      if (previousPilotInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
+      else process.env.PAPERCLIP_INSTANCE_ID = previousPilotInstanceId;
     }
 
     const authStat = await fs.lstat(managedAuth);
@@ -2553,12 +2553,12 @@ describe("ACPX engine remote sandbox staging seam (PR 1: workspace + cwd)", () =
     expect(stageArgs.installCommand ?? null).toBeNull();
 
     // Both bridges receive the real (non-null) runtimeRootDir from staging.
-    const paperclipArgs = vi.mocked(startAdapterExecutionTargetPaperclipBridge).mock.calls[0]![0];
+    const pilotArgs = vi.mocked(startAdapterExecutionTargetPilotBridge).mock.calls[0]![0];
     const processArgs = vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mock.calls[0]![0];
-    expect(paperclipArgs.runtimeRootDir).toBeTruthy();
+    expect(pilotArgs.runtimeRootDir).toBeTruthy();
     expect(processArgs.runtimeRootDir).toBeTruthy();
-    expect(String(paperclipArgs.runtimeRootDir)).toContain(".paperclip-runtime");
-    expect(processArgs.runtimeRootDir).toBe(paperclipArgs.runtimeRootDir);
+    expect(String(pilotArgs.runtimeRootDir)).toContain(".paperclip-runtime");
+    expect(processArgs.runtimeRootDir).toBe(pilotArgs.runtimeRootDir);
 
     // The workspace really landed in the sandbox workspace dir.
     await expect(fs.readFile(path.join(remoteCwd, "hello.txt"), "utf8")).resolves.toBe("hi");
@@ -2689,7 +2689,7 @@ describe("ACPX engine remote sandbox staging seam (PR 1: workspace + cwd)", () =
     // with it — still resolves a live handle. The abandon path must stop that
     // handle so no started bridge leaks on partial failure.
     const stop = vi.fn(async () => {});
-    vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementationOnce(async () => {
+    vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementationOnce(async () => {
       throw new Error("paperclip bridge boom");
     });
     vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementationOnce(
@@ -2789,7 +2789,7 @@ describe("ACPX engine remote sandbox staging seam (PR 1: workspace + cwd)", () =
     // A local (non-remote) run never crosses the staging seam or starts a
     // bridge, and session/new stays on the HOST cwd — byte-identical to today.
     expect(vi.mocked(prepareAdapterExecutionTargetRuntime)).not.toHaveBeenCalled();
-    expect(vi.mocked(startAdapterExecutionTargetPaperclipBridge)).not.toHaveBeenCalled();
+    expect(vi.mocked(startAdapterExecutionTargetPilotBridge)).not.toHaveBeenCalled();
     expect(vi.mocked(startAdapterExecutionTargetProcessSessionBridge)).not.toHaveBeenCalled();
     expect(sessionInputs[0]?.cwd).toBe(localCwd);
     expect(runtimeOptions[0]?.cwd).toBe(localCwd);
@@ -3509,7 +3509,7 @@ describe("ACPX engine remote session-lifecycle re-staging (PR 3: stage once / re
 
     // Run B resumes the same session and borrows the cached staged runtime, but a
     // bridge fails during bring-up.
-    vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementationOnce(async () => {
+    vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementationOnce(async () => {
       throw new Error("paperclip bridge boom");
     });
     await expect(
@@ -4245,15 +4245,15 @@ describe("ACPX engine sandbox-start spans (opt-in root + child parenting)", () =
 
     const rootSpan = spans.find((span) => span.name === "sandbox.startup");
     expect(rootSpan).toBeTruthy();
-    const paperclip = spans.find((span) => span.name === "bridge.paperclip");
+    const pilot = spans.find((span) => span.name === "bridge.paperclip");
     const processSession = spans.find((span) => span.name === "bridge.process-session");
-    expect(paperclip?.parent).toBe(rootSpan);
+    expect(pilot?.parent).toBe(rootSpan);
     expect(processSession?.parent).toBe(rootSpan);
     // Both bridge spans carry the same batch tag, so the trace marks them as one
     // parallel batch.
-    expect(paperclip?.attributes[A.batch]).toBe("bridge");
+    expect(pilot?.attributes[A.batch]).toBe("bridge");
     expect(processSession?.attributes[A.batch]).toBe("bridge");
-    expect(paperclip?.attributes[A.batch]).toBe(processSession?.attributes[A.batch]);
+    expect(pilot?.attributes[A.batch]).toBe(processSession?.attributes[A.batch]);
   });
 
   it("records the handshake create-runtime and ensure-session sub-times on the acp.handshake span", async () => {
@@ -4998,10 +4998,10 @@ describe("ACPX engine run lifecycle corrections (F1: settle every failure after 
 
   it("test_runtime_create_failure_stops_bridges_and_releases_staging_lease", async () => {
     const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
-    const paperclipStop = vi.fn(async () => {});
+    const pilotStop = vi.fn(async () => {});
     const processStop = vi.fn(async () => {});
-    vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementationOnce(
-      async () => ({ env: {}, stop: paperclipStop }) as never,
+    vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementationOnce(
+      async () => ({ env: {}, stop: pilotStop }) as never,
     );
     vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementationOnce(
       async () => ({ agentCommand: null, stop: processStop }) as never,
@@ -5032,7 +5032,7 @@ describe("ACPX engine run lifecycle corrections (F1: settle every failure after 
     expect(result.exitCode).toBe(1);
     expect(result.resultJson?.phase).toBe("create_runtime");
     // Both live bridges stop exactly once.
-    expect(paperclipStop).toHaveBeenCalledTimes(1);
+    expect(pilotStop).toHaveBeenCalledTimes(1);
     expect(processStop).toHaveBeenCalledTimes(1);
     // The per-session staging lease released, so the lock map does not strand the
     // next same-session run.
@@ -5382,11 +5382,11 @@ describe("ACPX engine run lifecycle corrections (F3: one teardown error policy)"
   // Stub both sandbox bridges with stop spies collected per start, so a test can
   // assert the bridges stopped without running the real bridge transport.
   function stubBridges() {
-    const paperclipStops: Array<ReturnType<typeof vi.fn>> = [];
+    const pilotStops: Array<ReturnType<typeof vi.fn>> = [];
     const processStops: Array<ReturnType<typeof vi.fn>> = [];
-    vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementation(async () => {
+    vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementation(async () => {
       const stop = vi.fn(async () => {});
-      paperclipStops.push(stop);
+      pilotStops.push(stop);
       return { env: {}, stop } as never;
     });
     vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementation(async () => {
@@ -5398,7 +5398,7 @@ describe("ACPX engine run lifecycle corrections (F3: one teardown error policy)"
       stops.some((stop) => stop.mock.calls.length > 0);
     const stoppedCount = (stops: Array<ReturnType<typeof vi.fn>>) =>
       stops.filter((stop) => stop.mock.calls.length > 0).length;
-    return { paperclipStops, processStops, anyStopped, stoppedCount };
+    return { paperclipStops: pilotStops, processStops, anyStopped, stoppedCount };
   }
 
   function throwingHandoffContext(): Record<string, unknown> {
@@ -5452,7 +5452,7 @@ describe("ACPX engine run lifecycle corrections (F3: one teardown error policy)"
 
   it("test_teardown_continues_after_one_teardown_step_fails", async () => {
     const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
-    const { paperclipStops, processStops, anyStopped } = stubBridges();
+    const { paperclipStops: pilotStops, processStops, anyStopped } = stubBridges();
     const stagingLocks = new Map<string, Promise<unknown>>();
     const logs: Array<{ stream: string; text: string }> = [];
     const execute = createAcpxEngineExecutor({
@@ -5481,7 +5481,7 @@ describe("ACPX engine run lifecycle corrections (F3: one teardown error policy)"
 
     expect(result.exitCode).toBe(1);
     // The close failure did not stop the bridge stops or the lease release.
-    expect(anyStopped(paperclipStops)).toBe(true);
+    expect(anyStopped(pilotStops)).toBe(true);
     expect(anyStopped(processStops)).toBe(true);
     expect(stagingLocks.size).toBe(0);
     // The close failure was recorded, not silently dropped.
@@ -5571,7 +5571,7 @@ describe("ACPX engine run lifecycle corrections (F3: one teardown error policy)"
 
   it("test_result_emission_failure_does_not_skip_teardown", async () => {
     const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
-    const { paperclipStops, processStops, anyStopped } = stubBridges();
+    const { paperclipStops: pilotStops, processStops, anyStopped } = stubBridges();
     const stagingLocks = new Map<string, Promise<unknown>>();
     const execute = createAcpxEngineExecutor({
       stagingLocks,
@@ -5595,14 +5595,14 @@ describe("ACPX engine run lifecycle corrections (F3: one teardown error policy)"
       }),
     } as never).catch(() => {});
 
-    expect(anyStopped(paperclipStops)).toBe(true);
+    expect(anyStopped(pilotStops)).toBe(true);
     expect(anyStopped(processStops)).toBe(true);
     expect(stagingLocks.size).toBe(0);
   });
 
   it("test_result_mapping_throw_after_close_does_not_rerun_teardown", async () => {
     const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
-    const { paperclipStops, processStops, stoppedCount } = stubBridges();
+    const { paperclipStops: pilotStops, processStops, stoppedCount } = stubBridges();
     let closeCount = 0;
     const execute = createAcpxEngineExecutor({
       warmHandles: new Map(),
@@ -5638,7 +5638,7 @@ describe("ACPX engine run lifecycle corrections (F3: one teardown error policy)"
     // The completed turn closed the runtime once; the mapping throw did not re-run
     // the teardown through the turn catch.
     expect(closeCount).toBe(1);
-    expect(stoppedCount(paperclipStops)).toBe(1);
+    expect(stoppedCount(pilotStops)).toBe(1);
     expect(stoppedCount(processStops)).toBe(1);
   });
 

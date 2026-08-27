@@ -127,12 +127,12 @@ export type ManagedExperimentalFeatureKey = {
     : never;
 }[keyof InstanceExperimentalSettings];
 
-export const PAPERCLIP_CLOUD_MANAGED_BY = "paperclip-cloud" as const;
+export const PILOT_CLOUD_MANAGED_BY = "paperclip-cloud" as const;
 
 /** Per-key metadata attached to settings responses for cloud-overlaid keys. */
 export interface ManagedSettingMetadata {
   managed: true;
-  managedBy: typeof PAPERCLIP_CLOUD_MANAGED_BY;
+  managedBy: typeof PILOT_CLOUD_MANAGED_BY;
 }
 
 /**

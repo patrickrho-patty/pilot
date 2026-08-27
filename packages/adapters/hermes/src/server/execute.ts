@@ -29,15 +29,15 @@ import type {
 
 import {
   runChildProcess,
-  buildPaperclipEnv,
+  buildPilotEnv,
   renderTemplate,
   ensureAbsoluteDirectory,
-  DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+  DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
   joinPromptSections,
-  renderPaperclipWakePrompt,
-  selectPaperclipTaskMarkdown,
-  stringifyPaperclipWakePayload,
-  isPaperclipRecoveryWakePayload,
+  renderPilotWakePrompt,
+  selectPilotTaskMarkdown,
+  stringifyPilotWakePayload,
+  isPilotRecoveryWakePayload,
 } from "@paperclipai/adapter-utils/server-utils";
 
 import {
@@ -117,7 +117,7 @@ const HERMES_DEFAULT_PROMPT_TEMPLATE = [
   "    --data-binary @-",
   "```",
   "",
-  DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+  DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
 ].join("\n");
 
 function renderConditionalSections(template: string, vars: Record<string, unknown>): string {
@@ -151,26 +151,26 @@ export function buildPrompt(
   const projectName = cfgString(context.projectName) || cfgString(ctx.config?.projectName) || "";
 
   // Build API URL — ensure it has the /api path
-  let paperclipApiUrl =
+  let pilotApiUrl =
     cfgString(config.paperclipApiUrl) ||
     process.env.PAPERCLIP_API_URL ||
     "http://127.0.0.1:3100/api";
   // Ensure /api suffix
-  if (!paperclipApiUrl.endsWith("/api")) {
-    paperclipApiUrl = paperclipApiUrl.replace(/\/+$/, "") + "/api";
+  if (!pilotApiUrl.endsWith("/api")) {
+    pilotApiUrl = pilotApiUrl.replace(/\/+$/, "") + "/api";
   }
 
-  const paperclipTaskMarkdown = selectPaperclipTaskMarkdown(context, {
+  const pilotTaskMarkdown = selectPilotTaskMarkdown(context, {
     resumedSession: options.resumedSession === true,
   });
-  const wakePrompt = renderPaperclipWakePrompt(context.paperclipWake, {
+  const wakePrompt = renderPilotWakePrompt(context.paperclipWake, {
     resumedSession: options.resumedSession === true,
     // The task-context markdown is the authoritative brief on this lane; keep
     // the wake prompt's description copy out so the prompt carries it once.
-    suppressIssueDescription: paperclipTaskMarkdown.length > 0,
+    suppressIssueDescription: pilotTaskMarkdown.length > 0,
   });
   const sessionHandoffMarkdown = cfgString(context.paperclipSessionHandoffMarkdown)?.trim() || "";
-  const wakePayloadJson = stringifyPaperclipWakePayload(context.paperclipWake) || "";
+  const wakePayloadJson = stringifyPilotWakePayload(context.paperclipWake) || "";
 
   const vars: Record<string, unknown> = {
     agentId: ctx.agent?.id || "",
@@ -188,23 +188,23 @@ export function buildPrompt(
     commentId,
     wakeReason,
     projectName,
-    paperclipApiUrl,
+    paperclipApiUrl: pilotApiUrl,
     paperclipWakePrompt: wakePrompt,
-    paperclipTaskMarkdown,
-    taskContext: paperclipTaskMarkdown,
+    paperclipTaskMarkdown: pilotTaskMarkdown,
+    taskContext: pilotTaskMarkdown,
     paperclipWakeJson: wakePayloadJson,
     wakePayloadJson,
     paperclipApiKeyEnv: "PAPERCLIP_API_KEY",
     paperclipRunIdEnv: "PAPERCLIP_RUN_ID",
   };
 
-  const rendered = isPaperclipRecoveryWakePayload(context.paperclipWake)
+  const rendered = isPilotRecoveryWakePayload(context.paperclipWake)
     ? ""
     : renderTemplate(renderConditionalSections(template, vars), vars);
   return joinPromptSections([
     wakePrompt,
     sessionHandoffMarkdown,
-    paperclipTaskMarkdown,
+    pilotTaskMarkdown,
     rendered,
   ]);
 }
@@ -466,7 +466,7 @@ export async function execute(
   const env: Record<string, string> = {
     ...(process.env as Record<string, string>),
     ...(userEnv && typeof userEnv === "object" ? userEnv : {}),
-    ...buildPaperclipEnv(ctx.agent),
+    ...buildPilotEnv(ctx.agent),
   };
 
   if (ctx.runId) env.PAPERCLIP_RUN_ID = ctx.runId;
@@ -484,7 +484,7 @@ export async function execute(
   if (envWakeReason) env.PAPERCLIP_WAKE_REASON = envWakeReason;
   const envCommentId = cfgString(ctxContext.commentId) || cfgString(ctxContext.wakeCommentId) || cfgString(ctx.config?.commentId);
   if (envCommentId) env.PAPERCLIP_WAKE_COMMENT_ID = envCommentId;
-  const wakePayloadJson = stringifyPaperclipWakePayload(ctxContext.paperclipWake);
+  const wakePayloadJson = stringifyPilotWakePayload(ctxContext.paperclipWake);
   if (wakePayloadJson) env.PAPERCLIP_WAKE_PAYLOAD_JSON = wakePayloadJson;
 
   // ── Resolve working directory ──────────────────────────────────────────

@@ -7,32 +7,32 @@ import {
   type PluginManagedRoutineResolution,
 } from "@paperclipai/plugin-sdk";
 import {
-  PAPERCLIP_DISTILL_SKILL_KEY,
+  PILOT_DISTILL_SKILL_KEY,
   WIKI_MAINTENANCE_ROUTINE_KEYS,
   WIKI_ROOT_FOLDER_KEY,
 } from "./manifest.js";
 import {
   bootstrapWikiRoot,
   bootstrapSpace,
-  assemblePaperclipSourceBundle,
+  assemblePilotSourceBundle,
   archiveSpace,
   captureWikiSource,
   createSpace,
-  createPaperclipDistillationRun,
-  createPaperclipDistillationWorkItem,
+  createPilotDistillationRun,
+  createPilotDistillationWorkItem,
   createOperationIssue,
-  distillPaperclipProjectPage,
+  distillPilotProjectPage,
   enableActiveProjectDistillation,
   fileQueryAnswerAsPage,
   getDistillationOverview,
   getDistillationPageProvenance,
   getDistillationAutoApplyRestriction,
   getEventIngestionSettings,
-  listPaperclipIngestionCandidates,
-  getPaperclipIngestionProfile,
+  listPilotIngestionCandidates,
+  getPilotIngestionProfile,
   getOverview,
   listSpaces,
-  handlePaperclipEventIngestion,
+  handlePilotEventIngestion,
   listWikiAgentOptions,
   listWikiProjectOptions,
   listOperations,
@@ -41,7 +41,7 @@ import {
   readCompanyIdFromParams,
   readTemplate,
   readWikiPage,
-  recordPaperclipDistillationOutcome,
+  recordPilotDistillationOutcome,
   reconcileWikiAgentResource,
   reconcileWikiProjectResource,
   reconcileWikiRoutineResources,
@@ -55,7 +55,7 @@ import {
   startWikiQuerySession,
   spaceFolderStatus,
   updateEventIngestionSettings,
-  updatePaperclipIngestionProfile,
+  updatePilotIngestionProfile,
   updateSpace,
   writeTemplate,
   writeWikiPage,
@@ -86,7 +86,7 @@ function routineOverridesFromParams(params: Record<string, unknown>) {
 }
 
 let activeContext: PluginContext | null = null;
-const PAPERCLIP_EVENT_INGESTION_EVENTS = [
+const PILOT_EVENT_INGESTION_EVENTS = [
   "issue.created",
   "issue.updated",
   "issue.comment.created",
@@ -127,7 +127,7 @@ function buildManualDistillPrompt(input: { companyId: string; projectId?: string
     "Manual LLM Wiki distillation requested outside recurring cadence.",
     "",
     "Prompt source: LLM Wiki plugin action `distill-paperclip-now` (`packages/plugins/plugin-llm-wiki/src/worker.ts`).",
-    `Required skill: use the installed \`${PAPERCLIP_DISTILL_SKILL_KEY}\` skill before changing wiki files.`,
+    `Required skill: use the installed \`${PILOT_DISTILL_SKILL_KEY}\` skill before changing wiki files.`,
     "",
     "Scope:",
     `- Company ID: ${input.companyId}`,
@@ -188,9 +188,9 @@ const plugin = definePlugin({
     activeContext = ctx;
     await registerWikiTools(ctx);
 
-    for (const eventName of PAPERCLIP_EVENT_INGESTION_EVENTS) {
+    for (const eventName of PILOT_EVENT_INGESTION_EVENTS) {
       ctx.events.on(eventName, async (event) => {
-        const result = await handlePaperclipEventIngestion(ctx, event);
+        const result = await handlePilotEventIngestion(ctx, event);
         if (result.status === "recorded") {
           ctx.logger.info("LLM Wiki recorded Paperclip event for cursor discovery", {
             eventType: event.eventType,
@@ -372,7 +372,7 @@ const plugin = definePlugin({
     });
 
     ctx.data.register("paperclip-ingestion-profile", async (params) => {
-      return getPaperclipIngestionProfile(ctx, {
+      return getPilotIngestionProfile(ctx, {
         companyId: readCompanyIdFromParams(params),
         wikiId: stringField(params.wikiId),
         spaceSlug: stringField(params.spaceSlug),
@@ -380,7 +380,7 @@ const plugin = definePlugin({
     });
 
     ctx.data.register("paperclip-ingestion-candidates", async (params) => {
-      return listPaperclipIngestionCandidates(ctx, {
+      return listPilotIngestionCandidates(ctx, {
         companyId: readCompanyIdFromParams(params),
         wikiId: stringField(params.wikiId),
         spaceSlug: stringField(params.spaceSlug),
@@ -389,7 +389,7 @@ const plugin = definePlugin({
     });
 
     ctx.actions.register("update-paperclip-ingestion-profile", async (params) => {
-      return updatePaperclipIngestionProfile(ctx, {
+      return updatePilotIngestionProfile(ctx, {
         companyId: readCompanyIdFromParams(params),
         wikiId: stringField(params.wikiId),
         spaceSlug: stringField(params.spaceSlug),
@@ -427,7 +427,7 @@ const plugin = definePlugin({
       const queued: Array<{ workItemId: string; issueId: string; projectId: string | null; rootIssueId: string | null }> = [];
       for (const scope of scopes) {
         const idempotencyScope = scope.rootIssueId ? `root:${scope.rootIssueId}` : `project:${scope.projectId}`;
-        const workItem = await createPaperclipDistillationWorkItem(ctx, {
+        const workItem = await createPilotDistillationWorkItem(ctx, {
           companyId,
           wikiId,
           spaceSlug,
@@ -511,7 +511,7 @@ const plugin = definePlugin({
     });
 
     ctx.actions.register("assemble-paperclip-source-bundle", async (params) => {
-      return assemblePaperclipSourceBundle(ctx, {
+      return assemblePilotSourceBundle(ctx, {
         companyId: readCompanyIdFromParams(params),
         wikiId: stringField(params.wikiId),
         spaceSlug: stringField(params.spaceSlug),
@@ -528,7 +528,7 @@ const plugin = definePlugin({
     });
 
     ctx.actions.register("create-paperclip-distillation-run", async (params) => {
-      return createPaperclipDistillationRun(ctx, {
+      return createPilotDistillationRun(ctx, {
         companyId: readCompanyIdFromParams(params),
         wikiId: stringField(params.wikiId),
         spaceSlug: stringField(params.spaceSlug),
@@ -553,7 +553,7 @@ const plugin = definePlugin({
       }
       const runId = stringField(params.runId);
       if (!runId) throw new Error("runId is required");
-      return recordPaperclipDistillationOutcome(ctx, {
+      return recordPilotDistillationOutcome(ctx, {
         companyId: readCompanyIdFromParams(params),
         wikiId: stringField(params.wikiId),
         spaceSlug: stringField(params.spaceSlug),
@@ -569,7 +569,7 @@ const plugin = definePlugin({
     });
 
     ctx.actions.register("distill-paperclip-project-page", async (params) => {
-      return distillPaperclipProjectPage(ctx, {
+      return distillPilotProjectPage(ctx, {
         companyId: readCompanyIdFromParams(params),
         wikiId: stringField(params.wikiId),
         spaceSlug: stringField(params.spaceSlug),
@@ -596,7 +596,7 @@ const plugin = definePlugin({
       const projectId = stringField(params.projectId);
       const rootIssueId = stringField(params.rootIssueId);
       const idempotencyScope = rootIssueId ? `root:${rootIssueId}` : projectId ? `project:${projectId}` : "company";
-      const workItem = await createPaperclipDistillationWorkItem(ctx, {
+      const workItem = await createPilotDistillationWorkItem(ctx, {
         companyId,
         wikiId: stringField(params.wikiId),
         spaceSlug,
@@ -642,7 +642,7 @@ const plugin = definePlugin({
       const backfillStartAt = stringField(params.backfillStartAt);
       const backfillEndAt = stringField(params.backfillEndAt);
       const idempotencyScope = rootIssueId ? `root:${rootIssueId}` : `project:${projectId}`;
-      const workItem = await createPaperclipDistillationWorkItem(ctx, {
+      const workItem = await createPilotDistillationWorkItem(ctx, {
         companyId,
         wikiId: stringField(params.wikiId),
         spaceSlug,
@@ -670,7 +670,7 @@ const plugin = definePlugin({
           "Do not process whole-company history; stay within the selected project/root issue and date window.",
         ].filter(Boolean).join("\n"),
       });
-      const result = await distillPaperclipProjectPage(ctx, {
+      const result = await distillPilotProjectPage(ctx, {
         companyId,
         wikiId: stringField(params.wikiId),
         spaceSlug,
@@ -707,7 +707,7 @@ const plugin = definePlugin({
       if (priority && priority !== "critical" && priority !== "high" && priority !== "medium" && priority !== "low") {
         throw new Error("priority must be critical, high, medium, or low");
       }
-      return createPaperclipDistillationWorkItem(ctx, {
+      return createPilotDistillationWorkItem(ctx, {
         companyId: readCompanyIdFromParams(params),
         wikiId: stringField(params.wikiId),
         spaceSlug: stringField(params.spaceSlug),

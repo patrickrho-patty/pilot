@@ -96,7 +96,7 @@ export {
 // Plugin definition and lifecycle types
 export type {
   PluginDefinition,
-  PaperclipPlugin,
+  PilotPlugin,
   PluginHealthDiagnostics,
   PluginConfigChangeContext,
   PluginConfigValidationResult,
@@ -327,7 +327,7 @@ export type {
 // Plugin authors import manifest types from here so they have a single
 // dependency (@paperclipai/plugin-sdk) for all plugin authoring needs.
 export type {
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   PluginJobDeclaration,
   PluginWebhookDeclaration,
   PluginToolDeclaration,

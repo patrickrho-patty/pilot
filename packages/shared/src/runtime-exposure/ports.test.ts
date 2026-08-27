@@ -8,7 +8,7 @@ import {
   buildRuntimeExposureHealthUrl,
   buildRuntimeExposureUrl,
   deriveViteHmrPort,
-  derivePaperclipViteHmrPort,
+  derivePilotViteHmrPort,
   isAllowedRuntimeExposurePort,
   isRuntimeExposureAppPort,
   isRuntimeExposureHmrPort,
@@ -51,10 +51,10 @@ describe("runtime exposure port policy", () => {
   });
 
   it("shares the generic Paperclip HMR derivation with high-port overflow fallback", () => {
-    expect(derivePaperclipViteHmrPort(3_100)).toBe(13_100);
-    expect(derivePaperclipViteHmrPort(55_535)).toBe(65_535);
-    expect(derivePaperclipViteHmrPort(55_536)).toBe(45_536);
-    expect(() => derivePaperclipViteHmrPort(0)).toThrow(/valid TCP port/);
+    expect(derivePilotViteHmrPort(3_100)).toBe(13_100);
+    expect(derivePilotViteHmrPort(55_535)).toBe(65_535);
+    expect(derivePilotViteHmrPort(55_536)).toBe(45_536);
+    expect(() => derivePilotViteHmrPort(0)).toThrow(/valid TCP port/);
   });
 
   it("builds https URLs on the non-standard port", () => {

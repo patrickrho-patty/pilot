@@ -15,7 +15,7 @@ import {
   type AdapterExecutionTarget,
   type AdapterExecutionTargetShellOptions,
 } from "@paperclipai/adapter-utils/execution-target";
-import { resolvePaperclipInstanceRootForAdapter } from "@paperclipai/adapter-utils/server-utils";
+import { resolvePilotInstanceRootForAdapter } from "@paperclipai/adapter-utils/server-utils";
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
 import { classifyThrownErrorClass, logSandboxProbeDiagnostic } from "./probe-diagnostics.js";
 
@@ -131,7 +131,7 @@ export function resolveManagedClaudeConfigSeedDir(
   env: NodeJS.ProcessEnv,
   companyId?: string,
 ): string {
-  const instanceRoot = resolvePaperclipInstanceRootForAdapter({
+  const instanceRoot = resolvePilotInstanceRootForAdapter({
     homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
     instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
     env,
@@ -146,7 +146,7 @@ export function resolveManagedClaudeRuntimeStateDir(
   companyId: string,
   agentId: string,
 ): string {
-  const instanceRoot = resolvePaperclipInstanceRootForAdapter({
+  const instanceRoot = resolvePilotInstanceRootForAdapter({
     homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
     instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
     env,
@@ -154,7 +154,7 @@ export function resolveManagedClaudeRuntimeStateDir(
   return path.join(instanceRoot, "companies", companyId, "agents", agentId, "claude-runtime");
 }
 
-export async function writePaperclipClaudeMcpConfig(input: {
+export async function writePilotClaudeMcpConfig(input: {
   stateDir: string;
   runId: string;
   servers: AdapterRuntimeMcpServer[];

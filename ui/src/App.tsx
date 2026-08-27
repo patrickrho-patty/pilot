@@ -15,7 +15,7 @@ import { Cases } from "./pages/Cases";
 import { CaseDetail } from "./pages/CaseDetail";
 import { OnboardingWizardVariant } from "./components/OnboardingWizardVariant";
 import { CloudAccessGate } from "./components/CloudAccessGate";
-import { PaperclipLoading } from "./components/AnimatedPaperclipIcon";
+import { PilotLoading } from "./components/AnimatedPaperclipIcon";
 import { Dashboard } from "./pages/Dashboard";
 import { DashboardLive } from "./pages/DashboardLive";
 import { Timeline } from "./pages/Timeline";
@@ -121,7 +121,7 @@ function boardRoutes() {
       <Route
         path="company/export/*"
         element={(
-          <Suspense fallback={<PaperclipLoading />}>
+          <Suspense fallback={<PilotLoading />}>
             <CompanyExport />
           </Suspense>
         )}
@@ -368,7 +368,7 @@ function LegacySettingsRedirect() {
   const { hidden: hiddenSettings } = useHiddenSettings();
 
   if (loading) {
-    return <PaperclipLoading />;
+    return <PilotLoading />;
   }
 
   const targetCompany =
@@ -487,7 +487,7 @@ function CompanyRootRedirect() {
   const location = useLocation();
 
   if (loading) {
-    return <PaperclipLoading />;
+    return <PilotLoading />;
   }
 
   const targetCompany = selectedCompany ?? companies[0] ?? null;
@@ -518,7 +518,7 @@ function UnprefixedBoardRedirect() {
   const { companies, selectedCompany, loading } = useCompany();
 
   if (loading) {
-    return <PaperclipLoading />;
+    return <PilotLoading />;
   }
 
   const targetCompany = selectedCompany ?? companies[0] ?? null;

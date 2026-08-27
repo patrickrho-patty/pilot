@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readConfigFile } from "../config-file.js";
 
-const ORIGINAL_PAPERCLIP_CONFIG = process.env.PAPERCLIP_CONFIG;
+const ORIGINAL_PILOT_CONFIG = process.env.PAPERCLIP_CONFIG;
 
 function writeConfig(configPath: string, value: unknown): void {
   fs.writeFileSync(configPath, `${JSON.stringify(value, null, 2)}\n`);
@@ -43,10 +43,10 @@ describe("readConfigFile", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    if (ORIGINAL_PAPERCLIP_CONFIG === undefined) {
+    if (ORIGINAL_PILOT_CONFIG === undefined) {
       delete process.env.PAPERCLIP_CONFIG;
     } else {
-      process.env.PAPERCLIP_CONFIG = ORIGINAL_PAPERCLIP_CONFIG;
+      process.env.PAPERCLIP_CONFIG = ORIGINAL_PILOT_CONFIG;
     }
 
     fs.rmSync(tempDir, { recursive: true, force: true });

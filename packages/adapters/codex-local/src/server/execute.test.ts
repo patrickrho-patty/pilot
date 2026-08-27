@@ -17,7 +17,7 @@ const {
   ensureCommandResolvable,
   resolveCommandForLogs,
   prepareAdapterExecutionTargetRuntime,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
 } = vi.hoisted(() => ({
   runChildProcess: vi.fn(async () => ({
     exitCode: 0,
@@ -31,7 +31,7 @@ const {
   ensureCommandResolvable: vi.fn(async () => undefined),
   resolveCommandForLogs: vi.fn(async () => "/usr/bin/codex"),
   prepareAdapterExecutionTargetRuntime: vi.fn(),
-  startAdapterExecutionTargetPaperclipBridge: vi.fn(async () => null),
+  startAdapterExecutionTargetPilotBridge: vi.fn(async () => null),
 }));
 
 vi.mock("@paperclipai/adapter-utils/server-utils", async () => {
@@ -53,7 +53,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", async () => {
   return {
     ...actual,
     prepareAdapterExecutionTargetRuntime,
-    startAdapterExecutionTargetPaperclipBridge,
+    startAdapterExecutionTargetPilotBridge,
   };
 });
 

@@ -162,7 +162,7 @@ function asTextFile(entry: CompanyPortabilityFileEntry | undefined) {
 }
 
 describe("company portability", () => {
-  const paperclipKey = "paperclipai/paperclip/paperclip";
+  const pilotKey = "paperclipai/paperclip/paperclip";
   const companyPlaybookKey = "company/company-1/company-playbook";
 
   beforeEach(() => {
@@ -213,7 +213,7 @@ describe("company portability", () => {
         adapterConfig: {
           promptTemplate: "You are ClaudeCoder.",
           paperclipSkillSync: {
-            desiredSkills: [paperclipKey],
+            desiredSkills: [pilotKey],
           },
           instructionsFilePath: "/tmp/ignored.md",
           cwd: "/tmp/ignored",
@@ -347,7 +347,7 @@ describe("company portability", () => {
       {
         id: "skill-1",
         companyId: "company-1",
-        key: paperclipKey,
+        key: pilotKey,
         slug: "paperclip",
         name: "paperclip",
         description: "Paperclip coordination skill",
@@ -525,7 +525,7 @@ describe("company portability", () => {
     expect(asTextFile(exported.files["COMPANY.md"])).toContain('schema: "agentcompanies/v1"');
     expect(asTextFile(exported.files["agents/claudecoder/AGENTS.md"])).toContain("You are ClaudeCoder.");
     expect(asTextFile(exported.files["agents/claudecoder/AGENTS.md"])).toContain("skills:");
-    expect(asTextFile(exported.files["agents/claudecoder/AGENTS.md"])).toContain(`- "${paperclipKey}"`);
+    expect(asTextFile(exported.files["agents/claudecoder/AGENTS.md"])).toContain(`- "${pilotKey}"`);
     expect(asTextFile(exported.files["agents/cmo/AGENTS.md"])).not.toContain("skills:");
     expect(asTextFile(exported.files["skills/paperclipai/paperclip/paperclip/SKILL.md"])).toContain("metadata:");
     expect(asTextFile(exported.files["skills/paperclipai/paperclip/paperclip/SKILL.md"])).toContain('kind: "github-dir"');
@@ -568,7 +568,7 @@ describe("company portability", () => {
     expect(companySkillSvc.listFull).not.toHaveBeenCalled();
     expect(Object.keys(exported.files).some((filePath) => filePath.startsWith("skills/"))).toBe(false);
     expect(exported.manifest.skills).toEqual([]);
-    expect(asTextFile(exported.files["agents/claudecoder/AGENTS.md"])).toContain(`- "${paperclipKey}"`);
+    expect(asTextFile(exported.files["agents/claudecoder/AGENTS.md"])).toContain(`- "${pilotKey}"`);
   });
 
   it("exports agent permission grants through the Paperclip extension and manifest", async () => {
@@ -3103,7 +3103,7 @@ describe("company portability", () => {
     companySkillSvc.importPackageFiles.mockResolvedValueOnce([{
       skill: {
         id: "skill-imported",
-        key: paperclipKey,
+        key: pilotKey,
         slug: "paperclip",
       },
       action: "renamed",
@@ -3151,7 +3151,7 @@ describe("company portability", () => {
     expect(result.skills).toEqual([{
       originalKey: "paperclip",
       originalSlug: "paperclip",
-      key: paperclipKey,
+      key: pilotKey,
       slug: "paperclip",
       id: "skill-imported",
       action: "renamed",
@@ -3160,7 +3160,7 @@ describe("company portability", () => {
     expect(agentSvc.create).toHaveBeenCalledWith("company-imported", expect.objectContaining({
       adapterConfig: expect.objectContaining({
         paperclipSkillSync: {
-          desiredSkills: [paperclipKey],
+          desiredSkills: [pilotKey],
         },
       }),
     }));

@@ -19,7 +19,7 @@ import {
   resolveCanonicalWorktreeSeedSource,
   type CanonicalWorktreeSeedSource,
 } from "@paperclipai/shared/worktree-seed-source";
-import { resolvePaperclipConfigPath } from "../paths.js";
+import { resolvePilotConfigPath } from "../paths.js";
 import { validate } from "../middleware/validate.js";
 import {
   accessService,
@@ -80,7 +80,7 @@ function isReadableFile(filePath: string) {
  * still rejected.
  */
 function resolveFallbackSeedSourceConfigPath(baseWorkspaceCwd: string): string | null {
-  return baseWorkspaceDeclaresInstanceConfig(baseWorkspaceCwd) ? null : resolvePaperclipConfigPath();
+  return baseWorkspaceDeclaresInstanceConfig(baseWorkspaceCwd) ? null : resolvePilotConfigPath();
 }
 
 export function executionWorkspaceRoutes(db: Db, opts: { pluginWorkerManager?: PluginWorkerManager } = {}) {

@@ -5,7 +5,7 @@ import {
 } from "@paperclipai/adapter-grok-local/server";
 
 describe("grok local skill sync", () => {
-  const paperclipKey = "paperclipai/paperclip/paperclip";
+  const pilotKey = "paperclipai/paperclip/paperclip";
 
   it("reports Grok skills as ephemeral workspace-mounted state", async () => {
     const snapshot = await listGrokSkills({
@@ -14,7 +14,7 @@ describe("grok local skill sync", () => {
       adapterType: "grok_local",
       config: {
         paperclipSkillSync: {
-          desiredSkills: [paperclipKey],
+          desiredSkills: [pilotKey],
         },
       },
     });
@@ -22,8 +22,8 @@ describe("grok local skill sync", () => {
     expect(snapshot.adapterType).toBe("grok_local");
     expect(snapshot.supported).toBe(true);
     expect(snapshot.mode).toBe("ephemeral");
-    expect(snapshot.desiredSkills).toContain(paperclipKey);
-    expect(snapshot.entries.find((entry) => entry.key === paperclipKey)).toMatchObject({
+    expect(snapshot.desiredSkills).toContain(pilotKey);
+    expect(snapshot.entries.find((entry) => entry.key === pilotKey)).toMatchObject({
       state: "configured",
       detail: "Will be copied into `.claude/skills` in the execution workspace on the next run.",
     });

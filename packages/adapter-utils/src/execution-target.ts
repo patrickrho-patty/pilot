@@ -205,7 +205,7 @@ export interface AdapterExecutionTargetShellOptions {
   onLog?: (stream: "stdout" | "stderr", chunk: string) => Promise<void>;
 }
 
-export interface AdapterExecutionTargetPaperclipBridgeHandle {
+export interface AdapterExecutionTargetPilotBridgeHandle {
   env: Record<string, string>;
   /**
    * Present when the sandbox target opted into run-log streaming
@@ -277,7 +277,7 @@ function resolveHostForUrl(rawHost: string): string {
   return host;
 }
 
-function resolveDefaultPaperclipApiUrl(): string {
+function resolveDefaultPilotApiUrl(): string {
   const runtimeHost = resolveHostForUrl(
     process.env.PAPERCLIP_LISTEN_HOST ?? process.env.HOST ?? "localhost",
   );
@@ -363,7 +363,7 @@ export function resolveAdapterExecutionTargetCwd(
   return adapterExecutionTargetRemoteCwd(target, localFallbackCwd);
 }
 
-export function adapterExecutionTargetUsesPaperclipBridge(
+export function adapterExecutionTargetUsesPilotBridge(
   target: AdapterExecutionTarget | null | undefined,
 ): boolean {
   return target?.kind === "remote";
@@ -2184,7 +2184,7 @@ child.on("close", (code, signal) => void writeEvent({ type: "exit", code, signal
 ${PROCESS_SESSION_STDIN_POLL_TAIL}`;
 }
 
-export async function startAdapterExecutionTargetPaperclipBridge(input: {
+export async function startAdapterExecutionTargetPilotBridge(input: {
   runId: string;
   target: AdapterExecutionTarget | null | undefined;
   runtimeRootDir: string | null | undefined;
@@ -2204,8 +2204,8 @@ export async function startAdapterExecutionTargetPaperclipBridge(input: {
   // request's execs group under one wrapper span. When it is absent, the request
   // work runs under the run parent with no wrapper span.
   runtimeSpan?: RuntimeSpanRunner;
-}): Promise<AdapterExecutionTargetPaperclipBridgeHandle | null> {
-  if (!adapterExecutionTargetUsesPaperclipBridge(input.target)) {
+}): Promise<AdapterExecutionTargetPilotBridgeHandle | null> {
+  if (!adapterExecutionTargetUsesPilotBridge(input.target)) {
     return null;
   }
   if (!input.target || input.target.kind !== "remote") {
@@ -2243,7 +2243,7 @@ export async function startAdapterExecutionTargetPaperclipBridge(input: {
   // to the loopback address of the same family (0.0.0.0 -> 127.0.0.1,
   // :: -> [::1]), so the fallback is always loopback-reachable.
   // input.hostApiUrl stays available as an explicit override seam.
-  const hostApiUrl = input.hostApiUrl?.trim() || resolveDefaultPaperclipApiUrl();
+  const hostApiUrl = input.hostApiUrl?.trim() || resolveDefaultPilotApiUrl();
   const shellCommand = adapterExecutionTargetShellCommand(target);
   const runner = adapterExecutionTargetCommandRunner(target);
   const bridgeTimeoutMs =

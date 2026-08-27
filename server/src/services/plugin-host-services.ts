@@ -701,7 +701,7 @@ export function buildHostServices(
   notifyWorker?: (method: string, params: unknown) => void,
   options: {
     pluginWorkerManager?: PluginWorkerManager;
-    manifest?: import("@paperclipai/shared").PaperclipPluginManifestV1;
+    manifest?: import("@paperclipai/shared").PilotPluginManifestV1;
     heartbeatRuntimeEnv?: Record<string, string | undefined>;
   } = {},
 ): HostServices & { dispose(): void } {

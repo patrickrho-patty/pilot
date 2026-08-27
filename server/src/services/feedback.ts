@@ -18,7 +18,7 @@ import {
   issueDocuments,
   issues,
 } from "@paperclipai/db";
-import { readPaperclipSkillSyncPreference } from "@paperclipai/adapter-utils/server-utils";
+import { readPilotSkillSyncPreference } from "@paperclipai/adapter-utils/server-utils";
 import { claudeConfigDir, parseClaudeStreamJson } from "@paperclipai/adapter-claude-local/server";
 import { codexHomeDir, parseCodexJsonl } from "@paperclipai/adapter-codex-local/server";
 import { parseOpenCodeJsonl } from "@paperclipai/adapter-opencode-local/server";
@@ -35,7 +35,7 @@ import {
   type FeedbackTraceTargetSummary,
   type FeedbackVoteValue,
 } from "@paperclipai/shared";
-import { resolveHomeAwarePath, resolvePaperclipInstanceRoot } from "../home-paths.js";
+import { resolveHomeAwarePath, resolvePilotInstanceRoot } from "../home-paths.js";
 import { notFound, unprocessable } from "../errors.js";
 import { agentInstructionsService } from "./agent-instructions.js";
 import {
@@ -391,7 +391,7 @@ async function buildCodexTraceFiles(input: {
   }
 
   const managedRoot = path.join(
-    resolvePaperclipInstanceRoot(),
+    resolvePilotInstanceRoot(),
     "companies",
     input.companyId,
     "codex-home",
@@ -1115,7 +1115,7 @@ async function buildAgentContext(
 
   const adapterConfig = asRecord(agent.adapterConfig) ?? {};
   const runtimeConfig = asRecord(agent.runtimeConfig) ?? {};
-  const desiredSkillRefs = uniqueNonEmpty(readPaperclipSkillSyncPreference(adapterConfig).desiredSkills).slice(0, MAX_SKILLS);
+  const desiredSkillRefs = uniqueNonEmpty(readPilotSkillSyncPreference(adapterConfig).desiredSkills).slice(0, MAX_SKILLS);
   const availableSkills = desiredSkillRefs.length === 0
     ? []
     : await db
@@ -1460,7 +1460,7 @@ async function buildFeedbackTraceBundleFromRow(
   const files: FeedbackTraceBundleFile[] = [];
   const sourceRunId = resolveSourceRunId(payloadSnapshot);
 
-  let paperclipRun: Record<string, unknown> | null = null;
+  let pilotRun: Record<string, unknown> | null = null;
   let rawAdapterTrace: Record<string, unknown> | null = null;
   let normalizedAdapterTrace: Record<string, unknown> | null = null;
   let adapterType: string | null = null;
@@ -1517,7 +1517,7 @@ async function buildFeedbackTraceBundleFromRow(
         .map((entry) => entry.chunk)
         .join("");
 
-      paperclipRun = sanitizeFeedbackValue(
+      pilotRun = sanitizeFeedbackValue(
         {
           id: run.id,
           companyId: run.companyId,
@@ -1555,7 +1555,7 @@ async function buildFeedbackTraceBundleFromRow(
         path: "paperclip/run.json",
         contentType: "application/json",
         source: "paperclip_run",
-        contents: `${JSON.stringify(paperclipRun, null, 2)}\n`,
+        contents: `${JSON.stringify(pilotRun, null, 2)}\n`,
       }));
 
       const sanitizedEvents = sanitizeFeedbackValue(
@@ -1677,7 +1677,7 @@ async function buildFeedbackTraceBundleFromRow(
     notes,
     envelope,
     surface,
-    paperclipRun,
+    paperclipRun: pilotRun,
     rawAdapterTrace,
     normalizedAdapterTrace,
     privacy,

@@ -49,7 +49,7 @@ function attachErrorContext(
   }
 }
 
-function getPaperclipDb(req: Request): Db | null {
+function getPilotDb(req: Request): Db | null {
   const locals = req.app?.locals as { paperclipDb?: Db; db?: Db } | undefined;
   return locals?.paperclipDb ?? locals?.db ?? null;
 }
@@ -59,7 +59,7 @@ function recordResponsibleUserDenialFromHttpError(
   details: Record<string, unknown> | null,
 ) {
   if (req.actor?.type !== "agent") return;
-  const db = getPaperclipDb(req);
+  const db = getPilotDb(req);
   if (!db) return;
 
   void recordResponsibleUserDenialOnActiveRun(db, {

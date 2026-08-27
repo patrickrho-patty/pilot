@@ -10,7 +10,7 @@
  */
 
 import type {
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   PluginStateScopeKind,
   PluginEventType,
   PluginToolDeclaration,
@@ -57,7 +57,7 @@ import type { PluginPerformActionContext } from "./protocol.js";
 // ---------------------------------------------------------------------------
 
 export type {
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   PluginJobDeclaration,
   PluginWebhookDeclaration,
   PluginToolDeclaration,
@@ -2100,7 +2100,7 @@ export interface PluginDuplexChannelClient {
  */
 export interface PluginContext {
   /** The plugin's manifest as validated at install time. */
-  manifest: PaperclipPluginManifestV1;
+  manifest: PilotPluginManifestV1;
 
   /** Read resolved operator configuration. */
   config: PluginConfigClient;

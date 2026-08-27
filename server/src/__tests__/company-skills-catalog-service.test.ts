@@ -81,7 +81,7 @@ describeEmbeddedPostgres("companySkillService.installFromCatalog", () => {
   let db!: ReturnType<typeof createDb>;
   let svc!: Awaited<ReturnType<typeof createService>>;
   let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>> | null = null;
-  let oldPaperclipHome: string | undefined;
+  let oldPilotHome: string | undefined;
   const cleanupDirs = new Set<string>();
 
   async function createService() {
@@ -101,7 +101,7 @@ describeEmbeddedPostgres("companySkillService.installFromCatalog", () => {
   }
 
   beforeAll(async () => {
-    oldPaperclipHome = process.env.PAPERCLIP_HOME;
+    oldPilotHome = process.env.PAPERCLIP_HOME;
     tempDb = await startEmbeddedPostgresTestDatabase("paperclip-company-skills-catalog-");
     db = createDb(tempDb.connectionString);
     svc = await createService();
@@ -140,8 +140,8 @@ describeEmbeddedPostgres("companySkillService.installFromCatalog", () => {
   });
 
   afterAll(async () => {
-    if (oldPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
-    else process.env.PAPERCLIP_HOME = oldPaperclipHome;
+    if (oldPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
+    else process.env.PAPERCLIP_HOME = oldPilotHome;
     await tempDb?.cleanup();
   });
 

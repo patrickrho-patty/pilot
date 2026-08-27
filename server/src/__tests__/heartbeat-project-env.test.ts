@@ -493,7 +493,7 @@ describe("resolveExecutionRunAdapterConfig codex_local credential pre-dispatch g
   async function stubManagedCodexEnv(options: { seedSharedAuth: boolean }) {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-codex-gate-"));
     cleanupDirs.push(root);
-    const paperclipHome = path.join(root, "paperclip-home");
+    const pilotHome = path.join(root, "paperclip-home");
     const sharedCodexHome = path.join(root, "shared-codex-home");
     await fs.mkdir(sharedCodexHome, { recursive: true });
     if (options.seedSharedAuth) {
@@ -503,11 +503,11 @@ describe("resolveExecutionRunAdapterConfig codex_local credential pre-dispatch g
         "utf8",
       );
     }
-    vi.stubEnv("PAPERCLIP_HOME", paperclipHome);
+    vi.stubEnv("PAPERCLIP_HOME", pilotHome);
     vi.stubEnv("PAPERCLIP_INSTANCE_ID", "default");
     vi.stubEnv("CODEX_HOME", sharedCodexHome);
     const managedAgentHome = path.join(
-      paperclipHome,
+      pilotHome,
       "instances",
       "default",
       "companies",

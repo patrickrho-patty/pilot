@@ -112,8 +112,8 @@ describe("claude_local ACP startup fallback", () => {
   });
 
   it("trusts the Paperclip API URL when network access is allowlisted", async () => {
-    const paperclipApiUrl = "http://127.0.0.1:4310";
-    vi.stubEnv("PAPERCLIP_API_URL", paperclipApiUrl);
+    const pilotApiUrl = "http://127.0.0.1:4310";
+    vi.stubEnv("PAPERCLIP_API_URL", pilotApiUrl);
     const ctx = buildContext({ networkScope: "allowlist" });
 
     await execute(ctx as never);
@@ -127,7 +127,7 @@ describe("claude_local ACP startup fallback", () => {
       expect.objectContaining({
         localProcessSandbox: expect.objectContaining({
           networkScope: "allowlist",
-          networkTrustedUrls: [paperclipApiUrl],
+          networkTrustedUrls: [pilotApiUrl],
         }),
       }),
     );

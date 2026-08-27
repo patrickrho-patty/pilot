@@ -4,9 +4,9 @@ import {
   asNumber,
   asStringArray,
   parseObject,
-  buildPaperclipEnv,
+  buildPilotEnv,
   isForbiddenConfigEnvKey,
-  isPaperclipRuntimeEnvKey,
+  isPilotRuntimeEnvKey,
   buildInvocationEnvForLogs,
   ensurePathInEnv,
   resolveCommandForLogs,
@@ -22,7 +22,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const cwd = asString(config.cwd, process.cwd());
   const envConfig = parseObject(config.env);
   const env: Record<string, string> = {
-    ...buildPaperclipEnv(agent),
+    ...buildPilotEnv(agent),
   };
   for (const [k, v] of Object.entries(envConfig)) {
     if (typeof v !== "string") continue;
@@ -30,7 +30,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     // never accepted from config — the harness-minted run token is the only
     // source. Other PAPERCLIP_* keys Paperclip did not assign flow through.
     if (isForbiddenConfigEnvKey(k)) continue;
-    if (isPaperclipRuntimeEnvKey(k) && k in env) continue;
+    if (isPilotRuntimeEnvKey(k) && k in env) continue;
     env[k] = v;
   }
   env.PAPERCLIP_RUN_ID = runId;

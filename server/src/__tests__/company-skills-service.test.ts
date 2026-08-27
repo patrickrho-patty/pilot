@@ -36,14 +36,14 @@ describeEmbeddedPostgres("companySkillService.list", () => {
   let db!: ReturnType<typeof createDb>;
   let svc!: ReturnType<typeof companySkillService>;
   let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>> | null = null;
-  let oldPaperclipHome: string | undefined;
-  let oldPaperclipInstanceId: string | undefined;
-  let paperclipHome: string | null = null;
+  let oldPilotHome: string | undefined;
+  let oldPilotInstanceId: string | undefined;
+  let pilotHome: string | null = null;
   const cleanupDirs = new Set<string>();
 
   async function createManagedSkillDir(companyId: string, prefix: string) {
-    if (!paperclipHome) throw new Error("Expected Paperclip test home");
-    const managedRoot = path.join(paperclipHome, "instances", "default", "skills", companyId);
+    if (!pilotHome) throw new Error("Expected Paperclip test home");
+    const managedRoot = path.join(pilotHome, "instances", "default", "skills", companyId);
     await fs.mkdir(managedRoot, { recursive: true });
     const skillDir = await fs.mkdtemp(path.join(managedRoot, prefix));
     cleanupDirs.add(skillDir);
@@ -52,10 +52,10 @@ describeEmbeddedPostgres("companySkillService.list", () => {
 
   beforeAll(async () => {
     tempDb = await startEmbeddedPostgresTestDatabase("paperclip-company-skills-service-");
-    oldPaperclipHome = process.env.PAPERCLIP_HOME;
-    oldPaperclipInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
-    paperclipHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-company-skills-home-"));
-    process.env.PAPERCLIP_HOME = paperclipHome;
+    oldPilotHome = process.env.PAPERCLIP_HOME;
+    oldPilotInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
+    pilotHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-company-skills-home-"));
+    process.env.PAPERCLIP_HOME = pilotHome;
     process.env.PAPERCLIP_INSTANCE_ID = "default";
     db = createDb(tempDb.connectionString);
     svc = companySkillService(db);
@@ -74,12 +74,12 @@ describeEmbeddedPostgres("companySkillService.list", () => {
   });
 
   afterAll(async () => {
-    if (oldPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
-    else process.env.PAPERCLIP_HOME = oldPaperclipHome;
-    if (oldPaperclipInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-    else process.env.PAPERCLIP_INSTANCE_ID = oldPaperclipInstanceId;
-    if (paperclipHome) {
-      await fs.rm(paperclipHome, { recursive: true, force: true });
+    if (oldPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
+    else process.env.PAPERCLIP_HOME = oldPilotHome;
+    if (oldPilotInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
+    else process.env.PAPERCLIP_INSTANCE_ID = oldPilotInstanceId;
+    if (pilotHome) {
+      await fs.rm(pilotHome, { recursive: true, force: true });
     }
     await tempDb?.cleanup();
   });
@@ -345,17 +345,17 @@ describeEmbeddedPostgres("companySkillService.list", () => {
 
     const initialList = await svc.list(companyId);
     await svc.list(companyId);
-    const paperclipSkill = initialList.find((skill) => skill.key === "paperclipai/paperclip/paperclip");
-    expect(paperclipSkill).toBeDefined();
-    if (!paperclipSkill) throw new Error("Expected bundled Paperclip skill");
+    const pilotSkill = initialList.find((skill) => skill.key === "paperclipai/paperclip/paperclip");
+    expect(pilotSkill).toBeDefined();
+    if (!pilotSkill) throw new Error("Expected bundled Paperclip skill");
 
-    const versions = await svc.listVersions(companyId, paperclipSkill.id);
+    const versions = await svc.listVersions(companyId, pilotSkill.id);
     expect(versions.map((version) => version.releaseId).sort()).toEqual(["v0", "v7-roster"]);
     expect(versions).toHaveLength(2);
     const storedSkill = await db
       .select({ currentVersionId: companySkills.currentVersionId })
       .from(companySkills)
-      .where(eq(companySkills.id, paperclipSkill.id))
+      .where(eq(companySkills.id, pilotSkill.id))
       .then((rows) => rows[0]);
     expect(storedSkill?.currentVersionId).toBeNull();
 
@@ -377,9 +377,9 @@ describeEmbeddedPostgres("companySkillService.list", () => {
     expect(championHashes).not.toHaveProperty("EDITS.md");
 
     const runtimeEntries = await svc.listRuntimeSkillEntries(companyId, {
-      versionSelections: new Map([[paperclipSkill.key, champion.id]]),
+      versionSelections: new Map([[pilotSkill.key, champion.id]]),
     });
-    const materialized = runtimeEntries.find((entry) => entry.key === paperclipSkill.key);
+    const materialized = runtimeEntries.find((entry) => entry.key === pilotSkill.key);
     expect(materialized).toMatchObject({ versionId: champion.id, sourceStatus: "available" });
     if (!materialized) throw new Error("Expected materialized release entry");
     const materializedHashes: Record<string, string> = {};

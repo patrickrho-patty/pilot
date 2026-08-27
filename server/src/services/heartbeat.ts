@@ -283,10 +283,10 @@ import {
   type SessionCompactionPolicy,
 } from "@paperclipai/adapter-utils";
 import {
-  readPaperclipSkillSyncPreference,
+  readPilotSkillSyncPreference,
   UNMANAGED_BACKGROUND_TASK_LIVENESS_REASON,
   UNMANAGED_BACKGROUND_TASK_STOP_REASON,
-  writePaperclipSkillSyncPreference,
+  writePilotSkillSyncPreference,
 } from "@paperclipai/adapter-utils/server-utils";
 import { extractSkillMentionIds, isUuidLike } from "@paperclipai/shared";
 import { evaluateCodexCredentialReadiness } from "@paperclipai/adapter-codex-local/server";
@@ -363,9 +363,9 @@ const LIVENESS_BOOKKEEPING_ACTIVITY_ACTIONS = [
 ];
 const DEFERRED_WAKE_CONTEXT_KEY = "_paperclipWakeContext";
 const WAKE_COMMENT_IDS_KEY = "wakeCommentIds";
-const PAPERCLIP_WAKE_PAYLOAD_KEY = "paperclipWake";
-const PAPERCLIP_AGENT_MESSAGE_KEY = "paperclipAgentMessage";
-const PAPERCLIP_HARNESS_CHECKOUT_KEY = "paperclipHarnessCheckedOut";
+const PILOT_WAKE_PAYLOAD_KEY = "paperclipWake";
+const PILOT_AGENT_MESSAGE_KEY = "paperclipAgentMessage";
+const PILOT_HARNESS_CHECKOUT_KEY = "paperclipHarnessCheckedOut";
 const DETACHED_PROCESS_ERROR_CODE = "process_detached";
 // The reaper sweeps at most this many pending_cleanup leases per tick.
 const PENDING_CLEANUP_SWEEP_PAGE_SIZE = 20;
@@ -1302,8 +1302,8 @@ export function applyRunScopedMentionedSkillKeys(
   );
   if (normalizedSkillKeys.length === 0) return config;
 
-  const existingPreference = readPaperclipSkillSyncPreference(config);
-  return writePaperclipSkillSyncPreference(config, [
+  const existingPreference = readPilotSkillSyncPreference(config);
+  return writePilotSkillSyncPreference(config, [
     ...existingPreference.desiredSkillEntries,
     ...normalizedSkillKeys,
   ]);
@@ -3330,7 +3330,7 @@ type ManagedMcpGatewayRunConfig = {
   }>;
 };
 
-function paperclipApiBaseUrl(): string {
+function pilotApiBaseUrl(): string {
   const configured = readNonEmptyString(process.env.PAPERCLIP_API_URL);
   if (!configured) {
     throw new Error("PAPERCLIP_API_URL is required to deliver managed runtime MCP servers");
@@ -3355,7 +3355,7 @@ export async function revokeHeartbeatRunGatewayTokens(input: {
     ));
 }
 
-export async function buildPaperclipRuntimeMcpServers(input: {
+export async function buildPilotRuntimeMcpServers(input: {
   db: Db;
   agent: Pick<typeof agents.$inferSelect, "id" | "companyId" | "name">;
   runId: string;
@@ -3470,7 +3470,7 @@ export async function buildPaperclipRuntimeMcpServers(input: {
     });
     servers.push({
       name: connection.name,
-      url: `${paperclipApiBaseUrl()}/api/tool-gateway/gateways/${gateway.id}/mcp`,
+      url: `${pilotApiBaseUrl()}/api/tool-gateway/gateways/${gateway.id}/mcp`,
       token: token.token,
       connectionId: connection.id,
     });
@@ -4356,7 +4356,7 @@ const SESSION_CONFIG_FINGERPRINT_KEY = "__paperclipConfigFingerprint";
 const SESSION_CONFIG_FINGERPRINT_VERSION_KEY = "__paperclipConfigFingerprintVersion";
 const SESSION_CONFIG_CATEGORIES_KEY = "__paperclipConfigCategories";
 const SESSION_CONFIG_CATEGORY_FINGERPRINTS_KEY = "__paperclipConfigCategoryFingerprints";
-const PAPERCLIP_SESSION_METADATA_KEYS = new Set([
+const PILOT_SESSION_METADATA_KEYS = new Set([
   SESSION_CONFIGURED_MODEL_KEY,
   SESSION_CONFIG_FINGERPRINT_KEY,
   SESSION_CONFIG_FINGERPRINT_VERSION_KEY,
@@ -5223,7 +5223,7 @@ function readConfiguredModelFromAdapterConfig(
   return readNonEmptyString(adapterConfig?.model);
 }
 
-function attachPaperclipSessionMetadataToSessionParams(
+function attachPilotSessionMetadataToSessionParams(
   sessionParams: Record<string, unknown> | null | undefined,
   configuredModel: string | null,
   configMetadata?: EffectiveRunSessionConfigMetadata | null,
@@ -5265,12 +5265,12 @@ export function stripConfiguredModelFromSessionParams(
   return next;
 }
 
-export function stripPaperclipSessionMetadataFromSessionParams(
+export function stripPilotSessionMetadataFromSessionParams(
   sessionParams: Record<string, unknown> | null | undefined,
 ) {
   if (!sessionParams) return null;
   const next = { ...sessionParams };
-  for (const key of PAPERCLIP_SESSION_METADATA_KEYS) {
+  for (const key of PILOT_SESSION_METADATA_KEYS) {
     delete next[key];
   }
   return next;
@@ -5476,7 +5476,7 @@ function enrichWakeContextSnapshot(input: {
     contextSnapshot.wakeCommentId = latestCommentId;
     // Once comment ids are normalized into the snapshot, rebuild the structured
     // wake payload from those ids later instead of carrying forward stale data.
-    delete contextSnapshot[PAPERCLIP_WAKE_PAYLOAD_KEY];
+    delete contextSnapshot[PILOT_WAKE_PAYLOAD_KEY];
   } else if (!readNonEmptyString(contextSnapshot["wakeCommentId"]) && wakeCommentId) {
     contextSnapshot.wakeCommentId = wakeCommentId;
   }
@@ -5603,7 +5603,7 @@ export function mergeCoalescedContextSnapshot(
     merged.wakeCommentId = latestCommentId;
     // The merged context should carry canonical comment ids; the next wake will
     // regenerate any structured payload from those ids.
-    delete merged[PAPERCLIP_WAKE_PAYLOAD_KEY];
+    delete merged[PILOT_WAKE_PAYLOAD_KEY];
   }
   if (!hasInteractionContinuationWakeContext(incoming)) {
     clearInteractionContinuationWakeContext(merged);
@@ -5611,7 +5611,7 @@ export function mergeCoalescedContextSnapshot(
   return merged;
 }
 
-export async function buildPaperclipWakePayload(input: {
+export async function buildPilotWakePayload(input: {
   db: Db;
   companyId: string;
   contextSnapshot: Record<string, unknown>;
@@ -5647,7 +5647,7 @@ export async function buildPaperclipWakePayload(input: {
   const annotationCommentId = readNonEmptyString(input.contextSnapshot.annotationCommentId);
   const issueId = readNonEmptyString(input.contextSnapshot.issueId);
   const continuationSummary = input.continuationSummary ?? null;
-  const agentMessage = parseObject(input.contextSnapshot[PAPERCLIP_AGENT_MESSAGE_KEY]);
+  const agentMessage = parseObject(input.contextSnapshot[PILOT_AGENT_MESSAGE_KEY]);
   const agentMessageText = sanitizeAgentSessionMessageText(agentMessage.text);
   const issueSummary =
     input.issueSummary ??
@@ -5924,7 +5924,7 @@ export async function buildPaperclipWakePayload(input: {
     interactionKind,
     interactionStatus,
     checkboxSelection: Object.keys(checkboxSelection).length > 0 ? checkboxSelection : null,
-    checkedOutByHarness: input.contextSnapshot[PAPERCLIP_HARNESS_CHECKOUT_KEY] === true,
+    checkedOutByHarness: input.contextSnapshot[PILOT_HARNESS_CHECKOUT_KEY] === true,
     simplifiedEnglishInteractions: input.simplifiedEnglishInteractions === true,
     dependencyBlockedInteraction: input.contextSnapshot.dependencyBlockedInteraction === true,
     treeHoldInteraction: input.contextSnapshot.treeHoldInteraction === true,
@@ -6242,7 +6242,7 @@ function buildRunEventRuntimeProgress(input: {
   };
 }
 
-export function buildPaperclipTaskMarkdown(input: {
+export function buildPilotTaskMarkdown(input: {
   issue: {
     id: string;
     identifier: string | null;
@@ -14170,10 +14170,10 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     ) {
       try {
         await issuesSvc.checkout(issueId, agent.id, ["todo", "backlog", "blocked"], run.id);
-        context[PAPERCLIP_HARNESS_CHECKOUT_KEY] = true;
+        context[PILOT_HARNESS_CHECKOUT_KEY] = true;
       } catch (error) {
         if (!isCheckoutConflictError(error)) throw error;
-        context[PAPERCLIP_HARNESS_CHECKOUT_KEY] = false;
+        context[PILOT_HARNESS_CHECKOUT_KEY] = false;
       }
       issueContext = await getIssueExecutionContext(agent.companyId, issueId);
     }
@@ -14404,7 +14404,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     } else {
       delete context.paperclipSkillTest;
     }
-    const paperclipWakePayload = await buildPaperclipWakePayload({
+    const pilotWakePayload = await buildPilotWakePayload({
       db,
       companyId: agent.companyId,
       contextSnapshot: context,
@@ -14425,10 +14425,10 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
       exposeLowTrustRaw,
       simplifiedEnglishInteractions: experimentalInstanceSettings.enableSimplifiedEnglishInteractions === true,
     });
-    if (paperclipWakePayload) {
-      context[PAPERCLIP_WAKE_PAYLOAD_KEY] = paperclipWakePayload;
+    if (pilotWakePayload) {
+      context[PILOT_WAKE_PAYLOAD_KEY] = pilotWakePayload;
     } else {
-      delete context[PAPERCLIP_WAKE_PAYLOAD_KEY];
+      delete context[PILOT_WAKE_PAYLOAD_KEY];
     }
     const taskMarkdownInput = {
       issue: issueRef
@@ -14450,8 +14450,8 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
         readNonEmptyString(context.workspaceRefreshReason) === "accepted_plan_confirmation"
         && Object.keys(parseObject(context.acceptedPlanWakeRouting)).length === 0,
     };
-    const taskMarkdown = buildPaperclipTaskMarkdown(taskMarkdownInput);
-    const taskMarkdownCompact = buildPaperclipTaskMarkdown({ ...taskMarkdownInput, includeDescription: false });
+    const taskMarkdown = buildPilotTaskMarkdown(taskMarkdownInput);
+    const taskMarkdownCompact = buildPilotTaskMarkdown({ ...taskMarkdownInput, includeDescription: false });
     if (issueRef) {
       context.paperclipIssue = {
         id: issueRef.id,
@@ -14778,7 +14778,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
       resolvedConfig,
       runScopedMentionedSkillKeys,
     );
-    const runtimeSkillPreference = readPaperclipSkillSyncPreference(effectiveResolvedConfig);
+    const runtimeSkillPreference = readPilotSkillSyncPreference(effectiveResolvedConfig);
     const runtimeSkillEntries = await companySkills.listRuntimeSkillEntries(agent.companyId, {
       versionSelections: skillVersionSelectionMap(runtimeSkillPreference.desiredSkillEntries, {
         versionPinsEnabled: resolvedInstanceSettings.experimental.enableBetaSkills === true,
@@ -14868,7 +14868,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
         : null) ??
       normalizeResumeParamsForAdapter(
         agent.adapterType,
-        stripPaperclipSessionMetadataFromSessionParams(
+        stripPilotSessionMetadataFromSessionParams(
           sessionCodec.deserialize(taskSessionForRun?.sessionParamsJson ?? null),
         ),
       );
@@ -15506,8 +15506,8 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     // attach the branch pin here; the shared wake-prompt renderer surfaces it as
     // a one-time "stay on this branch" hint on non-resumed sessions.
     if (executionWorkspace.branchName) {
-      const wakePayloadForWorkspace = parseObject(context[PAPERCLIP_WAKE_PAYLOAD_KEY]);
-      context[PAPERCLIP_WAKE_PAYLOAD_KEY] = {
+      const wakePayloadForWorkspace = parseObject(context[PILOT_WAKE_PAYLOAD_KEY]);
+      context[PILOT_WAKE_PAYLOAD_KEY] = {
         ...wakePayloadForWorkspace,
         executionWorkspace: { branchName: executionWorkspace.branchName },
       };
@@ -15554,7 +15554,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     let runtimeSessionIdForAdapter =
       readNonEmptyString(runtimeSessionParams?.sessionId) ?? runtimeSessionFallback;
     let runtimeSessionParamsForAdapter = normalizeSessionParams(
-      stripPaperclipSessionMetadataFromSessionParams(runtimeSessionParams),
+      stripPilotSessionMetadataFromSessionParams(runtimeSessionParams),
     );
 
     const sessionCompaction = await evaluateSessionCompaction({
@@ -16136,7 +16136,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
       let adapterResult: Awaited<ReturnType<typeof adapter.execute>>;
       try {
         const adapterContext = { ...context };
-        const runtimeMcpServers = await buildPaperclipRuntimeMcpServers({
+        const runtimeMcpServers = await buildPilotRuntimeMcpServers({
           db,
           agent,
           runId: run.id,
@@ -16602,7 +16602,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
               agentId: agent.id,
               adapterType: agent.adapterType,
               taskKey,
-              sessionParamsJson: attachPaperclipSessionMetadataToSessionParams(
+              sessionParamsJson: attachPilotSessionMetadataToSessionParams(
                 nextSessionState.params,
                 configuredModel,
                 sessionConfigMetadata,
@@ -16736,7 +16736,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
             agentId: agent.id,
             adapterType: agent.adapterType,
             taskKey,
-            sessionParamsJson: attachPaperclipSessionMetadataToSessionParams(
+            sessionParamsJson: attachPilotSessionMetadataToSessionParams(
               previousSessionParams,
               configuredModel,
               sessionConfigMetadata,

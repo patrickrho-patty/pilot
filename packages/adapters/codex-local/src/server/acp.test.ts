@@ -65,8 +65,8 @@ type FakeRuntimeTurn = {
 
 const tempRoots: string[] = [];
 const originalNodeVersion = process.version;
-const originalPaperclipHome = process.env.PAPERCLIP_HOME;
-const originalPaperclipInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
+const originalPilotHome = process.env.PAPERCLIP_HOME;
+const originalPilotInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
 const originalCodexHome = process.env.CODEX_HOME;
 const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
 
@@ -113,10 +113,10 @@ function setNodeVersion(version: string): void {
 
 afterEach(async () => {
   setNodeVersion(originalNodeVersion);
-  if (originalPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
-  else process.env.PAPERCLIP_HOME = originalPaperclipHome;
-  if (originalPaperclipInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-  else process.env.PAPERCLIP_INSTANCE_ID = originalPaperclipInstanceId;
+  if (originalPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
+  else process.env.PAPERCLIP_HOME = originalPilotHome;
+  if (originalPilotInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
+  else process.env.PAPERCLIP_INSTANCE_ID = originalPilotInstanceId;
   if (originalCodexHome === undefined) delete process.env.CODEX_HOME;
   else process.env.CODEX_HOME = originalCodexHome;
   if (originalOpenAiApiKey === undefined) delete process.env.OPENAI_API_KEY;

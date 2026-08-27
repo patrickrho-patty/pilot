@@ -22,7 +22,7 @@ import {
   routines,
   routineTriggers,
 } from "@paperclipai/db";
-import { readPaperclipSkillSyncPreference } from "@paperclipai/adapter-utils/server-utils";
+import { readPilotSkillSyncPreference } from "@paperclipai/adapter-utils/server-utils";
 import {
   getEmbeddedPostgresTestSupport,
   startEmbeddedPostgresTestDatabase,
@@ -638,7 +638,7 @@ describeEmbeddedPostgres("built-in agents", () => {
       key: "paperclipai/bundled/paperclip-operations/reflection-coach",
       slug: "reflection-coach",
     });
-    expect(readPaperclipSkillSyncPreference(state.agent!.adapterConfig as Record<string, unknown>).desiredSkills).toContain(
+    expect(readPilotSkillSyncPreference(state.agent!.adapterConfig as Record<string, unknown>).desiredSkills).toContain(
       "paperclipai/bundled/paperclip-operations/reflection-coach",
     );
 
@@ -1152,7 +1152,7 @@ describeEmbeddedPostgres("built-in agents", () => {
       key: "paperclipai/bundled/paperclip-operations/reflection-coach",
       slug: "reflection-coach",
     });
-    expect(readPaperclipSkillSyncPreference(state.agent!.adapterConfig).desiredSkills).toContain(skill!.key);
+    expect(readPilotSkillSyncPreference(state.agent!.adapterConfig).desiredSkills).toContain(skill!.key);
 
     const [routine] = await db.select().from(routines).where(eq(routines.companyId, companyId));
     expect(routine).toMatchObject({
@@ -1225,7 +1225,7 @@ describeEmbeddedPostgres("built-in agents", () => {
       key: "paperclipai/bundled/paperclip-operations/summarize-status",
       slug: "summarize-status",
     });
-    expect(readPaperclipSkillSyncPreference(state.agent!.adapterConfig).desiredSkills).toContain(skill!.key);
+    expect(readPilotSkillSyncPreference(state.agent!.adapterConfig).desiredSkills).toContain(skill!.key);
 
     const [routine] = await db
       .select()

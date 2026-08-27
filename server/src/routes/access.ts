@@ -194,7 +194,7 @@ function isSafeSkillName(skillName: string): boolean {
 }
 
 /** Resolve the Paperclip repo skills directory (built-in / managed skills). */
-function resolvePaperclipSkillsDir(): string | null {
+function resolvePilotSkillsDir(): string | null {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
     path.resolve(moduleDir, "../../skills"),         // published
@@ -247,14 +247,14 @@ function resolveClaudeSkillsDir(): string {
 
 function listAvailableSkills(): AvailableSkill[] {
   const claudeSkillsDir = resolveClaudeSkillsDir();
-  const paperclipSkillsDir = resolvePaperclipSkillsDir();
+  const pilotSkillsDir = resolvePilotSkillsDir();
 
   // Build set of Paperclip-managed skill names
-  const paperclipSkillNames = new Set<string>();
-  if (paperclipSkillsDir) {
+  const pilotSkillNames = new Set<string>();
+  if (pilotSkillsDir) {
     try {
-      for (const entry of fs.readdirSync(paperclipSkillsDir, { withFileTypes: true })) {
-        if (entry.isDirectory()) paperclipSkillNames.add(entry.name);
+      for (const entry of fs.readdirSync(pilotSkillsDir, { withFileTypes: true })) {
+        if (entry.isDirectory()) pilotSkillNames.add(entry.name);
       }
     } catch { /* skip */ }
   }
@@ -275,17 +275,17 @@ function listAvailableSkills(): AvailableSkill[] {
       skills.push({
         name: entry.name,
         description,
-        isPaperclipManaged: paperclipSkillNames.has(entry.name),
+        isPaperclipManaged: pilotSkillNames.has(entry.name),
       });
     }
   } catch { /* Claude skills directory doesn't exist */ }
 
-  if (paperclipSkillsDir) {
+  if (pilotSkillsDir) {
     const existingNames = new Set(skills.map((skill) => skill.name));
     try {
-      for (const entry of fs.readdirSync(paperclipSkillsDir, { withFileTypes: true })) {
+      for (const entry of fs.readdirSync(pilotSkillsDir, { withFileTypes: true })) {
         if (!entry.isDirectory() || entry.name.startsWith(".") || existingNames.has(entry.name)) continue;
-        const skillMdPath = path.join(paperclipSkillsDir, entry.name, "SKILL.md");
+        const skillMdPath = path.join(pilotSkillsDir, entry.name, "SKILL.md");
         let description = "";
         try {
           const md = fs.readFileSync(skillMdPath, "utf8");
@@ -558,8 +558,8 @@ export function buildJoinDefaultsPayloadForAccept(input: {
     : ({} as Record<string, unknown>);
 
   if (!nonEmptyTrimmedString(merged.paperclipApiUrl)) {
-    const legacyPaperclipApiUrl = nonEmptyTrimmedString(input.paperclipApiUrl);
-    if (legacyPaperclipApiUrl) merged.paperclipApiUrl = legacyPaperclipApiUrl;
+    const legacyPilotApiUrl = nonEmptyTrimmedString(input.paperclipApiUrl);
+    if (legacyPilotApiUrl) merged.paperclipApiUrl = legacyPilotApiUrl;
   }
   const mergedHeaders = normalizeHeaderMap(merged.headers) ?? {};
 
@@ -1034,35 +1034,35 @@ export function normalizeAgentDefaultsForJoin(input: {
     }
   }
 
-  const rawPaperclipApiUrl =
+  const rawPilotApiUrl =
     typeof defaults.paperclipApiUrl === "string"
       ? defaults.paperclipApiUrl.trim()
       : "";
-  if (rawPaperclipApiUrl) {
+  if (rawPilotApiUrl) {
     try {
-      const parsedPaperclipApiUrl = new URL(rawPaperclipApiUrl);
+      const parsedPilotApiUrl = new URL(rawPilotApiUrl);
       if (
-        parsedPaperclipApiUrl.protocol !== "http:" &&
-        parsedPaperclipApiUrl.protocol !== "https:"
+        parsedPilotApiUrl.protocol !== "http:" &&
+        parsedPilotApiUrl.protocol !== "https:"
       ) {
         diagnostics.push({
           code: "openclaw_gateway_paperclip_api_url_protocol",
           level: "warn",
-          message: `paperclipApiUrl must use http:// or https:// (got ${parsedPaperclipApiUrl.protocol}).`
+          message: `paperclipApiUrl must use http:// or https:// (got ${parsedPilotApiUrl.protocol}).`
         });
       } else {
-        normalized.paperclipApiUrl = parsedPaperclipApiUrl.toString();
+        normalized.paperclipApiUrl = parsedPilotApiUrl.toString();
         diagnostics.push({
           code: "openclaw_gateway_paperclip_api_url_configured",
           level: "info",
-          message: `paperclipApiUrl set to ${parsedPaperclipApiUrl.toString()}`
+          message: `paperclipApiUrl set to ${parsedPilotApiUrl.toString()}`
         });
       }
     } catch {
       diagnostics.push({
         code: "openclaw_gateway_paperclip_api_url_invalid",
         level: "warn",
-        message: `Invalid paperclipApiUrl: ${rawPaperclipApiUrl}`
+        message: `Invalid paperclipApiUrl: ${rawPilotApiUrl}`
       });
     }
   }

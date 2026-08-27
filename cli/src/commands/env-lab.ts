@@ -10,12 +10,12 @@ import {
   startSshEnvLabFixture,
   stopSshEnvLabFixture,
 } from "@paperclipai/adapter-utils/ssh";
-import { resolvePaperclipInstanceId, resolvePaperclipInstanceRoot } from "../config/home.js";
+import { resolvePilotInstanceId, resolvePilotInstanceRoot } from "../config/home.js";
 
 export function resolveEnvLabSshStatePath(instanceId?: string): string {
-  const resolvedInstanceId = resolvePaperclipInstanceId(instanceId);
+  const resolvedInstanceId = resolvePilotInstanceId(instanceId);
   return path.resolve(
-    resolvePaperclipInstanceRoot(resolvedInstanceId),
+    resolvePilotInstanceRoot(resolvedInstanceId),
     "env-lab",
     "ssh-fixture",
     "state.json",
@@ -220,7 +220,7 @@ export async function envLabDoctorCommand(opts: { instance?: string; json?: bool
   // The hint pins that resolved instance, so a contributor who pastes the hint
   // in a shell without `PAPERCLIP_INSTANCE_ID` stops the diagnosed fixture, not
   // the default instance.
-  const cleanupInstance = resolvePaperclipInstanceId(opts.instance);
+  const cleanupInstance = resolvePilotInstanceId(opts.instance);
   p.log.message(`Cleanup: ${pc.dim(buildEnvLabCleanupCommand({ instance: cleanupInstance }))}`);
 }
 

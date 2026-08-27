@@ -12,7 +12,7 @@ async function makeTempDir(prefix: string): Promise<string> {
 }
 
 describe("kimi local skill sync", () => {
-  const paperclipKey = "paperclipai/paperclip/paperclip";
+  const pilotKey = "paperclipai/paperclip/paperclip";
   const cleanupDirs = new Set<string>();
 
   afterEach(async () => {
@@ -33,7 +33,7 @@ describe("kimi local skill sync", () => {
           KIMI_CODE_HOME: kimiCodeHome,
         },
         paperclipSkillSync: {
-          desiredSkills: [paperclipKey],
+          desiredSkills: [pilotKey],
         },
       },
     } as const;
@@ -41,11 +41,11 @@ describe("kimi local skill sync", () => {
     const before = await listKimiSkills(ctx);
     expect(before.adapterType).toBe("kimi_local");
     expect(before.mode).toBe("persistent");
-    expect(before.desiredSkills).toContain(paperclipKey);
-    expect(before.entries.find((entry) => entry.key === paperclipKey)?.state).toBe("missing");
+    expect(before.desiredSkills).toContain(pilotKey);
+    expect(before.entries.find((entry) => entry.key === pilotKey)?.state).toBe("missing");
 
-    const after = await syncKimiSkills(ctx, [paperclipKey]);
-    expect(after.entries.find((entry) => entry.key === paperclipKey)?.state).toBe("installed");
+    const after = await syncKimiSkills(ctx, [pilotKey]);
+    expect(after.entries.find((entry) => entry.key === pilotKey)?.state).toBe("installed");
     expect((await fs.lstat(path.join(kimiCodeHome, "skills", "paperclip"))).isSymbolicLink()).toBe(true);
   });
 });

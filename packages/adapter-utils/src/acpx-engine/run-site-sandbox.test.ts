@@ -159,15 +159,15 @@ describe("sandbox run site", () => {
 
   it("test_sandbox_site_preserves_bridge_overlap_and_callback_sequencing", async () => {
     const events: string[] = [];
-    let releasePaperclip!: () => void;
-    const paperclipGate = new Promise<void>((resolve) => {
-      releasePaperclip = resolve;
+    let releasePilot!: () => void;
+    const pilotGate = new Promise<void>((resolve) => {
+      releasePilot = resolve;
     });
     let processLaunchEnv: Record<string, string> | null = null;
     const { site } = makeSite({
       startPaperclipBridge: async () => {
         events.push("paperclip:start");
-        await paperclipGate;
+        await pilotGate;
         events.push("paperclip:env-ready");
         return { env: { PAPERCLIP_API_KEY: "run-token" }, stop: async () => {} } as never;
       },
@@ -191,7 +191,7 @@ describe("sandbox run site", () => {
 
     // Release the paperclip env; the process-session launch now observes the
     // merged run-scoped env (the single sequencing point).
-    releasePaperclip();
+    releasePilot();
     const transport = await transportPromise;
     expect(events.indexOf("paperclip:env-ready")).toBeLessThan(events.indexOf("process-session:launch"));
     expect(processLaunchEnv).toEqual({ BASE: "1", CODEX_HOME: "/remote/home", PAPERCLIP_API_KEY: "run-token" });

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PaperclipApiClient } from "./client.js";
+import { PilotApiClient } from "./client.js";
 import { createToolDefinitions } from "./tools.js";
 
 function makeClient() {
-  return new PaperclipApiClient({
+  return new PilotApiClient({
     apiUrl: "http://localhost:3100/api",
     apiKey: "token-123",
     companyId: "11111111-1111-1111-1111-111111111111",

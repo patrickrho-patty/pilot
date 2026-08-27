@@ -5,12 +5,12 @@ import { defineConfig } from "@playwright/test";
 
 const PORT = Number(process.env.PAPERCLIP_ISSUE_PERF_PORT ?? 3201);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
-const PAPERCLIP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-issue-perf-home-"));
-const PAPERCLIP_INSTANCE_ID = "playwright-issue-perf";
-const PAPERCLIP_CONFIG = path.join(PAPERCLIP_HOME, "instances", PAPERCLIP_INSTANCE_ID, "config.json");
+const PILOT_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-issue-perf-home-"));
+const PILOT_INSTANCE_ID = "playwright-issue-perf";
+const PILOT_CONFIG = path.join(PILOT_HOME, "instances", PILOT_INSTANCE_ID, "config.json");
 
-process.env.PAPERCLIP_HOME = PAPERCLIP_HOME;
-process.env.PAPERCLIP_CONFIG = PAPERCLIP_CONFIG;
+process.env.PAPERCLIP_HOME = PILOT_HOME;
+process.env.PAPERCLIP_CONFIG = PILOT_CONFIG;
 
 export default defineConfig({
   testDir: ".",

@@ -15,7 +15,7 @@ import {
   DEFAULT_FEEDBACK_DATA_SHARING_PREFERENCE,
   DEFAULT_BACKUP_RETENTION,
   DEFAULT_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS,
-  PAPERCLIP_CLOUD_MANAGED_BY,
+  PILOT_CLOUD_MANAGED_BY,
   instanceGeneralSettingsSchema,
   type InstanceGeneralSettings,
   instanceExperimentalSettingsSchema,
@@ -317,7 +317,7 @@ export function applyManagedExperimentalOverlay(
     [ManagedExperimentalFeatureKey, boolean]
   >) {
     next[key] = value;
-    managedKeys[key] = { managed: true, managedBy: PAPERCLIP_CLOUD_MANAGED_BY };
+    managedKeys[key] = { managed: true, managedBy: PILOT_CLOUD_MANAGED_BY };
   }
   return { experimental: next, managedKeys };
 }

@@ -1630,14 +1630,14 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
       throw forbidden("Agent run is not active");
     }
     const snapshot = asRecord(run.contextSnapshot);
-    const paperclipIssue = asRecord(snapshot.paperclipIssue);
+    const pilotIssue = asRecord(snapshot.paperclipIssue);
     return {
       run,
-      issueId: runSnapshotString(snapshot, "issueId") ?? runSnapshotString(paperclipIssue, "id"),
-      projectId: runSnapshotString(snapshot, "projectId") ?? runSnapshotString(paperclipIssue, "projectId"),
+      issueId: runSnapshotString(snapshot, "issueId") ?? runSnapshotString(pilotIssue, "id"),
+      projectId: runSnapshotString(snapshot, "projectId") ?? runSnapshotString(pilotIssue, "projectId"),
       routineId: runSnapshotString(snapshot, "routineId"),
       responsibleUserId: runSnapshotString(snapshot, "responsibleUserId", "responsible_user_id")
-        ?? runSnapshotString(paperclipIssue, "responsibleUserId", "responsible_user_id"),
+        ?? runSnapshotString(pilotIssue, "responsibleUserId", "responsible_user_id"),
     };
   }
 

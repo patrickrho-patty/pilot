@@ -13,7 +13,7 @@ import {
   runCommandWithDiagnostics,
 } from "../commands/install.js";
 import { uninstallCommand } from "../commands/uninstall.js";
-import { resolvePaperclipInstanceId } from "../config/home.js";
+import { resolvePilotInstanceId } from "../config/home.js";
 import {
   INSTALL_MANIFEST_VERSION,
   flipCurrentAtomic,
@@ -298,7 +298,7 @@ describe("managed install commands", () => {
       ".config",
       "systemd",
       "user",
-      systemdServiceName(resolvePaperclipInstanceId()),
+      systemdServiceName(resolvePilotInstanceId()),
     );
     fs.mkdirSync(path.dirname(unitPath), { recursive: true });
     fs.writeFileSync(unitPath, "unit");

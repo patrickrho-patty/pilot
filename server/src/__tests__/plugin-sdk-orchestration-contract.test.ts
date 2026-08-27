@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import type { Issue, PaperclipPluginManifestV1 } from "@paperclipai/shared";
+import type { Issue, PilotPluginManifestV1 } from "@paperclipai/shared";
 import { createTestHarness } from "../../../packages/plugins/sdk/src/testing.js";
 
-function manifest(capabilities: PaperclipPluginManifestV1["capabilities"]): PaperclipPluginManifestV1 {
+function manifest(capabilities: PilotPluginManifestV1["capabilities"]): PilotPluginManifestV1 {
   return {
     id: "paperclip.test-orchestration",
     apiVersion: 1,

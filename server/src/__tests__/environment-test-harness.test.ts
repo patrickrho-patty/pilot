@@ -9,9 +9,9 @@ import {
   assertExecutionLifecycle,
   assertEnvironmentError,
 } from "@paperclipai/plugin-sdk/testing";
-import type { PaperclipPluginManifestV1 } from "@paperclipai/shared";
+import type { PilotPluginManifestV1 } from "@paperclipai/shared";
 
-const FAKE_MANIFEST: PaperclipPluginManifestV1 = {
+const FAKE_MANIFEST: PilotPluginManifestV1 = {
   id: "test-env-plugin",
   apiVersion: 1,
   version: "0.1.0",

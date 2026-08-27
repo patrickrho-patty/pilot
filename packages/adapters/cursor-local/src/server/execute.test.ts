@@ -41,7 +41,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", async () => {
   );
   return {
     ...actual,
-    startAdapterExecutionTargetPaperclipBridge: async () => null,
+    startAdapterExecutionTargetPilotBridge: async () => null,
   };
 });
 

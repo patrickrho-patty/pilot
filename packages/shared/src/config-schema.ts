@@ -107,7 +107,7 @@ export const updatesConfigSchema = z.object({
   checkEnabled: z.boolean().default(true),
 }).passthrough().prefault({});
 
-export const paperclipConfigSchema = z
+export const pilotConfigSchema = z
   .object({
     $meta: configMetaSchema,
     llm: llmConfigSchema.optional(),
@@ -189,7 +189,7 @@ export const paperclipConfigSchema = z
     }
   });
 
-export type PaperclipConfig = z.infer<typeof paperclipConfigSchema>;
+export type PilotConfig = z.infer<typeof pilotConfigSchema>;
 export type LlmConfig = z.infer<typeof llmConfigSchema>;
 export type DatabaseConfig = z.infer<typeof databaseConfigSchema>;
 export type LoggingConfig = z.infer<typeof loggingConfigSchema>;
@@ -256,15 +256,15 @@ function mergeUnknownConfigKeys(
  * Known optional keys that are absent from the update stay absent, so callers can
  * intentionally clear values such as llm.apiKey or auth.publicBaseUrl.
  */
-export function mergePaperclipConfig(
-  source: PaperclipConfig,
-  update: PaperclipConfig,
-): PaperclipConfig {
+export function mergePilotConfig(
+  source: PilotConfig,
+  update: PilotConfig,
+): PilotConfig {
   return mergeUnknownConfigKeys(
     source as Record<string, unknown>,
     update as Record<string, unknown>,
-    paperclipConfigSchema,
-  ) as PaperclipConfig;
+    pilotConfigSchema,
+  ) as PilotConfig;
 }
 
 export type ConfigKeyWarning = {
@@ -341,9 +341,9 @@ function collectConfigKeyWarnings(
 }
 
 /** Returns likely misspellings among retained extension keys without modifying them. */
-export function findPaperclipConfigKeyWarnings(config: unknown): ConfigKeyWarning[] {
+export function findPilotConfigKeyWarnings(config: unknown): ConfigKeyWarning[] {
   if (!isRecord(config)) return [];
   const warnings: ConfigKeyWarning[] = [];
-  collectConfigKeyWarnings(config, paperclipConfigSchema, "", warnings);
+  collectConfigKeyWarnings(config, pilotConfigSchema, "", warnings);
   return warnings;
 }

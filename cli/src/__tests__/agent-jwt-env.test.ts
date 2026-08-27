@@ -4,9 +4,9 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   ensureAgentJwtSecret,
-  mergePaperclipEnvEntries,
+  mergePilotEnvEntries,
   readAgentJwtSecretFromEnv,
-  readPaperclipEnvEntries,
+  readPilotEnvEntries,
   resolveAgentJwtEnvFile,
 } from "../config/env.js";
 import { agentJwtSecretCheck } from "../checks/agent-jwt-secret-check.js";
@@ -65,7 +65,7 @@ describe("agent jwt env helpers", () => {
     const configPath = tempConfigPath();
     const envPath = resolveAgentJwtEnvFile(configPath);
 
-    mergePaperclipEnvEntries(
+    mergePilotEnvEntries(
       {
         PAPERCLIP_WORKTREE_COLOR: "#439edb",
       },
@@ -74,7 +74,7 @@ describe("agent jwt env helpers", () => {
 
     const contents = fs.readFileSync(envPath, "utf-8");
     expect(contents).toContain('PAPERCLIP_WORKTREE_COLOR="#439edb"');
-    expect(readPaperclipEnvEntries(envPath).PAPERCLIP_WORKTREE_COLOR).toBe("#439edb");
+    expect(readPilotEnvEntries(envPath).PAPERCLIP_WORKTREE_COLOR).toBe("#439edb");
   });
 
   it("preserves operator content and CRLF while updating only managed entries", () => {
@@ -92,7 +92,7 @@ describe("agent jwt env helpers", () => {
     ].join("\r\n");
     fs.writeFileSync(envPath, original, { mode: 0o600 });
 
-    mergePaperclipEnvEntries(
+    mergePilotEnvEntries(
       {
         PAPERCLIP_HOME: "/new path",
         PAPERCLIP_DUPLICATE: "current",
@@ -129,7 +129,7 @@ describe("agent jwt env helpers", () => {
     fs.writeFileSync(envPath, original, { mode: 0o600 });
     const previousInode = fs.statSync(envPath).ino;
 
-    mergePaperclipEnvEntries({ PAPERCLIP_HOME: "/same path" }, envPath);
+    mergePilotEnvEntries({ PAPERCLIP_HOME: "/same path" }, envPath);
 
     expect(fs.readFileSync(envPath, "utf8")).toBe(original);
     expect(fs.statSync(envPath).ino).toBe(previousInode);

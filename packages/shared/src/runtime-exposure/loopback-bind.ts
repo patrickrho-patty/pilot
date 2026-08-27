@@ -47,11 +47,11 @@ export function commandSelectsBindMode(command: string): boolean {
  * pass it to `python3 -m http.server`), and appending flags a command does not
  * parse turns a working service into one that exits on startup.
  */
-const PAPERCLIP_DEV_RUNNER_COMMAND =
+const PILOT_DEV_RUNNER_COMMAND =
   /(?:^|[\s;&|])(?:(?:pnpm|npm|yarn|bun)(?:\s+run)?\s+dev(?::once|:watch|:server)?(?=\s|$)|[^\s]*dev-runner(?:\.[cm]?[jt]s)?(?=\s|$))/;
 
-export function isPaperclipDevRunnerCommand(command: string): boolean {
-  return PAPERCLIP_DEV_RUNNER_COMMAND.test(command);
+export function isPilotDevRunnerCommand(command: string): boolean {
+  return PILOT_DEV_RUNNER_COMMAND.test(command);
 }
 
 /**
@@ -69,7 +69,7 @@ export function isPaperclipDevRunnerCommand(command: string): boolean {
  * change readiness handling.
  */
 export function forceLoopbackBindInCommand(command: string): string {
-  if (!isPaperclipDevRunnerCommand(command)) return command;
+  if (!isPilotDevRunnerCommand(command)) return command;
   const stripped = command.replace(BIND_SELECTING_ARG, "").trim();
   if (stripped.length === 0) return command;
   return `${stripped} --bind ${RUNTIME_EXPOSURE_BIND_MODE}`;

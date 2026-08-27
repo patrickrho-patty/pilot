@@ -1,6 +1,6 @@
 import * as p from "@clack/prompts";
 import pc from "picocolors";
-import { resolvePaperclipInstanceId } from "./config/home.js";
+import { resolvePilotInstanceId } from "./config/home.js";
 import {
   detectServiceManager,
   type ServiceManagerDetection,
@@ -59,7 +59,7 @@ export async function handleOnboardService(
     return false;
   }
 
-  const instanceId = resolvePaperclipInstanceId();
+  const instanceId = resolvePilotInstanceId();
   const detection = await deps.detect(instanceId);
   if (!detection.supported) {
     if (explicitlyRequested) deps.warn(detection.reason);

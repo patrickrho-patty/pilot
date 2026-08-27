@@ -17,7 +17,7 @@ import {
   DEFAULT_REMOTE_SANDBOX_ADAPTER_TIMEOUT_SEC,
   adapterExecutionTargetSessionIdentity,
   adapterExecutionTargetToRemoteSpec,
-  adapterExecutionTargetUsesPaperclipBridge,
+  adapterExecutionTargetUsesPilotBridge,
   ensureAdapterExecutionTargetCommandResolvable,
   formatAdapterExecutionTimeoutErrorMessage,
   formatAdapterExecutionTimeoutStartLogLine,
@@ -27,7 +27,7 @@ import {
   runAdapterExecutionTargetProcess,
   runAdapterExecutionTargetShellCommand,
   startAdapterExecutionTargetProcessSessionBridge,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
   type AdapterSandboxExecutionTarget,
 } from "./execution-target.js";
 import {
@@ -1935,7 +1935,7 @@ describe("sandbox adapter execution targets", () => {
       },
     };
 
-    expect(adapterExecutionTargetUsesPaperclipBridge(target)).toBe(true);
+    expect(adapterExecutionTargetUsesPilotBridge(target)).toBe(true);
     expect(adapterExecutionTargetSessionIdentity(target)).toEqual({
       transport: "ssh",
       host: "ssh.example.test",
@@ -2018,7 +2018,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge",
       target,
       runtimeRootDir,
@@ -2073,7 +2073,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-stream",
       target,
       runtimeRootDir,
@@ -2115,7 +2115,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const defaultBridge = await startAdapterExecutionTargetPaperclipBridge({
+    const defaultBridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-stream-default",
       target: baseTarget,
       runtimeRootDir,
@@ -2129,7 +2129,7 @@ describe("sandbox adapter execution targets", () => {
       await defaultBridge?.stop();
     }
 
-    const optOutBridge = await startAdapterExecutionTargetPaperclipBridge({
+    const optOutBridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-stream-opt-out",
       target: { ...baseTarget, streamRunLogs: false },
       runtimeRootDir,
@@ -2334,7 +2334,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-shell",
       target,
       runtimeRootDir,
@@ -2441,7 +2441,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-timeout",
       target,
       runtimeRootDir,
@@ -2504,7 +2504,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-limit",
       target,
       runtimeRootDir,
@@ -2577,7 +2577,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-outcome",
       target,
       runtimeRootDir,
@@ -2659,7 +2659,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-local",
       target,
       runtimeRootDir,
@@ -2729,7 +2729,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-override",
       target,
       runtimeRootDir,

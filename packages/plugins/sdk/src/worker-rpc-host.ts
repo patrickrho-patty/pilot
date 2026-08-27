@@ -42,13 +42,13 @@ import { fileURLToPath } from "node:url";
 
 import type {
   AskUserQuestionsInteraction,
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   RequestCheckboxConfirmationInteraction,
   RequestConfirmationInteraction,
   SuggestTasksInteraction,
 } from "@paperclipai/shared";
 
-import type { PaperclipPlugin } from "./define-plugin.js";
+import type { PilotPlugin } from "./define-plugin.js";
 import type {
   PluginApiRequestInput,
   PluginHealthDiagnostics,
@@ -148,7 +148,7 @@ export interface WorkerRpcHostOptions {
    *
    * The worker entrypoint should import its plugin and pass it here.
    */
-  plugin: PaperclipPlugin;
+  plugin: PilotPlugin;
 
   /**
    * Input stream to read JSON-RPC messages from.
@@ -277,7 +277,7 @@ export interface RunWorkerOptions {
  * ```
  */
 export function runWorker(
-  plugin: PaperclipPlugin,
+  plugin: PilotPlugin,
   moduleUrl: string,
   options?: RunWorkerOptions,
 ): WorkerRpcHost | void {
@@ -330,7 +330,7 @@ export function startWorkerRpcHost(options: WorkerRpcHostOptions): WorkerRpcHost
 
   let running = true;
   let initialized = false;
-  let manifest: PaperclipPluginManifestV1 | null = null;
+  let manifest: PilotPluginManifestV1 | null = null;
   let currentConfig: Record<string, unknown> = {};
   // The company whose config was last applied via configChanged. Used to fail
   // closed when a single-tenant plugin would be collapsed onto a second,

@@ -155,7 +155,7 @@ const GUEST_COMMAND =
     let db: Db;
     let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>>;
     let previousHttpsMode: string | undefined;
-    let previousPaperclipHome: string | undefined;
+    let previousPilotHome: string | undefined;
     let previousInstanceId: string | undefined;
     /**
      * An EMPTY workspace root, never the repo checkout.
@@ -165,7 +165,7 @@ const GUEST_COMMAND =
      * blow the test timeout and has nothing to do with what is under test.
      */
     let workspaceRoot: string;
-    let paperclipHome: string;
+    let pilotHome: string;
 
     beforeAll(async () => {
       tempDb = await startEmbeddedPostgresTestDatabase("pap17419-reservation-");
@@ -176,13 +176,13 @@ const GUEST_COMMAND =
 
     beforeEach(async () => {
       workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pap17419-workspace-"));
-      paperclipHome = await fs.mkdtemp(path.join(os.tmpdir(), "pap17419-home-"));
+      pilotHome = await fs.mkdtemp(path.join(os.tmpdir(), "pap17419-home-"));
       // Redirect the local-service registry into a throwaway instance. Without
       // this the suite would write runtime-service records into the real
       // Paperclip instance on this host and could confuse a live server.
-      previousPaperclipHome = process.env.PAPERCLIP_HOME;
+      previousPilotHome = process.env.PAPERCLIP_HOME;
       previousInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
-      process.env.PAPERCLIP_HOME = paperclipHome;
+      process.env.PAPERCLIP_HOME = pilotHome;
       process.env.PAPERCLIP_INSTANCE_ID = `pap17419-${randomUUID()}`;
     });
 
@@ -195,12 +195,12 @@ const GUEST_COMMAND =
     afterEach(async () => {
       // Terminate first, while the suite's fake broker is still installed.
       await resetRuntimeServicesForTests({ terminateProcesses: true });
-      if (previousPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
-      else process.env.PAPERCLIP_HOME = previousPaperclipHome;
+      if (previousPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
+      else process.env.PAPERCLIP_HOME = previousPilotHome;
       if (previousInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
       else process.env.PAPERCLIP_INSTANCE_ID = previousInstanceId;
       await fs.rm(workspaceRoot, { recursive: true, force: true });
-      await fs.rm(paperclipHome, { recursive: true, force: true });
+      await fs.rm(pilotHome, { recursive: true, force: true });
       await db.delete(workspaceRuntimeServices);
       await db.delete(executionWorkspaces);
       await db.delete(projectWorkspaces);

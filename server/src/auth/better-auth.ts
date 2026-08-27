@@ -11,7 +11,7 @@ import {
   authVerifications,
 } from "@paperclipai/db";
 import type { Config } from "../config.js";
-import { resolvePaperclipInstanceId } from "../home-paths.js";
+import { resolvePilotInstanceId } from "../home-paths.js";
 import {
   workspaceLoginHandoffPlugin,
   type WorkspaceHandoffExpectedIdentity,
@@ -49,7 +49,7 @@ type BetterAuthInstance = BetterAuthHandlerTarget & BetterAuthSessionResolver;
 const AUTH_COOKIE_PREFIX_FALLBACK = "default";
 const AUTH_COOKIE_PREFIX_INVALID_SEGMENTS_RE = /[^a-zA-Z0-9_-]+/g;
 
-export function deriveAuthCookiePrefix(instanceId = resolvePaperclipInstanceId()): string {
+export function deriveAuthCookiePrefix(instanceId = resolvePilotInstanceId()): string {
   const scopedInstanceId = instanceId
     .trim()
     .replace(AUTH_COOKIE_PREFIX_INVALID_SEGMENTS_RE, "-")
@@ -175,7 +175,7 @@ export function resolveWorkspaceHandoffIdentity(
       : null);
   return {
     key,
-    instanceId: resolvePaperclipInstanceId(),
+    instanceId: resolvePilotInstanceId(),
     executionWorkspaceId: resolveWorkspaceHandoffLocalWorkspaceId(env),
     companyId: resolveWorkspaceHandoffLocalCompanyId(env),
     origin: configuredOrigin,

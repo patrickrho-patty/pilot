@@ -118,13 +118,13 @@ describe("worktree config repair", () => {
   it("repairs legacy repo-local worktree config and env files into an isolated instance", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-repair-"));
     const worktreeRoot = path.join(tempRoot, "PAP-884-ai-commits-component");
-    const paperclipDir = path.join(worktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
-    const envPath = path.join(paperclipDir, ".env");
+    const pilotDir = path.join(worktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
     const sharedRoot = path.join(tempRoot, ".paperclip", "instances", "default");
     const isolatedHome = path.join(tempRoot, ".paperclip-worktrees");
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     await fs.writeFile(configPath, JSON.stringify(buildLegacyConfig(sharedRoot), null, 2) + "\n", "utf8");
     await fs.writeFile(
       envPath,
@@ -180,13 +180,13 @@ describe("worktree config repair", () => {
   it("disables backups in an otherwise isolated existing worktree config", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-backup-migration-"));
     const worktreeRoot = path.join(tempRoot, "disable-worktree-backups");
-    const paperclipDir = path.join(worktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
-    const envPath = path.join(paperclipDir, ".env");
+    const pilotDir = path.join(worktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
     const isolatedHome = path.join(tempRoot, ".paperclip-worktrees");
     const instanceRoot = path.join(isolatedHome, "instances", "disable-worktree-backups");
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     const legacyIsolatedConfig = buildIsolatedConfig(instanceRoot, 3110, 54339);
     legacyIsolatedConfig.database.backup.enabled = true;
     await fs.writeFile(configPath, JSON.stringify(legacyIsolatedConfig, null, 2) + "\n", "utf8");
@@ -232,13 +232,13 @@ describe("worktree config repair", () => {
   it("preserves an externally supplied PORT while repairing worktree config", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-repair-external-port-"));
     const worktreeRoot = path.join(tempRoot, "PAP-10341-runtime-managed-port");
-    const paperclipDir = path.join(worktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
-    const envPath = path.join(paperclipDir, ".env");
+    const pilotDir = path.join(worktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
     const sharedRoot = path.join(tempRoot, ".paperclip", "instances", "default");
     const isolatedHome = path.join(tempRoot, ".paperclip-worktrees");
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     await fs.writeFile(configPath, JSON.stringify(buildLegacyConfig(sharedRoot), null, 2) + "\n", "utf8");
     await fs.writeFile(
       envPath,
@@ -335,11 +335,11 @@ describe("worktree config repair", () => {
   it("does not adopt a .paperclip config whose own env does not declare a worktree", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-unattested-"));
     const repoRoot = path.join(tempRoot, "repo");
-    const paperclipDir = path.join(repoRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
-    const envPath = path.join(paperclipDir, ".env");
+    const pilotDir = path.join(repoRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     const originalConfig =
       JSON.stringify(buildLegacyConfig(path.join(tempRoot, "shared")), null, 2) + "\n";
     await fs.writeFile(configPath, originalConfig, "utf8");
@@ -368,14 +368,14 @@ describe("worktree config repair", () => {
   it("avoids sibling worktree ports when repairing legacy configs", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-repair-ports-"));
     const worktreeRoot = path.join(tempRoot, "PAP-880-thumbs-capture-for-evals-feature");
-    const paperclipDir = path.join(worktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
-    const envPath = path.join(paperclipDir, ".env");
+    const pilotDir = path.join(worktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
     const sharedRoot = path.join(tempRoot, ".paperclip", "instances", "default");
     const isolatedHome = path.join(tempRoot, ".paperclip-worktrees");
     const siblingInstanceRoot = path.join(isolatedHome, "instances", "pap-878-create-a-mine-tab-in-inbox");
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     await fs.mkdir(siblingInstanceRoot, { recursive: true });
     await fs.writeFile(configPath, JSON.stringify(buildLegacyConfig(sharedRoot), null, 2) + "\n", "utf8");
     await fs.writeFile(
@@ -449,12 +449,12 @@ describe("worktree config repair", () => {
       name: string,
       databaseMode: "embedded-postgres" | "postgres" = "embedded-postgres",
     ) => {
-      const paperclipDir = path.join(worktreeRoot, ".paperclip");
+      const pilotDir = path.join(worktreeRoot, ".paperclip");
       const instanceRoot = path.join(isolatedHome, "instances", name.toLowerCase());
       const config = buildIsolatedConfig(instanceRoot, 45439, 55439);
-      await fs.mkdir(paperclipDir, { recursive: true });
+      await fs.mkdir(pilotDir, { recursive: true });
       await fs.writeFile(
-        path.join(paperclipDir, "config.json"),
+        path.join(pilotDir, "config.json"),
         `${JSON.stringify({
           ...config,
           database: {
@@ -468,14 +468,14 @@ describe("worktree config repair", () => {
         "utf8",
       );
       await fs.writeFile(
-        path.join(paperclipDir, ".env"),
+        path.join(pilotDir, ".env"),
         [
           "# Paperclip environment variables",
           "PAPERCLIP_IN_WORKTREE=true",
           `PAPERCLIP_WORKTREE_NAME=${name}`,
           `PAPERCLIP_HOME=${JSON.stringify(isolatedHome)}`,
           `PAPERCLIP_INSTANCE_ID=${name.toLowerCase()}`,
-          `PAPERCLIP_CONFIG=${JSON.stringify(path.join(paperclipDir, "config.json"))}`,
+          `PAPERCLIP_CONFIG=${JSON.stringify(path.join(pilotDir, "config.json"))}`,
           "",
         ].join("\n"),
         "utf8",
@@ -535,13 +535,13 @@ describe("worktree config repair", () => {
   it("ignores stale migrated env paths when the dev runner resolved the local config", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-migrated-env-"));
     const worktreeRoot = path.join(tempRoot, "PAP-9940-what-can-we-learn");
-    const paperclipDir = path.join(worktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
-    const envPath = path.join(paperclipDir, ".env");
+    const pilotDir = path.join(worktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
     const oldHome = "/old/home/.paperclip-worktrees";
     const isolatedHome = path.join(tempRoot, ".paperclip-worktrees");
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     await fs.writeFile(configPath, JSON.stringify(buildLegacyConfig(oldHome), null, 2) + "\n", "utf8");
     await fs.writeFile(
       envPath,
@@ -587,13 +587,13 @@ describe("worktree config repair", () => {
     const isolatedHome = path.join(tempRoot, ".paperclip-worktrees");
     const transientHome = path.join(tempRoot, "tests", "e2e", ".tmp", "multiuser-authenticated");
     const worktreeRoot = path.join(tempRoot, "PAP-989-multi-user-implementation-using-plan-from-pap-958");
-    const paperclipDir = path.join(worktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
-    const envPath = path.join(paperclipDir, ".env");
+    const pilotDir = path.join(worktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
     const instanceId = "pap-989-multi-user-implementation-using-plan-from-pap-958";
     const stableInstanceRoot = path.join(isolatedHome, "instances", instanceId);
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     await fs.writeFile(
       configPath,
       JSON.stringify(
@@ -697,13 +697,13 @@ describe("worktree config repair", () => {
     const siblingWorktreeRoot = path.join(repoWorktreesRoot, "PAP-878-create-a-mine-tab-in-inbox");
     const siblingInstanceRoot = path.join(isolatedHome, "instances", "pap-878-create-a-mine-tab-in-inbox");
     const currentWorktreeRoot = path.join(repoWorktreesRoot, "PAP-884-ai-commits-component");
-    const paperclipDir = path.join(currentWorktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
-    const envPath = path.join(paperclipDir, ".env");
+    const pilotDir = path.join(currentWorktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
     const currentInstanceRoot = path.join(isolatedHome, "instances", "pap-884-ai-commits-component");
     const siblingConfigPath = path.join(siblingWorktreeRoot, ".paperclip", "config.json");
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     await fs.mkdir(path.dirname(siblingConfigPath), { recursive: true });
     await fs.writeFile(
       configPath,
@@ -819,12 +819,12 @@ describe("worktree config repair", () => {
   it("persists runtime-selected worktree ports back into explicit-port auth URLs", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-ports-"));
     const worktreeRoot = path.join(tempRoot, "PAP-878-create-a-mine-tab-in-inbox");
-    const paperclipDir = path.join(worktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
+    const pilotDir = path.join(worktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
     const isolatedHome = path.join(tempRoot, ".paperclip-worktrees");
     const instanceRoot = path.join(isolatedHome, "instances", "pap-878-create-a-mine-tab-in-inbox");
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     await fs.writeFile(
       configPath,
       JSON.stringify(
@@ -880,7 +880,7 @@ describe("worktree config repair", () => {
     );
 
     await fs.writeFile(
-      path.join(paperclipDir, ".env"),
+      path.join(pilotDir, ".env"),
       ["# Paperclip environment variables", "PAPERCLIP_IN_WORKTREE=true", ""].join("\n"),
       "utf8",
     );
@@ -909,12 +909,12 @@ describe("worktree config repair", () => {
   it("does not rewrite no-port public auth URLs when persisting runtime-selected ports", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-public-ports-"));
     const worktreeRoot = path.join(tempRoot, "PAP-125-public-base-url");
-    const paperclipDir = path.join(worktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
+    const pilotDir = path.join(worktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
     const isolatedHome = path.join(tempRoot, ".paperclip-worktrees");
     const instanceRoot = path.join(isolatedHome, "instances", "pap-125-public-base-url");
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     await fs.writeFile(
       configPath,
       JSON.stringify(
@@ -970,7 +970,7 @@ describe("worktree config repair", () => {
     );
 
     await fs.writeFile(
-      path.join(paperclipDir, ".env"),
+      path.join(pilotDir, ".env"),
       ["# Paperclip environment variables", "PAPERCLIP_IN_WORKTREE=true", ""].join("\n"),
       "utf8",
     );
@@ -999,8 +999,8 @@ describe("worktree config repair", () => {
   it("preserves top-level and nested config extensions while persisting runtime ports", async () => {
     const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-worktree-config-extensions-"));
     const worktreeRoot = path.join(tempRoot, "config-extensions");
-    const paperclipDir = path.join(worktreeRoot, ".paperclip");
-    const configPath = path.join(paperclipDir, "config.json");
+    const pilotDir = path.join(worktreeRoot, ".paperclip");
+    const configPath = path.join(pilotDir, "config.json");
     const isolatedHome = path.join(tempRoot, ".paperclip-worktrees");
     const instanceRoot = path.join(isolatedHome, "instances", "config-extensions");
     const base = buildIsolatedConfig(instanceRoot, 3101, 54331);
@@ -1027,10 +1027,10 @@ describe("worktree config repair", () => {
       },
     };
 
-    await fs.mkdir(paperclipDir, { recursive: true });
+    await fs.mkdir(pilotDir, { recursive: true });
     await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
     await fs.writeFile(
-      path.join(paperclipDir, ".env"),
+      path.join(pilotDir, ".env"),
       ["# Paperclip environment variables", "PAPERCLIP_IN_WORKTREE=true", ""].join("\n"),
       "utf8",
     );
@@ -1048,7 +1048,7 @@ describe("worktree config repair", () => {
     const sync = vi.spyOn(fsSync, "fsyncSync");
     maybePersistWorktreeRuntimePorts({ serverPort: 3103, databasePort: 54335 });
 
-    expect(open).toHaveBeenCalledWith(paperclipDir, "r");
+    expect(open).toHaveBeenCalledWith(pilotDir, "r");
     expect(sync).toHaveBeenCalled();
 
     const writtenConfig = JSON.parse(await fs.readFile(configPath, "utf8"));

@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
-import type { PaperclipConfig } from "../config/schema.js";
-import { resolvePaperclipInstanceId } from "../config/home.js";
+import type { PilotConfig } from "../config/schema.js";
+import { resolvePilotInstanceId } from "../config/home.js";
 import { readInstallManifest } from "../install-store.js";
 import {
   detectServiceManager,
@@ -12,10 +12,10 @@ import type { CheckResult } from "./index.js";
 type HealthResult = { ok: boolean; version: string | null; error?: string };
 type ServiceCheckDependencies = {
   detect: (instanceId: string) => Promise<ServiceManagerDetection>;
-  probe: (config: PaperclipConfig) => Promise<HealthResult>;
+  probe: (config: PilotConfig) => Promise<HealthResult>;
 };
 
-async function probeHealth(config: PaperclipConfig): Promise<HealthResult> {
+async function probeHealth(config: PilotConfig): Promise<HealthResult> {
   try {
     const response = await fetch(buildLocalHealthUrl(config.server.host, config.server.port), {
       signal: AbortSignal.timeout(2_000),
@@ -37,7 +37,7 @@ async function probeHealth(config: PaperclipConfig): Promise<HealthResult> {
 }
 
 export async function serviceHealthChecks(
-  config: PaperclipConfig,
+  config: PilotConfig,
   dependencies: Partial<ServiceCheckDependencies> = {},
 ): Promise<CheckResult[]> {
   if (process.env.PAPERCLIP_SERVICE_MANAGED === "1") return [];
@@ -47,7 +47,7 @@ export async function serviceHealthChecks(
     probe: probeHealth,
     ...dependencies,
   };
-  const instanceId = resolvePaperclipInstanceId();
+  const instanceId = resolvePilotInstanceId();
   const detection = await deps.detect(instanceId);
   if (!detection.supported) {
     return [{ name: "Background service", status: "pass", message: detection.reason }];

@@ -4,7 +4,7 @@ const {
   ensureAdapterExecutionTargetCommandResolvable,
   ensureAdapterExecutionTargetRuntimeCommandInstalled,
   executeGeminiAcp,
-  readPaperclipRuntimeSkillEntries,
+  readPilotRuntimeSkillEntries,
   resolveAdapterExecutionTargetCommandForLogs,
   runAdapterExecutionTargetProcess,
 } = vi.hoisted(() => ({
@@ -13,7 +13,7 @@ const {
   executeGeminiAcp: vi.fn(async () => {
     throw new Error('Transform failed with 1 error: execute.ts:818:0: ERROR: Unexpected "<<"');
   }),
-  readPaperclipRuntimeSkillEntries: vi.fn(async () => []),
+  readPilotRuntimeSkillEntries: vi.fn(async () => []),
   resolveAdapterExecutionTargetCommandForLogs: vi.fn(async () => "gemini"),
   runAdapterExecutionTargetProcess: vi.fn(async () => ({
     exitCode: 0,
@@ -63,7 +63,7 @@ vi.mock("@paperclipai/adapter-utils/server-utils", async () => {
   );
   return {
     ...actual,
-    readPaperclipRuntimeSkillEntries,
+    readPilotRuntimeSkillEntries,
   };
 });
 

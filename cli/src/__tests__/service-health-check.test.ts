@@ -4,25 +4,25 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { serviceHealthChecks } from "../checks/service-health-check.js";
 import { resolveRestartExpectedVersion, withHotRestartLock } from "../commands/service.js";
-import type { PaperclipConfig } from "../config/schema.js";
+import type { PilotConfig } from "../config/schema.js";
 import { buildLocalHealthUrl } from "../utils/health-url.js";
 
 const config = {
   server: { host: "127.0.0.1", port: 3100 },
-} as PaperclipConfig;
+} as PilotConfig;
 
-let previousPaperclipHome: string | undefined;
+let previousPilotHome: string | undefined;
 let previousServiceManaged: string | undefined;
 
 beforeEach(() => {
-  previousPaperclipHome = process.env.PAPERCLIP_HOME;
+  previousPilotHome = process.env.PAPERCLIP_HOME;
   previousServiceManaged = process.env.PAPERCLIP_SERVICE_MANAGED;
   process.env.PAPERCLIP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-service-restart-"));
 });
 
 afterEach(() => {
-  if (previousPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
-  else process.env.PAPERCLIP_HOME = previousPaperclipHome;
+  if (previousPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
+  else process.env.PAPERCLIP_HOME = previousPilotHome;
   if (previousServiceManaged === undefined) delete process.env.PAPERCLIP_SERVICE_MANAGED;
   else process.env.PAPERCLIP_SERVICE_MANAGED = previousServiceManaged;
 });

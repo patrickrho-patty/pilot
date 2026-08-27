@@ -3,10 +3,10 @@ import type { Agent, AgentSessionEvent, Issue, IssueComment, PluginContext, Plug
 import type { IssueDocument, PluginIssueOriginKind, PluginManagedRoutineResolution, PluginManagedSkillResolution } from "@paperclipai/plugin-sdk/types";
 import {
   DEFAULT_MAX_SOURCE_BYTES,
-  DEFAULT_MAX_PAPERCLIP_CURSOR_WINDOW_CHARS,
-  DEFAULT_MAX_PAPERCLIP_ISSUE_SOURCE_CHARS,
-  DEFAULT_MAX_PAPERCLIP_ROUTINE_RUN_CHARS,
-  DEFAULT_PAPERCLIP_COST_CENTS_PER_1K_CHARS,
+  DEFAULT_MAX_PILOT_CURSOR_WINDOW_CHARS,
+  DEFAULT_MAX_PILOT_ISSUE_SOURCE_CHARS,
+  DEFAULT_MAX_PILOT_ROUTINE_RUN_CHARS,
+  DEFAULT_PILOT_COST_CENTS_PER_1K_CHARS,
   PLUGIN_ID,
   WIKI_MAINTAINER_AGENT_KEY,
   WIKI_MANAGED_SKILL_KEYS,
@@ -29,17 +29,17 @@ const EVENT_INGESTION_STATE_NAMESPACE = "llm-wiki";
 const EVENT_INGESTION_STATE_KEY = "event-ingestion";
 const EVENT_INGESTION_DEDUP_NAMESPACE = "llm-wiki-event-ingestion";
 const MAX_EVENT_SOURCE_CHARS = 20000;
-const MAX_PAPERCLIP_INGESTION_PROFILE_SOURCE_COUNT = 3;
-const MAX_PAPERCLIP_DISTILLATION_FAN_OUT = 25;
-const MAX_PAPERCLIP_PROFILE_SELECTED_PROJECTS = 25;
-const MAX_PAPERCLIP_PROFILE_ROOT_ISSUES = 25;
+const MAX_PILOT_INGESTION_PROFILE_SOURCE_COUNT = 3;
+const MAX_PILOT_DISTILLATION_FAN_OUT = 25;
+const MAX_PILOT_PROFILE_SELECTED_PROJECTS = 25;
+const MAX_PILOT_PROFILE_ROOT_ISSUES = 25;
 const PROTECTED_WIKI_CONTROL_FILES = new Set(["AGENTS.md", "IDEA.md"]);
 export const PUBLIC_DISTILLATION_AUTO_APPLY_RESTRICTION =
   "Authenticated/public deployments always require manual review before wiki writes.";
 
 export type WikiEventIngestionSource = "issues" | "comments" | "documents";
-export type PaperclipDistillationScope = "company" | "project" | "root_issue";
-export type PaperclipDistillationWorkItemKind = "manual" | "retry" | "backfill" | "priority_override" | "review_patch";
+export type PilotDistillationScope = "company" | "project" | "root_issue";
+export type PilotDistillationWorkItemKind = "manual" | "retry" | "backfill" | "priority_override" | "review_patch";
 
 export type WikiEventIngestionSettings = {
   enabled: boolean;
@@ -52,16 +52,16 @@ export type WikiEventIngestionSettingsUpdate = Omit<Partial<WikiEventIngestionSe
   sources?: Partial<Record<WikiEventIngestionSource, boolean>>;
 };
 
-export type PaperclipIngestionSourceScope =
+export type PilotIngestionSourceScope =
   | { kind: "active_projects"; limit: number; statuses?: Array<"in_progress" | "todo" | "done"> }
   | { kind: "selected_projects"; projectIds: string[] }
   | { kind: "root_issues"; issueIds: string[] }
   | { kind: "company_all"; requiresBoardConfirmation: true };
 
-export type PaperclipIngestionProfileV1 = {
+export type PilotIngestionProfileV1 = {
   version: 1;
   enabled: boolean;
-  sourceScopes: PaperclipIngestionSourceScope[];
+  sourceScopes: PilotIngestionSourceScope[];
   sourceKinds: Record<WikiEventIngestionSource, boolean> & {
     attachments: "off" | "metadata_only";
     workProducts: "off" | "metadata_only";
@@ -80,18 +80,18 @@ export type PaperclipIngestionProfileV1 = {
   };
 };
 
-export type PaperclipIngestionProfileEffectiveState =
+export type PilotIngestionProfileEffectiveState =
   | "enabled"
   | "disabled"
   | "policy_blocked"
   | "pending_approval"
   | "enabled_no_scopes";
 
-export type PaperclipIngestionProfileRead = {
+export type PilotIngestionProfileRead = {
   wikiId: string;
   space: Pick<WikiSpace, "id" | "slug" | "displayName" | "accessScope" | "status">;
-  profile: PaperclipIngestionProfileV1;
-  effectiveState: PaperclipIngestionProfileEffectiveState;
+  profile: PilotIngestionProfileV1;
+  effectiveState: PilotIngestionProfileEffectiveState;
   policyBlocks: string[];
   historicalPageCount: number;
   overlapCount: number;
@@ -104,7 +104,7 @@ export type DistillationAutoApplyRestriction = {
   deploymentExposure: "private" | "public" | null;
 };
 
-type PaperclipIngestionPolicyPurpose =
+type PilotIngestionPolicyPurpose =
   | "profile_read"
   | "profile_update"
   | "candidate_search"
@@ -112,11 +112,11 @@ type PaperclipIngestionPolicyPurpose =
   | "execute"
   | "event_routing";
 
-type PaperclipIngestionPolicyDecision =
+type PilotIngestionPolicyDecision =
   | { allowed: true; space: WikiSpace }
   | { allowed: false; space: WikiSpace; reason: "restricted_space" | "archived_space" | "profile_disabled" | "profile_empty"; message: string };
 
-type PaperclipIngestionCandidatesInput = SpaceInput & {
+type PilotIngestionCandidatesInput = SpaceInput & {
   query?: string | null;
 };
 
@@ -291,7 +291,7 @@ type CaptureSourceInput = {
   metadata?: Record<string, unknown> | null;
 };
 
-type PaperclipSourceBundleInput = {
+type PilotSourceBundleInput = {
   companyId: string;
   wikiId?: string | null;
   spaceSlug?: string | null;
@@ -308,7 +308,7 @@ type PaperclipSourceBundleInput = {
   operationIssueId?: string | null;
 };
 
-type PaperclipSourceRef = {
+type PilotSourceRef = {
   kind: "issue" | "comment" | "document";
   issueId: string;
   issueIdentifier: string | null;
@@ -323,9 +323,9 @@ type PaperclipSourceRef = {
   redactionReasons?: string[];
 };
 
-type PaperclipSourceBundle = {
+type PilotSourceBundle = {
   markdown: string;
-  sourceRefs: PaperclipSourceRef[];
+  sourceRefs: PilotSourceRef[];
   sourceHash: string;
   sourceWindowStart: string | null;
   sourceWindowEnd: string | null;
@@ -333,9 +333,9 @@ type PaperclipSourceBundle = {
   warnings: string[];
 };
 
-type PaperclipDistillationRunInput = PaperclipSourceBundleInput;
+type PilotDistillationRunInput = PilotSourceBundleInput;
 
-type PaperclipDistillationOutcomeInput = {
+type PilotDistillationOutcomeInput = {
   companyId: string;
   wikiId?: string | null;
   spaceSlug?: string | null;
@@ -349,11 +349,11 @@ type PaperclipDistillationOutcomeInput = {
   retryCount?: number | null;
 };
 
-type PaperclipDistillationWorkItemInput = {
+type PilotDistillationWorkItemInput = {
   companyId: string;
   wikiId?: string | null;
   spaceSlug?: string | null;
-  kind: PaperclipDistillationWorkItemKind;
+  kind: PilotDistillationWorkItemKind;
   projectId?: string | null;
   rootIssueId?: string | null;
   requestedByIssueId?: string | null;
@@ -362,7 +362,7 @@ type PaperclipDistillationWorkItemInput = {
   metadata?: Record<string, unknown> | null;
 };
 
-type PaperclipProjectPageDistillationInput = PaperclipSourceBundleInput & {
+type PilotProjectPageDistillationInput = PilotSourceBundleInput & {
   autoApply?: boolean;
   expectedProjectPageHash?: string | null;
   includeSupportingPages?: boolean;
@@ -396,21 +396,21 @@ type FileQueryAnswerInput = {
 
 type ToolParams = Record<string, unknown>;
 type WikiResourceKind = "agent" | "project";
-type PaperclipDistillationPatchOperation =
+type PilotDistillationPatchOperation =
   | "standup_update"
   | "project_page_distill"
   | "decision_distill"
   | "history_distill"
   | "index_refresh"
   | "log_append";
-type PaperclipDistillationPatch = {
+type PilotDistillationPatch = {
   pagePath: string;
-  operationType: PaperclipDistillationPatchOperation;
+  operationType: PilotDistillationPatchOperation;
   currentHash: string | null;
   proposedHash: string;
   proposedContents: string;
   sourceHash: string;
-  sourceRefs: PaperclipSourceRef[];
+  sourceRefs: PilotSourceRef[];
   cursorWindow: {
     start: string | null;
     end: string | null;
@@ -419,7 +419,7 @@ type PaperclipDistillationPatch = {
   warnings: string[];
   humanReviewRequired: boolean;
 };
-type PaperclipEventIngestResult =
+type PilotEventIngestResult =
   | { status: "skipped"; reason: "disabled" | "source_disabled" | "unsupported_event" | "missing_issue" | "missing_comment" | "missing_document" | "plugin_operation" | "already_ingested" }
   | { status: "recorded"; sourceKind: WikiEventIngestionSource; sourceId: string; cursorId: string; issueId: string };
 
@@ -454,10 +454,10 @@ export function normalizeSpaceSlug(value: unknown): string {
   return normalized;
 }
 
-async function requirePaperclipIngestionPolicy(
+async function requirePilotIngestionPolicy(
   ctx: PluginContext,
   input: { companyId: string; wikiId: string; spaceSlug?: string | null },
-  purpose: PaperclipIngestionPolicyPurpose,
+  purpose: PilotIngestionPolicyPurpose,
   options: { requireEnabledProfile?: boolean } = {},
 ): Promise<WikiSpace> {
   const space = await resolveSpace(ctx, {
@@ -466,7 +466,7 @@ async function requirePaperclipIngestionPolicy(
     spaceSlug: input.spaceSlug,
   });
   const profile = await profileForSpace(ctx, input.companyId, space);
-  const decision = evaluatePaperclipProfilePolicy({
+  const decision = evaluatePilotProfilePolicy({
     space,
     profile,
     purpose,
@@ -476,7 +476,7 @@ async function requirePaperclipIngestionPolicy(
   return decision.space;
 }
 
-function assertPaperclipSourceScopePayload(input: { projectId?: string | null; rootIssueId?: string | null }) {
+function assertPilotSourceScopePayload(input: { projectId?: string | null; rootIssueId?: string | null }) {
   if (input.projectId && input.rootIssueId) {
     throw new Error("Paperclip source scope must specify either projectId or rootIssueId, not both.");
   }
@@ -553,11 +553,11 @@ function normalizeBundleLimit(value: unknown, fallback: number): number {
 }
 
 function normalizeCostRate(value: unknown): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_PAPERCLIP_COST_CENTS_PER_1K_CHARS;
+  if (typeof value !== "number" || !Number.isFinite(value)) return DEFAULT_PILOT_COST_CENTS_PER_1K_CHARS;
   return Math.max(0, value);
 }
 
-type PaperclipDistillationLimits = {
+type PilotDistillationLimits = {
   maxCharacters: number;
   maxCharactersPerSource: number;
   maxRoutineRunCharacters: number;
@@ -586,7 +586,7 @@ const DISTILLATION_PRIVATE_KEY_BLOCK_TEST_RE =
 type DistillationSourceProtectionResult = {
   body: string;
   warning: string | null;
-  refPatch: Pick<PaperclipSourceRef, "redactionStatus" | "redactionReasons">;
+  refPatch: Pick<PilotSourceRef, "redactionStatus" | "redactionReasons">;
 };
 
 function redactDistillationSensitiveText(input: string): string {
@@ -637,24 +637,24 @@ function protectDistillationSourceBody(input: {
   };
 }
 
-async function resolvePaperclipDistillationLimits(
+async function resolvePilotDistillationLimits(
   ctx: PluginContext,
-  input: Pick<PaperclipSourceBundleInput, "companyId" | "maxCharacters" | "maxCharactersPerSource" | "routineRun">,
-): Promise<PaperclipDistillationLimits> {
-  assertRequestedCharacterLimit("maxCharacters", input.maxCharacters, DEFAULT_MAX_PAPERCLIP_CURSOR_WINDOW_CHARS);
-  assertRequestedCharacterLimit("maxCharactersPerSource", input.maxCharactersPerSource, DEFAULT_MAX_PAPERCLIP_ISSUE_SOURCE_CHARS);
+  input: Pick<PilotSourceBundleInput, "companyId" | "maxCharacters" | "maxCharactersPerSource" | "routineRun">,
+): Promise<PilotDistillationLimits> {
+  assertRequestedCharacterLimit("maxCharacters", input.maxCharacters, DEFAULT_MAX_PILOT_CURSOR_WINDOW_CHARS);
+  assertRequestedCharacterLimit("maxCharactersPerSource", input.maxCharactersPerSource, DEFAULT_MAX_PILOT_ISSUE_SOURCE_CHARS);
   const config = await ctx.config.get(input.companyId) as Record<string, unknown>;
   const maxCharactersPerSource = Math.min(
-    normalizeBundleLimit(input.maxCharactersPerSource, DEFAULT_MAX_PAPERCLIP_ISSUE_SOURCE_CHARS),
-    normalizeBundleLimit(config.maxPaperclipIssueSourceCharacters, DEFAULT_MAX_PAPERCLIP_ISSUE_SOURCE_CHARS),
+    normalizeBundleLimit(input.maxCharactersPerSource, DEFAULT_MAX_PILOT_ISSUE_SOURCE_CHARS),
+    normalizeBundleLimit(config.maxPaperclipIssueSourceCharacters, DEFAULT_MAX_PILOT_ISSUE_SOURCE_CHARS),
   );
   const cursorWindowCap = normalizeBundleLimit(
     config.maxPaperclipCursorWindowCharacters,
-    DEFAULT_MAX_PAPERCLIP_CURSOR_WINDOW_CHARS,
+    DEFAULT_MAX_PILOT_CURSOR_WINDOW_CHARS,
   );
   const routineRunCap = normalizeBundleLimit(
     config.maxPaperclipRoutineRunCharacters,
-    DEFAULT_MAX_PAPERCLIP_ROUTINE_RUN_CHARS,
+    DEFAULT_MAX_PILOT_ROUTINE_RUN_CHARS,
   );
   const requestedMaxCharacters = normalizeBundleLimit(input.maxCharacters, cursorWindowCap);
   const hardCharacterCap = input.routineRun ? Math.min(cursorWindowCap, routineRunCap) : cursorWindowCap;
@@ -666,12 +666,12 @@ async function resolvePaperclipDistillationLimits(
   };
 }
 
-async function resolvePaperclipDistillationLimitsForSpace(
+async function resolvePilotDistillationLimitsForSpace(
   ctx: PluginContext,
-  input: Pick<PaperclipSourceBundleInput, "companyId" | "maxCharacters" | "maxCharactersPerSource" | "routineRun"> & { space: WikiSpace },
-): Promise<PaperclipDistillationLimits> {
+  input: Pick<PilotSourceBundleInput, "companyId" | "maxCharacters" | "maxCharactersPerSource" | "routineRun"> & { space: WikiSpace },
+): Promise<PilotDistillationLimits> {
   const [base, profile] = await Promise.all([
-    resolvePaperclipDistillationLimits(ctx, input),
+    resolvePilotDistillationLimits(ctx, input),
     profileForSpace(ctx, input.companyId, input.space),
   ]);
   return {
@@ -718,10 +718,10 @@ function normalizeEventIngestionSettings(value: unknown): WikiEventIngestionSett
   };
 }
 
-function defaultPaperclipIngestionProfile(input: {
+function defaultPilotIngestionProfile(input: {
   space: Pick<WikiSpace, "slug">;
   legacySettings?: WikiEventIngestionSettings | null;
-}): PaperclipIngestionProfileV1 {
+}): PilotIngestionProfileV1 {
   const legacy = input.space.slug === DEFAULT_SPACE_SLUG ? input.legacySettings : null;
   return {
     version: 1,
@@ -735,8 +735,8 @@ function defaultPaperclipIngestionProfile(input: {
       workProducts: "off",
     },
     cursor: {
-      maxWindowCharacters: DEFAULT_MAX_PAPERCLIP_CURSOR_WINDOW_CHARS,
-      maxCharactersPerSource: DEFAULT_MAX_PAPERCLIP_ISSUE_SOURCE_CHARS,
+      maxWindowCharacters: DEFAULT_MAX_PILOT_CURSOR_WINDOW_CHARS,
+      maxCharactersPerSource: DEFAULT_MAX_PILOT_ISSUE_SOURCE_CHARS,
       minSourceAgeMinutes: 15,
       maxWindowsPerRun: 6,
       staleAfterHours: 72,
@@ -754,7 +754,7 @@ function stringArray(value: unknown): string[] {
   return [...new Set(value.map((item) => stringField(item)).filter((item): item is string => Boolean(item)))];
 }
 
-function normalizePaperclipIngestionSourceScope(value: unknown): PaperclipIngestionSourceScope | null {
+function normalizePilotIngestionSourceScope(value: unknown): PilotIngestionSourceScope | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
   const kind = stringField(record.kind);
@@ -765,15 +765,15 @@ function normalizePaperclipIngestionSourceScope(value: unknown): PaperclipIngest
       : undefined;
     return {
       kind,
-      limit: normalizeLimit(record.limit, 3, MAX_PAPERCLIP_PROFILE_SELECTED_PROJECTS),
+      limit: normalizeLimit(record.limit, 3, MAX_PILOT_PROFILE_SELECTED_PROJECTS),
       ...(statuses && statuses.length > 0 ? { statuses: [...new Set(statuses)] } : {}),
     };
   }
   if (kind === "selected_projects") {
-    return { kind, projectIds: stringArray(record.projectIds).slice(0, MAX_PAPERCLIP_PROFILE_SELECTED_PROJECTS) };
+    return { kind, projectIds: stringArray(record.projectIds).slice(0, MAX_PILOT_PROFILE_SELECTED_PROJECTS) };
   }
   if (kind === "root_issues") {
-    return { kind, issueIds: stringArray(record.issueIds).slice(0, MAX_PAPERCLIP_PROFILE_ROOT_ISSUES) };
+    return { kind, issueIds: stringArray(record.issueIds).slice(0, MAX_PILOT_PROFILE_ROOT_ISSUES) };
   }
   if (kind === "company_all") {
     return { kind, requiresBoardConfirmation: true };
@@ -781,11 +781,11 @@ function normalizePaperclipIngestionSourceScope(value: unknown): PaperclipIngest
   return null;
 }
 
-function normalizePaperclipIngestionProfile(
+function normalizePilotIngestionProfile(
   value: unknown,
   input: { space: Pick<WikiSpace, "slug">; legacySettings?: WikiEventIngestionSettings | null },
-): PaperclipIngestionProfileV1 {
-  const fallback = defaultPaperclipIngestionProfile(input);
+): PilotIngestionProfileV1 {
+  const fallback = defaultPilotIngestionProfile(input);
   if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
   const record = value as Record<string, unknown>;
   const sourceKinds = record.sourceKinds && typeof record.sourceKinds === "object" && !Array.isArray(record.sourceKinds)
@@ -801,7 +801,7 @@ function normalizePaperclipIngestionProfile(
     version: 1,
     enabled: normalizeBoolean(record.enabled, fallback.enabled),
     sourceScopes: Array.isArray(record.sourceScopes)
-      ? record.sourceScopes.map(normalizePaperclipIngestionSourceScope).filter((scope): scope is PaperclipIngestionSourceScope => Boolean(scope))
+      ? record.sourceScopes.map(normalizePilotIngestionSourceScope).filter((scope): scope is PilotIngestionSourceScope => Boolean(scope))
       : fallback.sourceScopes,
     sourceKinds: {
       issues: normalizeBoolean(sourceKinds.issues, fallback.sourceKinds.issues),
@@ -811,8 +811,8 @@ function normalizePaperclipIngestionProfile(
       workProducts: sourceKinds.workProducts === "metadata_only" ? "metadata_only" : "off",
     },
     cursor: {
-      maxWindowCharacters: normalizeLimit(cursor.maxWindowCharacters, fallback.cursor.maxWindowCharacters, DEFAULT_MAX_PAPERCLIP_CURSOR_WINDOW_CHARS),
-      maxCharactersPerSource: normalizeLimit(cursor.maxCharactersPerSource, fallback.cursor.maxCharactersPerSource, DEFAULT_MAX_PAPERCLIP_ISSUE_SOURCE_CHARS),
+      maxWindowCharacters: normalizeLimit(cursor.maxWindowCharacters, fallback.cursor.maxWindowCharacters, DEFAULT_MAX_PILOT_CURSOR_WINDOW_CHARS),
+      maxCharactersPerSource: normalizeLimit(cursor.maxCharactersPerSource, fallback.cursor.maxCharactersPerSource, DEFAULT_MAX_PILOT_ISSUE_SOURCE_CHARS),
       minSourceAgeMinutes: normalizeLimit(cursor.minSourceAgeMinutes, fallback.cursor.minSourceAgeMinutes, 24 * 60),
       maxWindowsPerRun: normalizeLimit(cursor.maxWindowsPerRun, fallback.cursor.maxWindowsPerRun, 25),
       staleAfterHours: normalizeLimit(cursor.staleAfterHours, fallback.cursor.staleAfterHours, 24 * 30),
@@ -825,9 +825,9 @@ function normalizePaperclipIngestionProfile(
   };
 }
 
-async function profileForSpace(ctx: PluginContext, companyId: string, space: WikiSpace): Promise<PaperclipIngestionProfileV1> {
+async function profileForSpace(ctx: PluginContext, companyId: string, space: WikiSpace): Promise<PilotIngestionProfileV1> {
   const legacySettings = space.slug === DEFAULT_SPACE_SLUG ? await getEventIngestionSettings(ctx, companyId) : null;
-  return normalizePaperclipIngestionProfile(space.settings.paperclipIngestion, { space, legacySettings });
+  return normalizePilotIngestionProfile(space.settings.paperclipIngestion, { space, legacySettings });
 }
 
 function eventIngestionStateKey(companyId: string) {
@@ -852,12 +852,12 @@ export async function getEventIngestionSettings(ctx: PluginContext, companyId: s
   return normalizeEventIngestionSettings(await ctx.state.get(eventIngestionStateKey(companyId)));
 }
 
-function evaluatePaperclipProfilePolicy(input: {
+function evaluatePilotProfilePolicy(input: {
   space: WikiSpace;
-  profile?: PaperclipIngestionProfileV1 | null;
-  purpose: PaperclipIngestionPolicyPurpose;
+  profile?: PilotIngestionProfileV1 | null;
+  purpose: PilotIngestionPolicyPurpose;
   requireEnabledProfile?: boolean;
-}): PaperclipIngestionPolicyDecision {
+}): PilotIngestionPolicyDecision {
   const { space, profile, purpose } = input;
   if (space.status !== "active") {
     return {
@@ -894,26 +894,26 @@ function evaluatePaperclipProfilePolicy(input: {
   return { allowed: true, space };
 }
 
-export async function getPaperclipIngestionProfile(
+export async function getPilotIngestionProfile(
   ctx: PluginContext,
   input: { companyId: string; wikiId?: string | null; spaceSlug?: string | null },
-): Promise<PaperclipIngestionProfileRead> {
+): Promise<PilotIngestionProfileRead> {
   const wikiId = normalizeWikiId(input.wikiId);
   const space = await resolveSpace(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug });
   const profile = await profileForSpace(ctx, input.companyId, space);
-  const policy = evaluatePaperclipProfilePolicy({ space, profile, purpose: "profile_read" });
-  const historicalPageCount = await countPaperclipHistoricalPages(ctx, {
+  const policy = evaluatePilotProfilePolicy({ space, profile, purpose: "profile_read" });
+  const historicalPageCount = await countPilotHistoricalPages(ctx, {
     companyId: input.companyId,
     wikiId,
     spaceId: space.id,
   });
-  const overlapCount = await countPaperclipProfileOverlaps(ctx, {
+  const overlapCount = await countPilotProfileOverlaps(ctx, {
     companyId: input.companyId,
     wikiId,
     space,
     profile,
   });
-  const effectiveState: PaperclipIngestionProfileEffectiveState = !policy.allowed
+  const effectiveState: PilotIngestionProfileEffectiveState = !policy.allowed
     ? "policy_blocked"
     : profile.enabled && profile.sourceScopes.length === 0
       ? "enabled_no_scopes"
@@ -937,7 +937,7 @@ export async function getPaperclipIngestionProfile(
   };
 }
 
-async function countPaperclipHistoricalPages(ctx: PluginContext, input: { companyId: string; wikiId: string; spaceId: string }): Promise<number> {
+async function countPilotHistoricalPages(ctx: PluginContext, input: { companyId: string; wikiId: string; spaceId: string }): Promise<number> {
   const rows = await ctx.db.query<{ count: string | number }>(
     `SELECT count(*)::text AS count
        FROM ${pageBindingTable(ctx)}
@@ -947,18 +947,18 @@ async function countPaperclipHistoricalPages(ctx: PluginContext, input: { compan
   return Number(rows[0]?.count ?? 0) || 0;
 }
 
-function scopeIdentity(scope: PaperclipIngestionSourceScope): string[] {
+function scopeIdentity(scope: PilotIngestionSourceScope): string[] {
   if (scope.kind === "active_projects") return [`active_projects:${scope.limit}`];
   if (scope.kind === "selected_projects") return scope.projectIds.map((id) => `project:${id}`);
   if (scope.kind === "root_issues") return scope.issueIds.map((id) => `root_issue:${id}`);
   return ["company_all"];
 }
 
-async function countPaperclipProfileOverlaps(ctx: PluginContext, input: {
+async function countPilotProfileOverlaps(ctx: PluginContext, input: {
   companyId: string;
   wikiId: string;
   space: WikiSpace;
-  profile: PaperclipIngestionProfileV1;
+  profile: PilotIngestionProfileV1;
 }): Promise<number> {
   if (!input.profile.enabled || input.profile.sourceScopes.length === 0) return 0;
   const own = new Set(input.profile.sourceScopes.flatMap(scopeIdentity));
@@ -976,12 +976,12 @@ async function countPaperclipProfileOverlaps(ctx: PluginContext, input: {
   return overlaps;
 }
 
-async function validatePaperclipIngestionProfile(ctx: PluginContext, input: {
+async function validatePilotIngestionProfile(ctx: PluginContext, input: {
   companyId: string;
   space: WikiSpace;
-  profile: PaperclipIngestionProfileV1;
+  profile: PilotIngestionProfileV1;
 }) {
-  const policy = evaluatePaperclipProfilePolicy({
+  const policy = evaluatePilotProfilePolicy({
     space: input.space,
     profile: input.profile,
     purpose: "profile_update",
@@ -991,16 +991,16 @@ async function validatePaperclipIngestionProfile(ctx: PluginContext, input: {
   if (input.profile.enabled && input.profile.sourceScopes.length === 0) {
     throw new Error("Paperclip ingestion profile must include at least one source scope before it can be enabled.");
   }
-  if (input.profile.sourceScopes.length > MAX_PAPERCLIP_INGESTION_PROFILE_SOURCE_COUNT) {
-    throw new Error(`Paperclip ingestion profile sources exceed the hard cap of ${MAX_PAPERCLIP_INGESTION_PROFILE_SOURCE_COUNT}.`);
+  if (input.profile.sourceScopes.length > MAX_PILOT_INGESTION_PROFILE_SOURCE_COUNT) {
+    throw new Error(`Paperclip ingestion profile sources exceed the hard cap of ${MAX_PILOT_INGESTION_PROFILE_SOURCE_COUNT}.`);
   }
   for (const scope of input.profile.sourceScopes) {
     if (scope.kind === "company_all" && input.space.slug !== DEFAULT_SPACE_SLUG) {
       throw new Error("Everything in the company is only available on the default wiki space.");
     }
     if (scope.kind === "selected_projects") {
-      if (scope.projectIds.length > MAX_PAPERCLIP_PROFILE_SELECTED_PROJECTS) {
-        throw new Error(`selected_projects exceeds the hard cap of ${MAX_PAPERCLIP_PROFILE_SELECTED_PROJECTS}.`);
+      if (scope.projectIds.length > MAX_PILOT_PROFILE_SELECTED_PROJECTS) {
+        throw new Error(`selected_projects exceeds the hard cap of ${MAX_PILOT_PROFILE_SELECTED_PROJECTS}.`);
       }
       for (const projectId of scope.projectIds) {
         const project = await ctx.projects.get(projectId, input.companyId);
@@ -1008,8 +1008,8 @@ async function validatePaperclipIngestionProfile(ctx: PluginContext, input: {
       }
     }
     if (scope.kind === "root_issues") {
-      if (scope.issueIds.length > MAX_PAPERCLIP_PROFILE_ROOT_ISSUES) {
-        throw new Error(`root_issues exceeds the hard cap of ${MAX_PAPERCLIP_PROFILE_ROOT_ISSUES}.`);
+      if (scope.issueIds.length > MAX_PILOT_PROFILE_ROOT_ISSUES) {
+        throw new Error(`root_issues exceeds the hard cap of ${MAX_PILOT_PROFILE_ROOT_ISSUES}.`);
       }
       for (const issueId of scope.issueIds) {
         const issue = await ctx.issues.get(issueId, input.companyId);
@@ -1019,17 +1019,17 @@ async function validatePaperclipIngestionProfile(ctx: PluginContext, input: {
   }
 }
 
-export async function updatePaperclipIngestionProfile(ctx: PluginContext, input: {
+export async function updatePilotIngestionProfile(ctx: PluginContext, input: {
   companyId: string;
   wikiId?: string | null;
   spaceSlug?: string | null;
   profile: unknown;
-}): Promise<PaperclipIngestionProfileRead> {
+}): Promise<PilotIngestionProfileRead> {
   const wikiId = normalizeWikiId(input.wikiId);
   const space = await resolveSpace(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug });
   const current = await profileForSpace(ctx, input.companyId, space);
-  const profile = normalizePaperclipIngestionProfile(input.profile, { space, legacySettings: space.slug === DEFAULT_SPACE_SLUG ? await getEventIngestionSettings(ctx, input.companyId) : null });
-  await validatePaperclipIngestionProfile(ctx, { companyId: input.companyId, space, profile });
+  const profile = normalizePilotIngestionProfile(input.profile, { space, legacySettings: space.slug === DEFAULT_SPACE_SLUG ? await getEventIngestionSettings(ctx, input.companyId) : null });
+  await validatePilotIngestionProfile(ctx, { companyId: input.companyId, space, profile });
   await updateSpace(ctx, {
     companyId: input.companyId,
     wikiId,
@@ -1064,15 +1064,15 @@ export async function updatePaperclipIngestionProfile(ctx: PluginContext, input:
       cursor: profile.cursor,
     },
   });
-  return getPaperclipIngestionProfile(ctx, { companyId: input.companyId, wikiId, spaceSlug: space.slug });
+  return getPilotIngestionProfile(ctx, { companyId: input.companyId, wikiId, spaceSlug: space.slug });
 }
 
-export async function listPaperclipIngestionCandidates(ctx: PluginContext, input: PaperclipIngestionCandidatesInput): Promise<{
+export async function listPilotIngestionCandidates(ctx: PluginContext, input: PilotIngestionCandidatesInput): Promise<{
   projects: Array<{ id: string; name: string; status: string; updatedAt: string | null }>;
   rootIssues: Array<{ id: string; identifier: string | null; title: string; status: string; projectId: string | null }>;
 }> {
   const wikiId = normalizeWikiId(input.wikiId);
-  await requirePaperclipIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "candidate_search");
+  await requirePilotIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "candidate_search");
   const query = stringField(input.query)?.toLowerCase() ?? "";
   const projects = (await ctx.projects.list({ companyId: input.companyId, limit: 200 }))
     .filter((project) => !project.archivedAt)
@@ -1106,14 +1106,14 @@ export async function listPaperclipIngestionCandidates(ctx: PluginContext, input
     ctx: PluginContext,
   input: { companyId: string; settings: WikiEventIngestionSettingsUpdate },
   ): Promise<WikiEventIngestionSettings> {
-  await requirePaperclipIngestionPolicy(ctx, {
+  await requirePilotIngestionPolicy(ctx, {
     companyId: input.companyId,
     wikiId: normalizeWikiId(input.settings.wikiId),
     spaceSlug: DEFAULT_SPACE_SLUG,
   }, "profile_update");
   const sourceKeys = Object.keys(input.settings.sources ?? {});
-  if (sourceKeys.length > MAX_PAPERCLIP_INGESTION_PROFILE_SOURCE_COUNT) {
-    throw new Error(`Paperclip ingestion profile sources exceed the hard cap of ${MAX_PAPERCLIP_INGESTION_PROFILE_SOURCE_COUNT}.`);
+  if (sourceKeys.length > MAX_PILOT_INGESTION_PROFILE_SOURCE_COUNT) {
+    throw new Error(`Paperclip ingestion profile sources exceed the hard cap of ${MAX_PILOT_INGESTION_PROFILE_SOURCE_COUNT}.`);
   }
   assertRequestedCharacterLimit("maxCharacters", input.settings.maxCharacters, MAX_EVENT_SOURCE_CHARS);
   const current = await getEventIngestionSettings(ctx, input.companyId);
@@ -1127,9 +1127,9 @@ export async function listPaperclipIngestionCandidates(ctx: PluginContext, input
   });
   await ctx.state.set(eventIngestionStateKey(input.companyId), next);
   const defaultSpace = await ensureDefaultSpace(ctx, { companyId: input.companyId, wikiId: next.wikiId });
-  const profile = normalizePaperclipIngestionProfile(
+  const profile = normalizePilotIngestionProfile(
     {
-      ...defaultPaperclipIngestionProfile({ space: defaultSpace, legacySettings: next }),
+      ...defaultPilotIngestionProfile({ space: defaultSpace, legacySettings: next }),
       enabled: next.enabled,
       sourceKinds: {
         issues: next.sources.issues,
@@ -1139,7 +1139,7 @@ export async function listPaperclipIngestionCandidates(ctx: PluginContext, input
         workProducts: "off",
       },
       cursor: {
-        ...defaultPaperclipIngestionProfile({ space: defaultSpace, legacySettings: next }).cursor,
+        ...defaultPilotIngestionProfile({ space: defaultSpace, legacySettings: next }).cursor,
         maxCharactersPerSource: next.maxCharacters,
       },
     },
@@ -2296,7 +2296,7 @@ function operationTitleWithSpace(title: string, space: WikiSpace): string {
 }
 
 function operationPromptWithSpaceContext(input: OperationSpaceContext): string {
-  const paperclipDerived = input.operationType === "distill" || input.operationType === "backfill";
+  const pilotDerived = input.operationType === "distill" || input.operationType === "backfill";
   return [
     `Plugin operation: ${input.operationType}`,
     `Wiki ID: ${input.wikiId}`,
@@ -2307,7 +2307,7 @@ function operationPromptWithSpaceContext(input: OperationSpaceContext): string {
     "Space isolation requirement:",
     `- Pass wikiId \`${input.wikiId}\` and spaceSlug \`${input.space.slug}\` on every LLM Wiki tool call.`,
     "- Treat all paths in the prompt as relative to this space root.",
-    paperclipDerived
+    pilotDerived
       ? "- Paperclip-derived distill/backfill operations are default-space-only in Phase 1. Stop and comment if asked to write Paperclip-derived pages into a non-default space."
       : "- Manual ingest, query, lint, index, and file-as-page operations follow the named destination space. Do not cross into another space unless the operation explicitly asks for a multi-space sweep.",
     "",
@@ -2332,7 +2332,7 @@ function operationMetadata(input: OperationSpaceContext) {
 export async function createOperationIssue(ctx: PluginContext, input: OperationInput) {
   const wikiId = normalizeWikiId(input.wikiId);
   const space = input.operationType === "distill" || input.operationType === "backfill"
-    ? await requirePaperclipIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "queue", { requireEnabledProfile: true })
+    ? await requirePilotIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "queue", { requireEnabledProfile: true })
     : await resolveSpace(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug });
   const managedAgent = await resolveWikiAgentResource(ctx, input.companyId, { reconcileMissing: true });
   const managedProject = await resolveWikiProjectResource(ctx, input.companyId, { reconcileMissing: true });
@@ -2389,14 +2389,14 @@ function isLlmWikiOperationIssue(issue: Issue): boolean {
   return typeof issue.originKind === "string" && issue.originKind.startsWith(OPERATION_ORIGIN_KIND);
 }
 
-function paperclipDistillationScope(input: { projectId?: string | null; rootIssueId?: string | null }): PaperclipDistillationScope {
+function pilotDistillationScope(input: { projectId?: string | null; rootIssueId?: string | null }): PilotDistillationScope {
   if (input.rootIssueId) return "root_issue";
   if (input.projectId) return "project";
   return "company";
 }
 
-function paperclipCursorScopeMetadata(input: { projectId?: string | null; rootIssueId?: string | null }) {
-  const sourceScope = paperclipDistillationScope(input);
+function pilotCursorScopeMetadata(input: { projectId?: string | null; rootIssueId?: string | null }) {
+  const sourceScope = pilotDistillationScope(input);
   const projectId = sourceScope === "project" ? input.projectId ?? null : null;
   const rootIssueId = sourceScope === "root_issue" ? input.rootIssueId ?? null : null;
   return {
@@ -2407,7 +2407,7 @@ function paperclipCursorScopeMetadata(input: { projectId?: string | null; rootIs
   };
 }
 
-async function upsertPaperclipDistillationCursor(ctx: PluginContext, input: {
+async function upsertPilotDistillationCursor(ctx: PluginContext, input: {
   companyId: string;
   wikiId: string;
   spaceId: string;
@@ -2417,7 +2417,7 @@ async function upsertPaperclipDistillationCursor(ctx: PluginContext, input: {
   metadata?: Record<string, unknown>;
 }): Promise<string> {
   const cursorId = randomUUID();
-  const scope = paperclipCursorScopeMetadata(input);
+  const scope = pilotCursorScopeMetadata(input);
   await ctx.db.execute(
     `INSERT INTO ${distillationCursorTable(ctx)} AS paperclip_distillation_cursors
        (id, company_id, wiki_id, space_id, source_scope, scope_key, project_id, root_issue_id, source_kind, last_observed_at, pending_event_count, metadata)
@@ -2478,9 +2478,9 @@ export async function enableActiveProjectDistillation(ctx: PluginContext, input:
   limit?: number | null;
 }): Promise<EnableActiveProjectDistillationResult> {
   const wikiId = normalizeWikiId(input.wikiId);
-  const space = await requirePaperclipIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "candidate_search", { requireEnabledProfile: true });
-  if (typeof input.limit === "number" && Number.isFinite(input.limit) && Math.floor(input.limit) > MAX_PAPERCLIP_DISTILLATION_FAN_OUT) {
-    throw new Error(`Paperclip ingestion fan-out exceeds the hard cap of ${MAX_PAPERCLIP_DISTILLATION_FAN_OUT} enabled profiles.`);
+  const space = await requirePilotIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "candidate_search", { requireEnabledProfile: true });
+  if (typeof input.limit === "number" && Number.isFinite(input.limit) && Math.floor(input.limit) > MAX_PILOT_DISTILLATION_FAN_OUT) {
+    throw new Error(`Paperclip ingestion fan-out exceeds the hard cap of ${MAX_PILOT_DISTILLATION_FAN_OUT} enabled profiles.`);
   }
   const limit = normalizeLimit(input.limit ?? 3, 3, 25);
   const projects = await ctx.projects.list({ companyId: input.companyId, limit: 200 });
@@ -2492,7 +2492,7 @@ export async function enableActiveProjectDistillation(ctx: PluginContext, input:
   const selectedProjects: EnableActiveProjectDistillationResult["selectedProjects"] = [];
   for (const project of activeProjects) {
     const observedAt = projectActivityTimestamp(project);
-    const cursorId = await upsertPaperclipDistillationCursor(ctx, {
+    const cursorId = await upsertPilotDistillationCursor(ctx, {
       companyId: input.companyId,
       wikiId,
       spaceId: space.id,
@@ -2539,8 +2539,8 @@ function appendBoundedSection(input: {
   lines: string[];
   title: string;
   body: string;
-  refs: PaperclipSourceRef[];
-  ref: PaperclipSourceRef;
+  refs: PilotSourceRef[];
+  ref: PilotSourceRef;
   remaining: { value: number };
   perSourceLimit: number;
   warnings: string[];
@@ -2568,11 +2568,11 @@ function issueSortKey(issue: Issue): string {
   return `${issue.identifier ?? ""}:${issue.title}:${issue.id}`;
 }
 
-function sourceRefUpdatedAt(ref: PaperclipSourceRef): string | null {
+function sourceRefUpdatedAt(ref: PilotSourceRef): string | null {
   return ref.updatedAt ?? ref.createdAt ?? null;
 }
 
-function issueInBackfillWindow(issue: Issue, input: Pick<PaperclipSourceBundleInput, "backfillStartAt" | "backfillEndAt">): boolean {
+function issueInBackfillWindow(issue: Issue, input: Pick<PilotSourceBundleInput, "backfillStartAt" | "backfillEndAt">): boolean {
   const issueUpdatedAt = isoString(issue.updatedAt);
   if (!issueUpdatedAt) return true;
   const startAt = isoString(input.backfillStartAt);
@@ -2582,7 +2582,7 @@ function issueInBackfillWindow(issue: Issue, input: Pick<PaperclipSourceBundleIn
   return true;
 }
 
-async function listPaperclipBundleIssues(ctx: PluginContext, input: PaperclipSourceBundleInput): Promise<Issue[]> {
+async function listPilotBundleIssues(ctx: PluginContext, input: PilotSourceBundleInput): Promise<Issue[]> {
   const filterAndSort = (issues: Issue[]) =>
     issues
       .filter((issue) => !isLlmWikiOperationIssue(issue))
@@ -2608,18 +2608,18 @@ async function listPaperclipBundleIssues(ctx: PluginContext, input: PaperclipSou
   return filterAndSort(issues);
 }
 
-export async function assemblePaperclipSourceBundle(ctx: PluginContext, input: PaperclipSourceBundleInput): Promise<PaperclipSourceBundle> {
+export async function assemblePilotSourceBundle(ctx: PluginContext, input: PilotSourceBundleInput): Promise<PilotSourceBundle> {
   const wikiId = normalizeWikiId(input.wikiId);
-  assertPaperclipSourceScopePayload(input);
-  const space = await requirePaperclipIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "execute", { requireEnabledProfile: true });
-  const limits = await resolvePaperclipDistillationLimitsForSpace(ctx, { ...input, space });
+  assertPilotSourceScopePayload(input);
+  const space = await requirePilotIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "execute", { requireEnabledProfile: true });
+  const limits = await resolvePilotDistillationLimitsForSpace(ctx, { ...input, space });
   const maxCharacters = limits.maxCharacters;
   const perSourceLimit = limits.maxCharactersPerSource;
   const includeComments = input.includeComments !== false;
   const includeDocuments = input.includeDocuments !== false;
-  const issues = await listPaperclipBundleIssues(ctx, input);
-  const scope = paperclipCursorScopeMetadata(input);
-  const sourceRefs: PaperclipSourceRef[] = [];
+  const issues = await listPilotBundleIssues(ctx, input);
+  const scope = pilotCursorScopeMetadata(input);
+  const sourceRefs: PilotSourceRef[] = [];
   const warnings: string[] = [];
   const lines = [
     `# Paperclip source bundle`,
@@ -2765,13 +2765,13 @@ export async function assemblePaperclipSourceBundle(ctx: PluginContext, input: P
   };
 }
 
-export async function createPaperclipDistillationRun(ctx: PluginContext, input: PaperclipDistillationRunInput) {
+export async function createPilotDistillationRun(ctx: PluginContext, input: PilotDistillationRunInput) {
   const wikiId = normalizeWikiId(input.wikiId);
-  assertPaperclipSourceScopePayload(input);
-  const space = await requirePaperclipIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "execute", { requireEnabledProfile: true });
-  const scope = paperclipCursorScopeMetadata(input);
-  const limits = await resolvePaperclipDistillationLimitsForSpace(ctx, { ...input, space });
-  const cursorId = await upsertPaperclipDistillationCursor(ctx, {
+  assertPilotSourceScopePayload(input);
+  const space = await requirePilotIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "execute", { requireEnabledProfile: true });
+  const scope = pilotCursorScopeMetadata(input);
+  const limits = await resolvePilotDistillationLimitsForSpace(ctx, { ...input, space });
+  const cursorId = await upsertPilotDistillationCursor(ctx, {
     companyId: input.companyId,
     wikiId,
     spaceId: space.id,
@@ -2779,7 +2779,7 @@ export async function createPaperclipDistillationRun(ctx: PluginContext, input: 
     rootIssueId: scope.rootIssueId,
     metadata: { source: "source-bundle" },
   });
-  const bundle = await assemblePaperclipSourceBundle(ctx, input);
+  const bundle = await assemblePilotSourceBundle(ctx, input);
   const estimatedCostCents = estimateSourceCostCents(
     bundle.markdown.length,
     limits.costCentsPerThousandSourceCharacters,
@@ -2845,9 +2845,9 @@ export async function createPaperclipDistillationRun(ctx: PluginContext, input: 
   return { status: "source_ready" as const, wikiId, spaceSlug: space.slug, cursorId, runId, snapshotId, bundle, estimatedCostCents };
 }
 
-export async function recordPaperclipDistillationOutcome(ctx: PluginContext, input: PaperclipDistillationOutcomeInput) {
+export async function recordPilotDistillationOutcome(ctx: PluginContext, input: PilotDistillationOutcomeInput) {
   const wikiId = normalizeWikiId(input.wikiId);
-  const space = await requirePaperclipIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "execute", { requireEnabledProfile: true });
+  const space = await requirePilotIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "execute", { requireEnabledProfile: true });
   const warnings = input.warning ? [input.warning] : [];
   await ctx.db.execute(
     `UPDATE ${distillationRunTable(ctx)}
@@ -2894,12 +2894,12 @@ export async function recordPaperclipDistillationOutcome(ctx: PluginContext, inp
   };
 }
 
-export async function createPaperclipDistillationWorkItem(ctx: PluginContext, input: PaperclipDistillationWorkItemInput) {
+export async function createPilotDistillationWorkItem(ctx: PluginContext, input: PilotDistillationWorkItemInput) {
   const wikiId = normalizeWikiId(input.wikiId);
-  assertPaperclipSourceScopePayload(input);
-  const space = await requirePaperclipIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "queue", { requireEnabledProfile: true });
+  assertPilotSourceScopePayload(input);
+  const space = await requirePilotIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "queue", { requireEnabledProfile: true });
   const itemId = randomUUID();
-  const scope = paperclipCursorScopeMetadata(input);
+  const scope = pilotCursorScopeMetadata(input);
   if (input.kind === "backfill" && !scope.projectId && !scope.rootIssueId) {
     throw new Error("Backfill work items must target a projectId or rootIssueId; whole-company backfill is not allowed.");
   }
@@ -2932,14 +2932,14 @@ export async function createPaperclipDistillationWorkItem(ctx: PluginContext, in
   return { status: "pending", workItemId: itemId, wikiId, spaceSlug: space.slug, kind: input.kind, sourceScope: scope.sourceScope };
 }
 
-function sourceRefLabel(ref: PaperclipSourceRef): string {
+function sourceRefLabel(ref: PilotSourceRef): string {
   const issue = ref.issueIdentifier ? issueReference(ref.issueIdentifier) : (ref.title ?? "Paperclip source");
   if (ref.kind === "document") return `${issue} document:${ref.documentKey ?? "unknown"}`;
   if (ref.kind === "comment") return `${issue} comment`;
   return issue;
 }
 
-function sourceRefMarkdown(ref: PaperclipSourceRef): string {
+function sourceRefMarkdown(ref: PilotSourceRef): string {
   const metadata = [
     ref.redactionStatus ? `redaction=${ref.redactionStatus}` : null,
     ref.redactionReasons?.length ? `redaction_reasons=${ref.redactionReasons.join("|")}` : null,
@@ -2947,7 +2947,7 @@ function sourceRefMarkdown(ref: PaperclipSourceRef): string {
   return `- ${sourceRefLabel(ref)}${metadata ? ` (${metadata})` : ""}`;
 }
 
-function issueSourceRef(issue: Issue): PaperclipSourceRef {
+function issueSourceRef(issue: Issue): PilotSourceRef {
   return {
     kind: "issue",
     issueId: issue.id,
@@ -3007,7 +3007,7 @@ function hasRiskSignal(value: string): boolean {
   return /\b(blocked|blocker|risk|warning|stale|conflict|failed|failure|regression)\b/i.test(value);
 }
 
-function hasDurableSignal(bundle: PaperclipSourceBundle, issues: Issue[]): boolean {
+function hasDurableSignal(bundle: PilotSourceBundle, issues: Issue[]): boolean {
   if (bundle.sourceRefs.some((ref) => ref.kind === "document" || ref.kind === "comment")) return true;
   if (issues.some((issue) => issue.status !== "todo" || issueDescription(issue).length > 0)) return true;
   return /\b(decision|approved|implemented|completed|blocked|risk|artifact|plan|handoff|merged|fixed)\b/i.test(bundle.markdown);
@@ -3017,7 +3017,7 @@ function standupPageContents(input: {
   project: Project | null;
   rootIssue: Issue | null;
   issues: Issue[];
-  bundle: PaperclipSourceBundle;
+  bundle: PilotSourceBundle;
   pagePath: string;
   durablePagePath: string;
 }): string {
@@ -3089,7 +3089,7 @@ function projectPageContents(input: {
   project: Project | null;
   rootIssue: Issue | null;
   issues: Issue[];
-  bundle: PaperclipSourceBundle;
+  bundle: PilotSourceBundle;
   pagePath: string;
 }): string {
   const currentAsOf = input.bundle.sourceWindowEnd ?? new Date().toISOString();
@@ -3149,7 +3149,7 @@ function projectPageContents(input: {
   ].filter((line): line is string => line !== null).join("\n");
 }
 
-function decisionsPageContents(input: { project: Project | null; rootIssue: Issue | null; issues: Issue[]; bundle: PaperclipSourceBundle }): string {
+function decisionsPageContents(input: { project: Project | null; rootIssue: Issue | null; issues: Issue[]; bundle: PilotSourceBundle }): string {
   const title = input.project?.name ?? input.rootIssue?.title ?? "Paperclip Project";
   const decisionIssues = input.issues.filter((issue) => hasDecisionSignal(`${issue.title}\n${issueDescription(issue)}`));
   return [
@@ -3174,7 +3174,7 @@ function decisionsPageContents(input: { project: Project | null; rootIssue: Issu
   ].join("\n");
 }
 
-function historyPageContents(input: { project: Project | null; rootIssue: Issue | null; issues: Issue[]; bundle: PaperclipSourceBundle }): string {
+function historyPageContents(input: { project: Project | null; rootIssue: Issue | null; issues: Issue[]; bundle: PilotSourceBundle }): string {
   const title = input.project?.name ?? input.rootIssue?.title ?? "Paperclip Project";
   const timeline = [...input.issues]
     .sort((a, b) => (isoString(a.updatedAt) ?? "").localeCompare(isoString(b.updatedAt) ?? ""))
@@ -3232,14 +3232,14 @@ function appendProjectLogContents(current: string | null, input: { standupPath: 
 
 function patchForPage(input: {
   path: string;
-  operationType: PaperclipDistillationPatchOperation;
+  operationType: PilotDistillationPatchOperation;
   currentHash: string | null;
   contents: string;
-  bundle: PaperclipSourceBundle;
+  bundle: PilotSourceBundle;
   confidence: "high" | "medium" | "low";
   warnings: string[];
   humanReviewRequired: boolean;
-}): PaperclipDistillationPatch {
+}): PilotDistillationPatch {
   return {
     pagePath: input.path,
     operationType: input.operationType,
@@ -3333,28 +3333,28 @@ export function getDistillationAutoApplyRestriction(): DistillationAutoApplyRest
   };
 }
 
-export async function distillPaperclipProjectPage(ctx: PluginContext, input: PaperclipProjectPageDistillationInput) {
+export async function distillPilotProjectPage(ctx: PluginContext, input: PilotProjectPageDistillationInput) {
   if (!input.projectId && !input.rootIssueId) {
     throw new Error("projectId or rootIssueId is required");
   }
   const wikiId = normalizeWikiId(input.wikiId);
-  assertPaperclipSourceScopePayload(input);
-  const space = await requirePaperclipIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "execute", { requireEnabledProfile: true });
-  const scope = paperclipCursorScopeMetadata(input);
-  const issues = await listPaperclipBundleIssues(ctx, input);
+  assertPilotSourceScopePayload(input);
+  const space = await requirePilotIngestionPolicy(ctx, { companyId: input.companyId, wikiId, spaceSlug: input.spaceSlug }, "execute", { requireEnabledProfile: true });
+  const scope = pilotCursorScopeMetadata(input);
+  const issues = await listPilotBundleIssues(ctx, input);
   const project = scope.projectId ? await ctx.projects.get(scope.projectId, input.companyId) : null;
   const rootIssue = scope.rootIssueId ? await ctx.issues.get(scope.rootIssueId, input.companyId) : null;
   const slug = projectPageSlug({ project, rootIssue });
   const projectDir = `wiki/projects/${slug}`;
   const standupPath = assertPagePath(`${projectDir}/standup.md`);
   const pagePath = assertPagePath(`${projectDir}/index.md`);
-  const run = await createPaperclipDistillationRun(ctx, input);
+  const run = await createPilotDistillationRun(ctx, input);
   const bundle = run.bundle;
   const current = await readCurrentWithHash(ctx, input.companyId, pagePath, space);
   assertExpectedHash(input.expectedProjectPageHash, current.hash, pagePath);
 
   if (!hasDurableSignal(bundle, issues)) {
-    await recordPaperclipDistillationOutcome(ctx, {
+    await recordPilotDistillationOutcome(ctx, {
       companyId: input.companyId,
       wikiId,
       spaceSlug: space.slug,
@@ -3373,13 +3373,13 @@ export async function distillPaperclipProjectPage(ctx: PluginContext, input: Pap
       cursorId: run.cursorId,
       sourceHash: bundle.sourceHash,
       warnings: ["Skipped low-signal Paperclip source window."],
-      patches: [] as PaperclipDistillationPatch[],
+      patches: [] as PilotDistillationPatch[],
     };
   }
 
   const existingBinding = await readPageBinding(ctx, { companyId: input.companyId, wikiId, spaceId: space.id, pagePath });
   if (existingBinding?.last_applied_source_hash === bundle.sourceHash) {
-    await recordPaperclipDistillationOutcome(ctx, {
+    await recordPilotDistillationOutcome(ctx, {
       companyId: input.companyId,
       wikiId,
       spaceSlug: space.slug,
@@ -3398,7 +3398,7 @@ export async function distillPaperclipProjectPage(ctx: PluginContext, input: Pap
       cursorId: run.cursorId,
       sourceHash: bundle.sourceHash,
       warnings: ["Skipped unchanged Paperclip source hash."],
-      patches: [] as PaperclipDistillationPatch[],
+      patches: [] as PilotDistillationPatch[],
     };
   }
 
@@ -3424,7 +3424,7 @@ export async function distillPaperclipProjectPage(ctx: PluginContext, input: Pap
     status: "proposed",
     warnings,
   });
-  const patches: PaperclipDistillationPatch[] = [
+  const patches: PilotDistillationPatch[] = [
     patchForPage({ path: standupPath, operationType: "standup_update", currentHash: standupCurrent.hash, contents: standupContents, bundle, confidence, warnings, humanReviewRequired: reviewRequired }),
     patchForPage({ path: pagePath, operationType: "project_page_distill", currentHash: current.hash, contents: projectContents, bundle, confidence, warnings, humanReviewRequired: reviewRequired }),
     patchForPage({ path: "wiki/index.md", operationType: "index_refresh", currentHash: indexCurrent.hash, contents: indexContents, bundle, confidence: "high", warnings: [], humanReviewRequired: false }),
@@ -3467,7 +3467,7 @@ export async function distillPaperclipProjectPage(ctx: PluginContext, input: Pap
     const autoApplyWarning =
       autoApplyRestriction.autoApplyRestriction
       ?? "Auto-apply policy disabled; proposed patches require review.";
-    await recordPaperclipDistillationOutcome(ctx, {
+    await recordPilotDistillationOutcome(ctx, {
       companyId: input.companyId,
       wikiId,
       spaceSlug: space.slug,
@@ -3516,7 +3516,7 @@ export async function distillPaperclipProjectPage(ctx: PluginContext, input: Pap
     });
     appliedPages.push(patch.pagePath);
   }
-  await recordPaperclipDistillationOutcome(ctx, {
+  await recordPilotDistillationOutcome(ctx, {
     companyId: input.companyId,
     wikiId,
     spaceSlug: space.slug,
@@ -3554,7 +3554,7 @@ function sourceTitleForIssue(issue: Issue): string {
   return issue.identifier ? `${issue.identifier} ${issue.title}` : issue.title;
 }
 
-function rawPathForPaperclipEvent(input: {
+function rawPathForPilotEvent(input: {
   sourceKind: WikiEventIngestionSource;
   issue: Issue;
   label: string;
@@ -3630,7 +3630,7 @@ function formatDocumentEventSource(issue: Issue, document: IssueDocument, event:
   ].filter((line): line is string => line !== null).join("\n"), maxCharacters);
 }
 
-async function recordPaperclipCursorObservation(ctx: PluginContext, input: {
+async function recordPilotCursorObservation(ctx: PluginContext, input: {
   companyId: string;
   wikiId: string;
   space: WikiSpace;
@@ -3638,8 +3638,8 @@ async function recordPaperclipCursorObservation(ctx: PluginContext, input: {
   sourceId: string;
   issue: Issue;
   event: PluginEvent;
-}): Promise<Extract<PaperclipEventIngestResult, { status: "recorded" }>> {
-  const cursorId = await upsertPaperclipDistillationCursor(ctx, {
+}): Promise<Extract<PilotEventIngestResult, { status: "recorded" }>> {
+  const cursorId = await upsertPilotDistillationCursor(ctx, {
     companyId: input.companyId,
     wikiId: input.wikiId,
     spaceId: input.space.id,
@@ -3671,10 +3671,10 @@ async function recordPaperclipCursorObservation(ctx: PluginContext, input: {
   };
 }
 
-async function paperclipProfileIncludesIssue(ctx: PluginContext, input: {
+async function pilotProfileIncludesIssue(ctx: PluginContext, input: {
   companyId: string;
   issue: Issue;
-  profile: PaperclipIngestionProfileV1;
+  profile: PilotIngestionProfileV1;
 }): Promise<boolean> {
   for (const scope of input.profile.sourceScopes) {
     if (scope.kind === "company_all") return true;
@@ -3699,31 +3699,31 @@ async function paperclipProfileIncludesIssue(ctx: PluginContext, input: {
   return false;
 }
 
-async function routePaperclipCursorObservation(ctx: PluginContext, input: {
+async function routePilotCursorObservation(ctx: PluginContext, input: {
   companyId: string;
   sourceKind: WikiEventIngestionSource;
   sourceId: string;
   issue: Issue;
   event: PluginEvent;
-}): Promise<PaperclipEventIngestResult> {
+}): Promise<PilotEventIngestResult> {
   const { spaces } = await listSpaces(ctx, { companyId: input.companyId, wikiId: DEFAULT_WIKI_ID });
-  const recorded: Array<Extract<PaperclipEventIngestResult, { status: "recorded" }>> = [];
+  const recorded: Array<Extract<PilotEventIngestResult, { status: "recorded" }>> = [];
   let eligibleProfileCount = 0;
   for (const space of spaces) {
     const profile = await profileForSpace(ctx, input.companyId, space);
     if (!profile.enabled) continue;
-    const policy = evaluatePaperclipProfilePolicy({ space, profile, purpose: "event_routing", requireEnabledProfile: true });
+    const policy = evaluatePilotProfilePolicy({ space, profile, purpose: "event_routing", requireEnabledProfile: true });
     if (!policy.allowed) continue;
     if (!profile.sourceKinds[input.sourceKind]) continue;
-    if (!(await paperclipProfileIncludesIssue(ctx, { companyId: input.companyId, issue: input.issue, profile }))) continue;
+    if (!(await pilotProfileIncludesIssue(ctx, { companyId: input.companyId, issue: input.issue, profile }))) continue;
     eligibleProfileCount += 1;
-    if (eligibleProfileCount > MAX_PAPERCLIP_DISTILLATION_FAN_OUT) {
-      throw new Error(`Paperclip ingestion fan-out exceeds the hard cap of ${MAX_PAPERCLIP_DISTILLATION_FAN_OUT} enabled profiles.`);
+    if (eligibleProfileCount > MAX_PILOT_DISTILLATION_FAN_OUT) {
+      throw new Error(`Paperclip ingestion fan-out exceeds the hard cap of ${MAX_PILOT_DISTILLATION_FAN_OUT} enabled profiles.`);
     }
     if (await ctx.state.get(eventIngestionDedupKey(input.companyId, space.wikiId, space.id, input.sourceKind, input.sourceId))) {
       continue;
     }
-    recorded.push(await recordPaperclipCursorObservation(ctx, {
+    recorded.push(await recordPilotCursorObservation(ctx, {
       ...input,
       wikiId: space.wikiId,
       space,
@@ -3732,7 +3732,7 @@ async function routePaperclipCursorObservation(ctx: PluginContext, input: {
   return recorded[0] ?? { status: "skipped", reason: "source_disabled" };
 }
 
-export async function handlePaperclipEventIngestion(ctx: PluginContext, event: PluginEvent): Promise<PaperclipEventIngestResult> {
+export async function handlePilotEventIngestion(ctx: PluginContext, event: PluginEvent): Promise<PilotEventIngestResult> {
   const companyId = event.companyId;
 
   const issueId = stringField(event.entityId);
@@ -3744,7 +3744,7 @@ export async function handlePaperclipEventIngestion(ctx: PluginContext, event: P
   const payload = eventPayload(event);
   if (event.eventType === "issue.created" || event.eventType === "issue.updated") {
     const sourceId = `${event.eventType}:${issue.id}:${event.eventId}`;
-    return routePaperclipCursorObservation(ctx, {
+    return routePilotCursorObservation(ctx, {
       companyId,
       sourceKind: "issues",
       sourceId,
@@ -3757,7 +3757,7 @@ export async function handlePaperclipEventIngestion(ctx: PluginContext, event: P
     const commentId = stringField(payload.commentId);
     if (!commentId) return { status: "skipped", reason: "missing_comment" };
     const sourceId = `comment:${commentId}`;
-    return routePaperclipCursorObservation(ctx, {
+    return routePilotCursorObservation(ctx, {
       companyId,
       sourceKind: "comments",
       sourceId,
@@ -3771,7 +3771,7 @@ export async function handlePaperclipEventIngestion(ctx: PluginContext, event: P
     if (!documentKey) return { status: "skipped", reason: "missing_document" };
     const revision = stringField(payload.revisionId) ?? stringField(payload.latestRevisionId) ?? stringField(payload.revisionNumber) ?? event.eventId;
     const sourceId = `document:${issue.id}:${documentKey}:revision:${revision}`;
-    return routePaperclipCursorObservation(ctx, {
+    return routePilotCursorObservation(ctx, {
       companyId,
       sourceKind: "documents",
       sourceId,

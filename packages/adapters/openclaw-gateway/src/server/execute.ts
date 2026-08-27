@@ -6,11 +6,11 @@ import type {
 import {
   asNumber,
   asString,
-  buildPaperclipEnv,
+  buildPilotEnv,
   parseObject,
-  readPaperclipIssueWorkModeFromContext,
-  renderPaperclipWakePrompt,
-  stringifyPaperclipWakePayload,
+  readPilotIssueWorkModeFromContext,
+  renderPilotWakePrompt,
+  stringifyPilotWakePayload,
 } from "@paperclipai/adapter-utils/server-utils";
 import crypto, { randomUUID } from "node:crypto";
 import { WebSocket } from "ws";
@@ -323,7 +323,7 @@ function buildWakePayload(ctx: AdapterExecutionContext): WakePayload {
   };
 }
 
-function resolvePaperclipApiUrlOverride(value: unknown): string | null {
+function resolvePilotApiUrlOverride(value: unknown): string | null {
   const raw = nonEmpty(value);
   if (!raw) return null;
   try {
@@ -341,33 +341,33 @@ export function resolveClaimedApiKeyPath(value: unknown): string {
   return nonEmpty(value) ?? DEFAULT_CLAIMED_API_KEY_PATH;
 }
 
-function buildPaperclipEnvForWake(ctx: AdapterExecutionContext, wakePayload: WakePayload): Record<string, string> {
-  const paperclipApiUrlOverride = resolvePaperclipApiUrlOverride(ctx.config.paperclipApiUrl);
-  const paperclipEnv: Record<string, string> = {
-    ...buildPaperclipEnv(ctx.agent),
+function buildPilotEnvForWake(ctx: AdapterExecutionContext, wakePayload: WakePayload): Record<string, string> {
+  const pilotApiUrlOverride = resolvePilotApiUrlOverride(ctx.config.paperclipApiUrl);
+  const pilotEnv: Record<string, string> = {
+    ...buildPilotEnv(ctx.agent),
     PAPERCLIP_RUN_ID: ctx.runId,
   };
 
-  if (paperclipApiUrlOverride) {
-    paperclipEnv.PAPERCLIP_API_URL = paperclipApiUrlOverride;
+  if (pilotApiUrlOverride) {
+    pilotEnv.PAPERCLIP_API_URL = pilotApiUrlOverride;
   }
-  if (wakePayload.taskId) paperclipEnv.PAPERCLIP_TASK_ID = wakePayload.taskId;
-  const issueWorkMode = readPaperclipIssueWorkModeFromContext(ctx.context);
-  if (issueWorkMode) paperclipEnv.PAPERCLIP_ISSUE_WORK_MODE = issueWorkMode;
-  if (wakePayload.wakeReason) paperclipEnv.PAPERCLIP_WAKE_REASON = wakePayload.wakeReason;
-  if (wakePayload.wakeCommentId) paperclipEnv.PAPERCLIP_WAKE_COMMENT_ID = wakePayload.wakeCommentId;
-  if (wakePayload.approvalId) paperclipEnv.PAPERCLIP_APPROVAL_ID = wakePayload.approvalId;
-  if (wakePayload.approvalStatus) paperclipEnv.PAPERCLIP_APPROVAL_STATUS = wakePayload.approvalStatus;
+  if (wakePayload.taskId) pilotEnv.PAPERCLIP_TASK_ID = wakePayload.taskId;
+  const issueWorkMode = readPilotIssueWorkModeFromContext(ctx.context);
+  if (issueWorkMode) pilotEnv.PAPERCLIP_ISSUE_WORK_MODE = issueWorkMode;
+  if (wakePayload.wakeReason) pilotEnv.PAPERCLIP_WAKE_REASON = wakePayload.wakeReason;
+  if (wakePayload.wakeCommentId) pilotEnv.PAPERCLIP_WAKE_COMMENT_ID = wakePayload.wakeCommentId;
+  if (wakePayload.approvalId) pilotEnv.PAPERCLIP_APPROVAL_ID = wakePayload.approvalId;
+  if (wakePayload.approvalStatus) pilotEnv.PAPERCLIP_APPROVAL_STATUS = wakePayload.approvalStatus;
   if (wakePayload.issueIds.length > 0) {
-    paperclipEnv.PAPERCLIP_LINKED_ISSUE_IDS = wakePayload.issueIds.join(",");
+    pilotEnv.PAPERCLIP_LINKED_ISSUE_IDS = wakePayload.issueIds.join(",");
   }
 
-  return paperclipEnv;
+  return pilotEnv;
 }
 
 function buildWakeText(
   payload: WakePayload,
-  paperclipEnv: Record<string, string>,
+  pilotEnv: Record<string, string>,
   structuredWakePrompt: string,
   claimedApiKeyPath: string,
 ): string {
@@ -386,13 +386,13 @@ function buildWakeText(
 
   const envLines: string[] = [];
   for (const key of orderedKeys) {
-    const value = paperclipEnv[key];
+    const value = pilotEnv[key];
     if (!value) continue;
     envLines.push(`${key}=${value}`);
   }
 
   const issueIdHint = payload.taskId ?? payload.issueId ?? "";
-  const apiBaseHint = paperclipEnv.PAPERCLIP_API_URL ?? "<set PAPERCLIP_API_URL>";
+  const apiBaseHint = pilotEnv.PAPERCLIP_API_URL ?? "<set PAPERCLIP_API_URL>";
 
   const lines = [
     "Paperclip wake event for a cloud adapter.",
@@ -1083,16 +1083,16 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const disableDeviceAuth = parseBoolean(ctx.config.disableDeviceAuth, false);
 
   const wakePayload = buildWakePayload(ctx);
-  const paperclipEnv = buildPaperclipEnvForWake(ctx, wakePayload);
+  const pilotEnv = buildPilotEnvForWake(ctx, wakePayload);
   // No heartbeat prompt template is sent over the gateway, so the wake prompt
   // must carry the execution contract itself.
-  const structuredWakePrompt = renderPaperclipWakePrompt(ctx.context.paperclipWake, {
+  const structuredWakePrompt = renderPilotWakePrompt(ctx.context.paperclipWake, {
     includeExecutionContract: true,
   });
-  const structuredWakeJson = stringifyPaperclipWakePayload(ctx.context.paperclipWake);
+  const structuredWakeJson = stringifyPilotWakePayload(ctx.context.paperclipWake);
   const wakeText = buildWakeText(
     wakePayload,
-    paperclipEnv,
+    pilotEnv,
     structuredWakeJson
       ? joinWakePayloadSections(structuredWakePrompt, structuredWakeJson)
       : structuredWakePrompt,

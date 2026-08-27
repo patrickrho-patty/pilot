@@ -67,7 +67,7 @@ export type {
 } from "../constants.js";
 
 // ---------------------------------------------------------------------------
-// Manifest sub-types — nested declarations within PaperclipPluginManifestV1
+// Manifest sub-types — nested declarations within PilotPluginManifestV1
 // ---------------------------------------------------------------------------
 
 /**
@@ -649,7 +649,7 @@ export interface PluginObjectReferenceProviderDeclaration {
  * The manifest shape every plugin package must export.
  * See PLUGIN_SPEC.md §10.1 for the normative definition.
  */
-export interface PaperclipPluginManifestV1 {
+export interface PilotPluginManifestV1 {
   /** Globally unique plugin identifier (e.g. `"acme.linear-sync"`). Must be lowercase alphanumeric with dots, hyphens, or underscores. */
   id: string;
   /** Plugin API version. Must be `1` for the current spec. */
@@ -740,7 +740,7 @@ export interface PluginRecord {
   /** Plugin categories from the manifest. */
   categories: PluginCategory[];
   /** Full manifest snapshot persisted at install/upgrade time. */
-  manifestJson: PaperclipPluginManifestV1;
+  manifestJson: PilotPluginManifestV1;
   /** Current lifecycle status. */
   status: PluginStatus;
   /** Deterministic load order (null if not yet assigned). */

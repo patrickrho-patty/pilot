@@ -8,8 +8,8 @@ import {
   resolveConfigPath,
 } from "../config/store.js";
 import {
-  findPaperclipConfigKeyWarnings,
-  type PaperclipConfig,
+  findPilotConfigKeyWarnings,
+  type PilotConfig,
 } from "../config/schema.js";
 import { ensureLocalSecretsKeyFile } from "../config/secrets-key.js";
 import { promptDatabase } from "../prompts/database.js";
@@ -22,9 +22,9 @@ import {
   resolveDefaultBackupDir,
   resolveDefaultEmbeddedPostgresDir,
   resolveDefaultLogsDir,
-  resolvePaperclipInstanceId,
+  resolvePilotInstanceId,
 } from "../config/home.js";
-import { printPaperclipCliBanner } from "../utils/banner.js";
+import { printPilotCliBanner } from "../utils/banner.js";
 
 type Section = "llm" | "database" | "logging" | "server" | "storage" | "secrets";
 
@@ -37,8 +37,8 @@ const SECTION_LABELS: Record<Section, string> = {
   secrets: "Secrets",
 };
 
-function defaultConfig(): PaperclipConfig {
-  const instanceId = resolvePaperclipInstanceId();
+function defaultConfig(): PilotConfig {
+  const instanceId = resolvePilotInstanceId();
   return {
     $meta: {
       version: 1,
@@ -85,7 +85,7 @@ export async function configure(opts: {
   config?: string;
   section?: string;
 }): Promise<void> {
-  printPaperclipCliBanner();
+  printPilotCliBanner();
   p.intro(pc.bgCyan(pc.black(" paperclip configure ")));
   const configPath = resolveConfigPath(opts.config);
 
@@ -96,11 +96,11 @@ export async function configure(opts: {
     return;
   }
 
-  let config: PaperclipConfig;
+  let config: PilotConfig;
   let invalidBackupPath: string | undefined;
   try {
     config = readConfig(opts.config) ?? defaultConfig();
-    for (const warning of findPaperclipConfigKeyWarnings(config)) {
+    for (const warning of findPilotConfigKeyWarnings(config)) {
       p.log.warn(`Unknown config key ${warning.path}; did you mean ${warning.suggestion}? It will be preserved.`);
     }
   } catch (err) {

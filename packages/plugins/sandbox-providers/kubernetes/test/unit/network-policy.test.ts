@@ -30,10 +30,10 @@ describe("buildNetworkPolicyManifests", () => {
       r.ports?.some((p) => p.port === 53),
     );
     expect(dnsRule).toBeDefined();
-    const paperclipRule = rules.find((r: { to: { namespaceSelector?: { matchLabels?: Record<string, string> } }[] }) =>
+    const pilotRule = rules.find((r: { to: { namespaceSelector?: { matchLabels?: Record<string, string> } }[] }) =>
       r.to.some((t) => t.namespaceSelector?.matchLabels?.["kubernetes.io/metadata.name"] === "paperclip"),
     );
-    expect(paperclipRule).toBeDefined();
+    expect(pilotRule).toBeDefined();
   });
 
   it("includes user-supplied CIDRs in egress allow", () => {

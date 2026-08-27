@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { resolvePaperclipHomeDir } from "./config/home.js";
+import { resolvePilotHomeDir } from "./config/home.js";
 
 export const INSTALL_MANIFEST_VERSION = 1;
 export const MANAGED_SHIM_MARKER = "paperclipai managed install shim v1";
@@ -71,11 +71,11 @@ export function resolveInstallStorePaths(options: {
   paperclipHome?: string;
   homeDir?: string;
 } = {}): InstallStorePaths {
-  const paperclipHome = path.resolve(options.paperclipHome ?? resolvePaperclipHomeDir());
-  const homeDir = path.resolve(options.homeDir ?? process.env.HOME ?? path.dirname(paperclipHome));
-  const cliRoot = path.join(paperclipHome, "cli");
+  const pilotHome = path.resolve(options.paperclipHome ?? resolvePilotHomeDir());
+  const homeDir = path.resolve(options.homeDir ?? process.env.HOME ?? path.dirname(pilotHome));
+  const cliRoot = path.join(pilotHome, "cli");
   return {
-    paperclipHome,
+    paperclipHome: pilotHome,
     cliRoot,
     installsRoot: path.join(cliRoot, "installs"),
     manifestPath: path.join(cliRoot, "install.json"),

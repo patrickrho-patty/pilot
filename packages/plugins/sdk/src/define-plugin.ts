@@ -511,7 +511,7 @@ export interface PluginDefinition {
  *
  * @see PLUGIN_SPEC.md §14 — SDK Surface
  */
-export interface PaperclipPlugin {
+export interface PilotPlugin {
   /** The original plugin definition passed to `definePlugin()`. */
   readonly definition: PluginDefinition;
 }
@@ -550,6 +550,6 @@ export interface PaperclipPlugin {
  *
  * @see PLUGIN_SPEC.md §14.1 — Example SDK Shape
  */
-export function definePlugin(definition: PluginDefinition): PaperclipPlugin {
+export function definePlugin(definition: PluginDefinition): PilotPlugin {
   return Object.freeze({ definition });
 }

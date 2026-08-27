@@ -13,7 +13,7 @@ import {
   pluginMigrations,
   plugins,
 } from "@paperclipai/db";
-import type { PaperclipPluginManifestV1 } from "@paperclipai/shared";
+import type { PilotPluginManifestV1 } from "@paperclipai/shared";
 import {
   getEmbeddedPostgresTestSupport,
   startEmbeddedPostgresTestDatabase,
@@ -338,7 +338,7 @@ describeEmbeddedPostgres("plugin database namespaces", () => {
     await tempDb?.cleanup();
   });
 
-  async function createPluginPackage(manifest: PaperclipPluginManifestV1, migrationSql: string) {
+  async function createPluginPackage(manifest: PilotPluginManifestV1, migrationSql: string) {
     const packageRoot = await mkdtemp(path.join(os.tmpdir(), "paperclip-plugin-package-"));
     packageRoots.push(packageRoot);
     const migrationsDir = path.join(packageRoot, manifest.database!.migrationsDir);
@@ -347,7 +347,7 @@ describeEmbeddedPostgres("plugin database namespaces", () => {
     return packageRoot;
   }
 
-  function llmWikiManifest(): PaperclipPluginManifestV1 {
+  function llmWikiManifest(): PilotPluginManifestV1 {
     return {
       id: llmWikiPluginKey,
       apiVersion: 1,
@@ -371,7 +371,7 @@ describeEmbeddedPostgres("plugin database namespaces", () => {
   }
 
   async function createInstallablePluginPackage(
-    pluginManifest: PaperclipPluginManifestV1,
+    pluginManifest: PilotPluginManifestV1,
     migrationSql: string,
   ) {
     const packageRoot = await createPluginPackage(pluginManifest, migrationSql);
@@ -395,7 +395,7 @@ describeEmbeddedPostgres("plugin database namespaces", () => {
     return packageRoot;
   }
 
-  async function installPluginRecord(manifest: PaperclipPluginManifestV1) {
+  async function installPluginRecord(manifest: PilotPluginManifestV1) {
     const pluginId = randomUUID();
     await db.insert(plugins).values({
       id: pluginId,
@@ -411,7 +411,7 @@ describeEmbeddedPostgres("plugin database namespaces", () => {
     return pluginId;
   }
 
-  function manifest(pluginKey = "paperclip.dbtest"): PaperclipPluginManifestV1 {
+  function manifest(pluginKey = "paperclip.dbtest"): PilotPluginManifestV1 {
     return {
       id: pluginKey,
       apiVersion: 1,
@@ -642,7 +642,7 @@ describeEmbeddedPostgres("plugin database namespaces", () => {
 
   it("refreshes persisted manifests from disk before activation", async () => {
     const staleManifest = manifest("paperclip.refresh");
-    const refreshedManifest: PaperclipPluginManifestV1 = {
+    const refreshedManifest: PilotPluginManifestV1 = {
       ...staleManifest,
       capabilities: [...staleManifest.capabilities, "agent.tools.register"],
       database: {

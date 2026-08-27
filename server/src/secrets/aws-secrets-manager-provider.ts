@@ -19,7 +19,7 @@ const AWS_SECRETS_MANAGER_SCHEME = "aws_secrets_manager_v1";
 const DEFAULT_PREFIX = "paperclip";
 const DEFAULT_OWNER_TAG = "paperclip";
 const DEFAULT_VERSION_STAGE = "AWSCURRENT";
-const PAPERCLIP_PENDING_VERSION_STAGE = "PAPERCLIP_PENDING";
+const PILOT_PENDING_VERSION_STAGE = "PAPERCLIP_PENDING";
 const DEFAULT_DELETE_RECOVERY_WINDOW_DAYS = 30;
 const AWS_SECRETS_MANAGER_REQUEST_TIMEOUT_MS = 30_000;
 const AWS_CREDENTIAL_CACHE_TTL_MS = 5 * 60_000;
@@ -631,13 +631,13 @@ function pathSegments(name: string) {
 function inferPathSignals(entry: AwsSecretsManagerListSecretEntry, tags: Map<string, string>) {
   const name = entry.Name?.trim() || entry.ARN?.trim() || "";
   const segments = pathSegments(name);
-  const paperclipDeploymentId = tagValue(tags, ["paperclip:deployment-id"]);
-  const paperclipManaged = tagValue(tags, ["paperclip:managed-by"])?.toLowerCase() === "paperclip";
+  const pilotDeploymentId = tagValue(tags, ["paperclip:deployment-id"]);
+  const pilotManaged = tagValue(tags, ["paperclip:managed-by"])?.toLowerCase() === "paperclip";
 
-  if (paperclipDeploymentId || paperclipManaged) {
+  if (pilotDeploymentId || pilotManaged) {
     return {
       prefix: segments[0] ?? DEFAULT_PREFIX,
-      namespace: paperclipDeploymentId ?? segments[1] ?? null,
+      namespace: pilotDeploymentId ?? segments[1] ?? null,
     };
   }
 
@@ -690,17 +690,17 @@ function discoverAwsProviderConfigCandidates(input: {
   };
 
   const skippedWarnings: string[] = [];
-  let skippedForeignPaperclipSampleCount = 0;
+  let skippedForeignPilotSampleCount = 0;
   const samples: DiscoverySample[] = [];
 
   for (const entry of input.entries) {
     const name = entry.Name?.trim() || entry.ARN?.trim();
     if (!name) continue;
     const tags = normalizeAwsTags(entry.Tags);
-    const paperclipManaged = tagValue(tags, ["paperclip:managed-by"])?.toLowerCase() === "paperclip";
-    const paperclipCompanyId = tagValue(tags, ["paperclip:company-id"]);
-    if (paperclipManaged && paperclipCompanyId !== input.companyId) {
-      skippedForeignPaperclipSampleCount += 1;
+    const pilotManaged = tagValue(tags, ["paperclip:managed-by"])?.toLowerCase() === "paperclip";
+    const pilotCompanyId = tagValue(tags, ["paperclip:company-id"]);
+    if (pilotManaged && pilotCompanyId !== input.companyId) {
+      skippedForeignPilotSampleCount += 1;
       continue;
     }
     const path = inferPathSignals(entry, tags);
@@ -713,14 +713,14 @@ function discoverAwsProviderConfigCandidates(input: {
       environmentTag: tagValue(tags, ["paperclip:environment", "environment", "env", "stage"]),
       ownerTag: tagValue(tags, ["paperclip:provider-owner", "owner", "team", "service", "application"]),
       kmsKeyId: asOptionalNonEmptyString(entry.KmsKeyId),
-      paperclipManaged,
-      paperclipCompanyId,
+      paperclipManaged: pilotManaged,
+      paperclipCompanyId: pilotCompanyId,
     });
   }
 
-  if (skippedForeignPaperclipSampleCount > 0) {
+  if (skippedForeignPilotSampleCount > 0) {
     skippedWarnings.push(
-      `Skipped ${skippedForeignPaperclipSampleCount} Paperclip-managed AWS secret sample(s) that were not tagged for this company.`,
+      `Skipped ${skippedForeignPilotSampleCount} Paperclip-managed AWS secret sample(s) that were not tagged for this company.`,
     );
   }
 
@@ -799,7 +799,7 @@ function discoverAwsProviderConfigCandidates(input: {
           hasKmsKey: kmsKeys.length > 0,
           sampleCount: group.length,
           paperclipManagedSampleCount: group.filter((sample) => sample.paperclipManaged).length,
-          skippedForeignPaperclipSampleCount,
+          skippedForeignPaperclipSampleCount: skippedForeignPilotSampleCount,
         },
         warnings: candidateWarnings,
       };
@@ -817,7 +817,7 @@ function discoverAwsProviderConfigCandidates(input: {
     provider: "aws_secrets_manager",
     nextToken: input.nextToken,
     sampledSecretCount: samples.length,
-    skippedForeignPaperclipSampleCount,
+    skippedForeignPaperclipSampleCount: skippedForeignPilotSampleCount,
     candidates,
     warnings,
   };
@@ -1163,7 +1163,7 @@ export function createAwsSecretsManagerProvider(
         const created = await gateway.putSecretValue({
           SecretId: secretId,
           SecretString: input.value,
-          VersionStages: [PAPERCLIP_PENDING_VERSION_STAGE],
+          VersionStages: [PILOT_PENDING_VERSION_STAGE],
         });
         const normalizedSecretId = created.ARN ?? created.Name ?? secretId;
         return {
@@ -1352,7 +1352,7 @@ export function createAwsSecretsManagerProvider(
           if (material.versionId && gateway.updateSecretVersionStage) {
             await gateway.updateSecretVersionStage({
               SecretId: secretId,
-              VersionStage: PAPERCLIP_PENDING_VERSION_STAGE,
+              VersionStage: PILOT_PENDING_VERSION_STAGE,
               RemoveFromVersionId: material.versionId,
             });
           }

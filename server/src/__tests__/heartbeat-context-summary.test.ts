@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildPaperclipTaskMarkdown,
+  buildPilotTaskMarkdown,
   mergeCoalescedContextSnapshot,
   summarizeHeartbeatRunContextSnapshot,
   summarizeHeartbeatRunListResultJson,
@@ -8,7 +8,7 @@ import {
 
 describe("buildPaperclipTaskMarkdown", () => {
   it("adds planning directives for assignment and comment task context", () => {
-    const assignment = buildPaperclipTaskMarkdown({
+    const assignment = buildPilotTaskMarkdown({
       issue: {
         id: "issue-1",
         identifier: "PAP-3404",
@@ -21,7 +21,7 @@ describe("buildPaperclipTaskMarkdown", () => {
     expect(assignment).toContain("- Work mode: \"planning\"");
     expect(assignment).toContain("Make the plan only. Do not write code or perform implementation work.");
 
-    const commentWake = buildPaperclipTaskMarkdown({
+    const commentWake = buildPilotTaskMarkdown({
       issue: {
         id: "issue-1",
         identifier: "PAP-3404",
@@ -37,7 +37,7 @@ describe("buildPaperclipTaskMarkdown", () => {
 
     expect(commentWake).toContain("Update the plan only. Do not write code or perform implementation work.");
 
-    const acceptedConfirmation = buildPaperclipTaskMarkdown({
+    const acceptedConfirmation = buildPilotTaskMarkdown({
       issue: {
         id: "issue-1",
         identifier: "PAP-3404",
@@ -56,7 +56,7 @@ describe("buildPaperclipTaskMarkdown", () => {
   });
 
   it("adds accepted-plan continuation guidance for standard-work issues when the wake is flagged as a plan continuation", () => {
-    const acceptedConfirmation = buildPaperclipTaskMarkdown({
+    const acceptedConfirmation = buildPilotTaskMarkdown({
       issue: {
         id: "issue-2",
         identifier: "PAP-415",
@@ -73,7 +73,7 @@ describe("buildPaperclipTaskMarkdown", () => {
   });
 
   it("adds answer-only guidance for ask-mode issues", () => {
-    const assignment = buildPaperclipTaskMarkdown({
+    const assignment = buildPilotTaskMarkdown({
       issue: {
         id: "issue-ask",
         identifier: "PAP-416",
@@ -91,7 +91,7 @@ describe("buildPaperclipTaskMarkdown", () => {
   });
 
   it("adds dry-run containment guidance for skill-test issues", () => {
-    const assignment = buildPaperclipTaskMarkdown({
+    const assignment = buildPilotTaskMarkdown({
       issue: {
         id: "issue-skill-test",
         identifier: "PAP-417",
@@ -122,11 +122,11 @@ describe("buildPaperclipTaskMarkdown", () => {
       },
     };
 
-    const full = buildPaperclipTaskMarkdown(input);
+    const full = buildPilotTaskMarkdown(input);
     expect(full).toContain("Issue description:");
     expect(full).toContain("Full multi-paragraph brief that the session already received.");
 
-    const compact = buildPaperclipTaskMarkdown({ ...input, includeDescription: false });
+    const compact = buildPilotTaskMarkdown({ ...input, includeDescription: false });
     expect(compact).not.toContain("Issue description:");
     expect(compact).not.toContain("Full multi-paragraph brief");
     expect(compact).toContain("- Issue: \"PAP-3404\"");
@@ -134,7 +134,7 @@ describe("buildPaperclipTaskMarkdown", () => {
   });
 
   it("prefers ordinary comment planning guidance over stale accepted confirmation state", () => {
-    const commentWake = buildPaperclipTaskMarkdown({
+    const commentWake = buildPilotTaskMarkdown({
       issue: {
         id: "issue-1",
         identifier: "PAP-3404",

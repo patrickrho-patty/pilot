@@ -8,7 +8,7 @@ import {
 } from "@paperclipai/db";
 import type {
   Agent,
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   PluginManagedAgentDeclaration,
   PluginManagedAgentResolution,
 } from "@paperclipai/shared";
@@ -24,7 +24,7 @@ const DEFAULT_MANAGED_AGENT_ADAPTER_TYPE = "process";
 interface PluginManagedAgentServiceOptions {
   pluginId: string;
   pluginKey: string;
-  manifest?: PaperclipPluginManifestV1 | null;
+  manifest?: PilotPluginManifestV1 | null;
   instructionTemplateVariables?: (companyId: string) => Promise<Record<string, string | null | undefined>>;
 }
 

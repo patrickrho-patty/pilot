@@ -4,7 +4,7 @@ import { getStoredBoardCredential, loginBoardCli } from "../../client/board-auth
 import { buildCliCommandLabel } from "../../client/command-label.js";
 import { readConfig } from "../../config/store.js";
 import { readContext, resolveProfile, type ClientContextProfile } from "../../client/context.js";
-import { ApiRequestError, PaperclipApiClient } from "../../client/http.js";
+import { ApiRequestError, PilotApiClient } from "../../client/http.js";
 
 export interface BaseClientOptions {
   config?: string;
@@ -19,7 +19,7 @@ export interface BaseClientOptions {
 }
 
 export interface ResolvedClientContext {
-  api: PaperclipApiClient;
+  api: PilotApiClient;
   companyId?: string;
   profileName: string;
   profile: ClientContextProfile;
@@ -76,7 +76,7 @@ export function resolveCommandContext(
   // PAPERCLIP_RUN_ID env the adapter/embodiment context already exports.
   const runId = options.runId?.trim() || process.env.PAPERCLIP_RUN_ID?.trim() || undefined;
 
-  const api = new PaperclipApiClient({
+  const api = new PilotApiClient({
     apiBase,
     apiKey,
     runId,

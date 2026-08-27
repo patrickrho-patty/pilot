@@ -12,7 +12,7 @@ async function makeTempDir(prefix: string): Promise<string> {
 }
 
 describe("codex local skill sync", () => {
-  const paperclipKey = "paperclipai/paperclip/paperclip";
+  const pilotKey = "paperclipai/paperclip/paperclip";
   const cleanupDirs = new Set<string>();
 
   afterEach(async () => {
@@ -33,16 +33,16 @@ describe("codex local skill sync", () => {
           CODEX_HOME: codexHome,
         },
         paperclipSkillSync: {
-          desiredSkills: [paperclipKey],
+          desiredSkills: [pilotKey],
         },
       },
     } as const;
 
     const before = await listCodexSkills(ctx);
     expect(before.mode).toBe("ephemeral");
-    expect(before.desiredSkills).toContain(paperclipKey);
-    expect(before.entries.find((entry) => entry.key === paperclipKey)?.state).toBe("configured");
-    expect(before.entries.find((entry) => entry.key === paperclipKey)?.detail).toContain("CODEX_HOME/skills/");
+    expect(before.desiredSkills).toContain(pilotKey);
+    expect(before.entries.find((entry) => entry.key === pilotKey)?.state).toBe("configured");
+    expect(before.entries.find((entry) => entry.key === pilotKey)?.detail).toContain("CODEX_HOME/skills/");
   });
 
   it("does not persist Paperclip skills into CODEX_HOME during sync", async () => {
@@ -58,14 +58,14 @@ describe("codex local skill sync", () => {
           CODEX_HOME: codexHome,
         },
         paperclipSkillSync: {
-          desiredSkills: [paperclipKey],
+          desiredSkills: [pilotKey],
         },
       },
     } as const;
 
-    const after = await syncCodexSkills(configuredCtx, [paperclipKey]);
+    const after = await syncCodexSkills(configuredCtx, [pilotKey]);
     expect(after.mode).toBe("ephemeral");
-    expect(after.entries.find((entry) => entry.key === paperclipKey)?.state).toBe("configured");
+    expect(after.entries.find((entry) => entry.key === pilotKey)?.state).toBe("configured");
     await expect(fs.lstat(path.join(codexHome, "skills", "paperclip"))).rejects.toMatchObject({
       code: "ENOENT",
     });
@@ -90,9 +90,9 @@ describe("codex local skill sync", () => {
     });
 
     expect(snapshot.warnings).toEqual([]);
-    expect(snapshot.desiredSkills).toContain(paperclipKey);
+    expect(snapshot.desiredSkills).toContain(pilotKey);
     expect(snapshot.desiredSkills).not.toContain("paperclip");
-    expect(snapshot.entries.find((entry) => entry.key === paperclipKey)?.state).toBe("configured");
+    expect(snapshot.entries.find((entry) => entry.key === pilotKey)?.state).toBe("configured");
     expect(snapshot.entries.find((entry) => entry.key === "paperclip")).toBeUndefined();
   });
 });

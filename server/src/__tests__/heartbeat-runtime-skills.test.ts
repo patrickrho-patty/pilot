@@ -17,7 +17,7 @@ import {
   toolProfiles,
 } from "@paperclipai/db";
 import type { AdapterRuntimeMcpServer } from "@paperclipai/adapter-utils";
-import type { PaperclipSkillEntry } from "@paperclipai/adapter-utils/server-utils";
+import type { PilotSkillEntry } from "@paperclipai/adapter-utils/server-utils";
 import {
   getEmbeddedPostgresTestSupport,
   startEmbeddedPostgresTestDatabase,
@@ -54,12 +54,12 @@ async function waitForRunToFinish(
 describeEmbeddedPostgres("heartbeat runtime skill version pins", () => {
   let db!: ReturnType<typeof createDb>;
   let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>> | null = null;
-  let oldPaperclipHome: string | undefined;
-  let oldPaperclipApiUrl: string | undefined;
-  let paperclipHome: string | null = null;
+  let oldPilotHome: string | undefined;
+  let oldPilotApiUrl: string | undefined;
+  let pilotHome: string | null = null;
   const capturedRuns: Array<{
     agentId: string;
-    skills: PaperclipSkillEntry[];
+    skills: PilotSkillEntry[];
     mcpServers: AdapterRuntimeMcpServer[];
     config: Record<string, unknown>;
     serializedRuntimeInput: string;
@@ -69,13 +69,13 @@ describeEmbeddedPostgres("heartbeat runtime skill version pins", () => {
   beforeAll(async () => {
     tempDb = await startEmbeddedPostgresTestDatabase("heartbeat-runtime-skills-");
     db = createDb(tempDb.connectionString);
-    oldPaperclipHome = process.env.PAPERCLIP_HOME;
-    paperclipHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-runtime-skills-home-"));
-    process.env.PAPERCLIP_HOME = paperclipHome;
+    oldPilotHome = process.env.PAPERCLIP_HOME;
+    pilotHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-runtime-skills-home-"));
+    process.env.PAPERCLIP_HOME = pilotHome;
     // The server normalizes PAPERCLIP_API_URL into its own env at boot
     // (server/src/index.ts); heartbeat gateway delivery requires it, so pin
     // a deterministic value for tests that never boot the full server.
-    oldPaperclipApiUrl = process.env.PAPERCLIP_API_URL;
+    oldPilotApiUrl = process.env.PAPERCLIP_API_URL;
     process.env.PAPERCLIP_API_URL = "http://127.0.0.1:3100/api";
     registerServerAdapter({
       type: TEST_ADAPTER_TYPE,
@@ -88,7 +88,7 @@ describeEmbeddedPostgres("heartbeat runtime skill version pins", () => {
         await ctx.onLog("stdout", `${serializedRuntimeInput}\n`);
         capturedRuns.push({
           agentId: ctx.agent.id,
-          skills: (ctx.config.paperclipRuntimeSkills ?? []) as PaperclipSkillEntry[],
+          skills: (ctx.config.paperclipRuntimeSkills ?? []) as PilotSkillEntry[],
           mcpServers: ctx.runtimeMcp?.getServers() ?? [],
           config: ctx.config,
           serializedRuntimeInput,
@@ -134,12 +134,12 @@ describeEmbeddedPostgres("heartbeat runtime skill version pins", () => {
 
   afterAll(async () => {
     unregisterServerAdapter(TEST_ADAPTER_TYPE);
-    if (oldPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
-    else process.env.PAPERCLIP_HOME = oldPaperclipHome;
-    if (oldPaperclipApiUrl === undefined) delete process.env.PAPERCLIP_API_URL;
-    else process.env.PAPERCLIP_API_URL = oldPaperclipApiUrl;
-    if (paperclipHome) {
-      await fs.rm(paperclipHome, { recursive: true, force: true });
+    if (oldPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
+    else process.env.PAPERCLIP_HOME = oldPilotHome;
+    if (oldPilotApiUrl === undefined) delete process.env.PAPERCLIP_API_URL;
+    else process.env.PAPERCLIP_API_URL = oldPilotApiUrl;
+    if (pilotHome) {
+      await fs.rm(pilotHome, { recursive: true, force: true });
     }
     await tempDb?.cleanup();
   });

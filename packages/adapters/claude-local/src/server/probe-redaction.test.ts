@@ -26,10 +26,10 @@ vi.mock("@paperclipai/adapter-utils/server-utils", async () => {
   );
   return {
     ...actual,
-    resolvePaperclipInstanceRootForAdapter: (...args: unknown[]) => {
+    resolvePilotInstanceRootForAdapter: (...args: unknown[]) => {
       if (resolveInstanceRoot.throwError) throw resolveInstanceRoot.throwError;
       return (
-        actual.resolvePaperclipInstanceRootForAdapter as (...a: unknown[]) => string
+        actual.resolvePilotInstanceRootForAdapter as (...a: unknown[]) => string
       )(...args);
     },
   };

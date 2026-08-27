@@ -14,7 +14,7 @@
 import type { AcpRuntime, AcpRuntimeHandle } from "acpx/runtime";
 import type {
   AdapterExecutionTarget,
-  AdapterExecutionTargetPaperclipBridgeHandle,
+  AdapterExecutionTargetPilotBridgeHandle,
   AdapterExecutionTargetProcessSessionBridgeHandle,
   PreparedAdapterExecutionTargetRuntime,
 } from "@paperclipai/adapter-utils/execution-target";
@@ -114,7 +114,7 @@ export interface StagingLeaseResource {
 export interface RunResourcePayloads {
   readonly acp_runtime: AcpRuntimeResource;
   readonly staged_runtime: StagedRuntimeResource;
-  readonly control_bridge: AdapterExecutionTargetPaperclipBridgeHandle;
+  readonly control_bridge: AdapterExecutionTargetPilotBridgeHandle;
   readonly agent_bridge: AdapterExecutionTargetProcessSessionBridgeHandle;
   readonly managed_home: ManagedHomeResource;
   readonly staging_lease: StagingLeaseResource;
@@ -339,7 +339,7 @@ export interface PlacedWorkspace {
 
 /** The transport handles the site started for the run. */
 export interface RunSiteTransport {
-  readonly controlBridge: AdapterExecutionTargetPaperclipBridgeHandle | null;
+  readonly controlBridge: AdapterExecutionTargetPilotBridgeHandle | null;
   readonly agentBridge: AdapterExecutionTargetProcessSessionBridgeHandle | null;
 }
 
@@ -420,7 +420,7 @@ export interface McpServerIdentity {
 }
 
 /** The Paperclip Claude settings the fingerprint reads. */
-export interface PaperclipClaudeSettingsIdentity {
+export interface PilotClaudeSettingsIdentity {
   readonly allow: readonly string[];
   readonly additionalDirectories: readonly string[];
   readonly defaultMode: string;
@@ -446,7 +446,7 @@ export interface SessionFingerprintIdentity {
   readonly additionalSourcesIdentity: Record<string, unknown>;
   readonly skillsIdentity: Record<string, unknown>;
   readonly skillPromptInstructions: string;
-  readonly paperclipClaudeSettings: PaperclipClaudeSettingsIdentity | null;
+  readonly paperclipClaudeSettings: PilotClaudeSettingsIdentity | null;
   readonly mcpServers: readonly McpServerIdentity[];
   readonly secretManifestHash: string;
   readonly adapterEnvHash: string;

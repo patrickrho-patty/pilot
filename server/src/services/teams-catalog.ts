@@ -246,8 +246,8 @@ export function readCatalogTeamProvenance(
   metadata: Record<string, unknown> | null | undefined,
 ): CatalogTeamProvenance | null {
   if (!isPlainRecord(metadata)) return null;
-  const paperclip = isPlainRecord(metadata.paperclip) ? metadata.paperclip : null;
-  const catalogTeam = paperclip && isPlainRecord(paperclip.catalogTeam) ? paperclip.catalogTeam : null;
+  const pilot = isPlainRecord(metadata.paperclip) ? metadata.paperclip : null;
+  const catalogTeam = pilot && isPlainRecord(pilot.catalogTeam) ? pilot.catalogTeam : null;
   if (!catalogTeam) return null;
   const catalogId = readNonEmptyString(catalogTeam.catalogId);
   if (!catalogId) return null;

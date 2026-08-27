@@ -104,14 +104,14 @@ function writeTestConfig(configPath: string, tempRoot: string, port: number, con
   writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }
 
-interface TestPaperclipEnv {
+interface TestPilotEnv {
   configPath: string;
   paperclipHome: string;
   instanceId: string;
   shellHome?: string;
 }
 
-function createBasePaperclipEnv(options: TestPaperclipEnv) {
+function createBasePilotEnv(options: TestPilotEnv) {
   const env = { ...process.env };
   for (const key of Object.keys(env)) {
     if (key.startsWith("PAPERCLIP_")) {
@@ -135,9 +135,9 @@ function createServerEnv(
   configPath: string,
   port: number,
   connectionString: string,
-  options: Omit<TestPaperclipEnv, "configPath">,
+  options: Omit<TestPilotEnv, "configPath">,
 ) {
-  const env = createBasePaperclipEnv({
+  const env = createBasePilotEnv({
     configPath,
     ...options,
   });
@@ -161,8 +161,8 @@ function createServerEnv(
   return env;
 }
 
-function createCliEnv(options: TestPaperclipEnv) {
-  const env = createBasePaperclipEnv(options);
+function createCliEnv(options: TestPilotEnv) {
+  const env = createBasePilotEnv(options);
   delete env.DATABASE_URL;
   delete env.PORT;
   delete env.HOST;
@@ -216,7 +216,7 @@ function isPortableAgent(agent: { metadata?: Record<string, unknown> | null }) {
 
 async function runCliJson<T>(
   args: string[],
-  opts: TestPaperclipEnv & { apiBase?: string; includeConfigArg?: boolean },
+  opts: TestPilotEnv & { apiBase?: string; includeConfigArg?: boolean },
 ) {
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
   const cliArgs = ["--silent", "paperclipai", ...args];
@@ -277,9 +277,9 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
   let configPath = "";
   let exportDir = "";
   let apiBase = "";
-  let paperclipHome = "";
+  let pilotHome = "";
   let cliShellHome = "";
-  let paperclipInstanceId = "";
+  let pilotInstanceId = "";
   let serverProcess: ServerProcess | null = null;
   let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>> | null = null;
 
@@ -287,10 +287,10 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
     tempRoot = mkdtempSync(path.join(os.tmpdir(), "paperclip-company-cli-e2e-"));
     configPath = path.join(tempRoot, "config", "config.json");
     exportDir = path.join(tempRoot, "exported-company");
-    paperclipHome = path.join(tempRoot, "paperclip-home");
+    pilotHome = path.join(tempRoot, "paperclip-home");
     cliShellHome = path.join(tempRoot, "shell-home");
-    paperclipInstanceId = "company-cli-e2e";
-    mkdirSync(paperclipHome, { recursive: true });
+    pilotInstanceId = "company-cli-e2e";
+    mkdirSync(pilotHome, { recursive: true });
     mkdirSync(cliShellHome, { recursive: true });
 
     tempDb = await startEmbeddedPostgresTestDatabase("paperclip-company-cli-db-");
@@ -307,8 +307,8 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
       {
         cwd: repoRoot,
         env: createServerEnv(configPath, port, tempDb.connectionString, {
-          paperclipHome,
-          instanceId: paperclipInstanceId,
+          paperclipHome: pilotHome,
+          instanceId: pilotInstanceId,
           shellHome: cliShellHome,
         }),
         stdio: ["ignore", "pipe", "pipe"],
@@ -344,14 +344,14 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
       ["context", "set", "--profile", "isolation-check", "--api-base", "https://example.test"],
       {
         configPath,
-        paperclipHome,
-        instanceId: paperclipInstanceId,
+        paperclipHome: pilotHome,
+        instanceId: pilotInstanceId,
         shellHome: cliShellHome,
         includeConfigArg: false,
       },
     );
 
-    const expectedContextPath = path.join(paperclipHome, "context.json");
+    const expectedContextPath = path.join(pilotHome, "context.json");
     const leakedContextPath = path.join(cliShellHome, ".paperclip", "context.json");
     expect(cliContext.contextPath).toBe(expectedContextPath);
     expect(cliContext.profileName).toBe("isolation-check");
@@ -440,8 +440,8 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
       {
         apiBase,
         configPath,
-        paperclipHome,
-        instanceId: paperclipInstanceId,
+        paperclipHome: pilotHome,
+        instanceId: pilotInstanceId,
         shellHome: cliShellHome,
       },
     );
@@ -470,8 +470,8 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
       {
         apiBase,
         configPath,
-        paperclipHome,
-        instanceId: paperclipInstanceId,
+        paperclipHome: pilotHome,
+        instanceId: pilotInstanceId,
         shellHome: cliShellHome,
       },
     );
@@ -524,8 +524,8 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
       {
         apiBase,
         configPath,
-        paperclipHome,
-        instanceId: paperclipInstanceId,
+        paperclipHome: pilotHome,
+        instanceId: pilotInstanceId,
         shellHome: cliShellHome,
       },
     );
@@ -557,8 +557,8 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
       {
         apiBase,
         configPath,
-        paperclipHome,
-        instanceId: paperclipInstanceId,
+        paperclipHome: pilotHome,
+        instanceId: pilotInstanceId,
         shellHome: cliShellHome,
       },
     );
@@ -611,8 +611,8 @@ describeEmbeddedPostgres("paperclipai company import/export e2e", () => {
       {
         apiBase,
         configPath,
-        paperclipHome,
-        instanceId: paperclipInstanceId,
+        paperclipHome: pilotHome,
+        instanceId: pilotInstanceId,
         shellHome: cliShellHome,
       },
     );
