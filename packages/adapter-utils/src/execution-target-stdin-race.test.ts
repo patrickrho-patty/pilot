@@ -54,11 +54,11 @@ describe("stdin file race (parent PAP-4037)", () => {
 
     const env: Record<string, string> = {
       ...process.env,
-      PAPERCLIP_PROCESS_SESSION_DIR: sessionDir,
-      PAPERCLIP_PROCESS_SESSION_COMMAND_B64: commandPayload,
+      PILOT_PROCESS_SESSION_DIR: sessionDir,
+      PILOT_PROCESS_SESSION_COMMAND_B64: commandPayload,
     };
     if (options?.maxRetries != null) {
-      env.PAPERCLIP_PROCESS_SESSION_STDIN_MAX_RETRIES = String(options.maxRetries);
+      env.PILOT_PROCESS_SESSION_STDIN_MAX_RETRIES = String(options.maxRetries);
     }
 
     const child = spawn(process.execPath, [wrapperPath], {

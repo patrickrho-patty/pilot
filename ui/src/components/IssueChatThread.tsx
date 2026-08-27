@@ -47,7 +47,7 @@ import type { ActiveRunForIssue, LiveRunForIssue } from "../api/heartbeats";
 import { findUIAdapter } from "../adapters/registry";
 import { useLiveRunTranscripts } from "./transcript/useLiveRunTranscripts";
 import { useSecondTick } from "../hooks/useSecondTick";
-import { usePaperclipIssueRuntime, type PaperclipIssueRuntimeReassignment } from "../hooks/usePaperclipIssueRuntime";
+import { usePilotIssueRuntime, type PilotIssueRuntimeReassignment } from "../hooks/usePaperclipIssueRuntime";
 import { useOptionalToastActions } from "../context/ToastContext";
 import { copyTextToClipboard } from "../lib/clipboard";
 import {
@@ -814,7 +814,7 @@ function clearDraft(draftKey: string) {
   }
 }
 
-function parseReassignment(target: string): PaperclipIssueRuntimeReassignment | null {
+function parseReassignment(target: string): PilotIssueRuntimeReassignment | null {
   if (!target || target === "__none__") {
     return { assigneeAgentId: null, assigneeUserId: null };
   }
@@ -4709,7 +4709,7 @@ export function IssueChatThread({
     return true;
   }
 
-  const runtime = usePaperclipIssueRuntime({
+  const runtime = usePilotIssueRuntime({
     messages,
     isRunning,
     onSend: ({ body, reopen, reassignment }) => {

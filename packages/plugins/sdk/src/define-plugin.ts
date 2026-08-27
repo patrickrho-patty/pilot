@@ -1,5 +1,5 @@
 /**
- * `definePlugin` — the top-level helper for authoring a Paperclip plugin.
+ * `definePlugin` — the top-level helper for authoring a Pilot plugin.
  *
  * Plugin authors call `definePlugin()` and export the result as the default
  * export from their worker entrypoint. The host imports the worker module,
@@ -325,7 +325,7 @@ export interface PluginDefinition {
   onApiRequest?(input: PluginApiRequestInput): Promise<PluginApiResponse>;
 
   /**
-   * Called when Paperclip scans issue/comment/document content and asks this
+   * Called when Pilot scans issue/comment/document content and asks this
    * plugin whether any sanitized URL candidates belong to its external object
    * providers. The host has already stripped URL userinfo, query strings, and
    * fragments unless provider-safe identity components were explicitly hashed.
@@ -337,7 +337,7 @@ export interface PluginDefinition {
   ): Promise<DetectExternalObjectsResult>;
 
   /**
-   * Called when Paperclip needs the current normalized status for one external
+   * Called when Pilot needs the current normalized status for one external
    * object owned by a manifest-declared provider.
    *
    * Requires `external.objects.read`.
@@ -500,7 +500,7 @@ export interface PluginDefinition {
 }
 
 // ---------------------------------------------------------------------------
-// PaperclipPlugin — the sealed object returned by definePlugin()
+// PilotPlugin — the sealed object returned by definePlugin()
 // ---------------------------------------------------------------------------
 
 /**
@@ -511,7 +511,7 @@ export interface PluginDefinition {
  *
  * @see PLUGIN_SPEC.md §14 — SDK Surface
  */
-export interface PaperclipPlugin {
+export interface PilotPlugin {
   /** The original plugin definition passed to `definePlugin()`. */
   readonly definition: PluginDefinition;
 }
@@ -521,14 +521,14 @@ export interface PaperclipPlugin {
 // ---------------------------------------------------------------------------
 
 /**
- * Define a Paperclip plugin.
+ * Define a Pilot plugin.
  *
  * Call this function in your worker entrypoint and export the result as the
  * default export. The host will import the module and call lifecycle methods
  * on the returned object.
  *
  * @param definition - Plugin lifecycle handlers
- * @returns A sealed `PaperclipPlugin` object for the host to consume
+ * @returns A sealed `PilotPlugin` object for the host to consume
  *
  * @example
  * ```ts
@@ -550,6 +550,6 @@ export interface PaperclipPlugin {
  *
  * @see PLUGIN_SPEC.md §14.1 — Example SDK Shape
  */
-export function definePlugin(definition: PluginDefinition): PaperclipPlugin {
+export function definePlugin(definition: PluginDefinition): PilotPlugin {
   return Object.freeze({ definition });
 }

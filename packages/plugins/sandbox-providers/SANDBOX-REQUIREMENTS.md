@@ -1,7 +1,7 @@
 # Sandbox Runtime Requirements
 
 This document states the sandbox environment as a contract. The sandbox owner
-must meet this contract. The Paperclip runtime does not build the environment at
+must meet this contract. The Pilot runtime does not build the environment at
 exec time. The environment is a requirement, not a build step.
 
 This document states requirements. It does not state build steps.
@@ -59,14 +59,14 @@ agent CLIs. The owner must also supply these:
 
 ## Detection contract
 
-Paperclip probes each CLI before launch. Paperclip uses the same detection
+Pilot probes each CLI before launch. Pilot uses the same detection
 pattern that the runtime Dockerfiles use:
 
 ```bash
 command -v <cmd> || exit 1
 ```
 
-Paperclip probes each CLI with `command -v <cmd>`. Paperclip fails loudly when
+Pilot probes each CLI with `command -v <cmd>`. Pilot fails loudly when
 the CLI is absent and no install command is configured for the CLI.
 
 ## Optional CLI installation
@@ -88,9 +88,9 @@ install the CLI. The owner must supply the CLI on the PATH.
 
 ## Firm rule
 
-- The Paperclip runtime never modifies the login profile. The runtime never
+- The Pilot runtime never modifies the login profile. The runtime never
   writes a profile file. The runtime never writes an rc file.
-- The Paperclip runtime never sources `nvm` on the exec path.
+- The Pilot runtime never sources `nvm` on the exec path.
 - The sandbox owner supplies a ready PATH. The PATH must resolve `node` and each
   used agent CLI without any action from the runtime, except for a configured
   install command.

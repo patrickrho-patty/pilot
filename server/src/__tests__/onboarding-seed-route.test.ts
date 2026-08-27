@@ -304,7 +304,7 @@ describeEmbeddedPostgres("POST /api/companies/:companyId/onboarding-seed", () =>
   it("never reads the seed from a trusted Cloud header", async () => {
     const { companyId, app } = await seedCompany();
 
-    // The `x-paperclip-cloud-*` set is the trusted identity channel, derived
+    // The `x-pilot-cloud-*` set is the trusted identity channel, derived
     // server-side. A mission planted there must be ignored entirely — only the
     // body is read.
     const response = await request(app)

@@ -2,7 +2,7 @@ import type { AdapterEnvironmentCheck } from "@paperclipai/adapter-utils";
 
 /**
  * The fixed label a Test result shows when the probe runs on the local
- * Paperclip host. The label is a constant, so a local target check never
+ * Pilot host. The label is a constant, so a local target check never
  * carries an environment ID, a config value, or a credential-derived string.
  */
 export const ADAPTER_TEST_HOST_TARGET_LABEL = "Paperclip host";

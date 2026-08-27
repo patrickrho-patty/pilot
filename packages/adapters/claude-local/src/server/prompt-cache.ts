@@ -4,12 +4,12 @@ import path from "node:path";
 import { createHash, type Hash } from "node:crypto";
 import type { AdapterExecutionContext } from "@paperclipai/adapter-utils";
 import {
-  ensurePaperclipSkillSymlink,
-  resolvePaperclipInstanceRootForAdapter,
-  type PaperclipSkillEntry,
+  ensurePilotSkillSymlink,
+  resolvePilotInstanceRootForAdapter,
+  type PilotSkillEntry,
 } from "@paperclipai/adapter-utils/server-utils";
 
-type SkillEntry = PaperclipSkillEntry;
+type SkillEntry = PilotSkillEntry;
 
 export interface ClaudePromptBundle {
   bundleKey: string;
@@ -26,9 +26,9 @@ function resolveManagedClaudePromptCacheRoot(
   env: NodeJS.ProcessEnv,
   companyId: string,
 ): string {
-  const instanceRoot = resolvePaperclipInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+  const instanceRoot = resolvePilotInstanceRootForAdapter({
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   return path.resolve(
@@ -149,7 +149,7 @@ export async function prepareClaudePromptBundle(input: {
   for (const entry of skills) {
     const target = path.join(skillsHome, entry.runtimeName);
     try {
-      await ensurePaperclipSkillSymlink(entry.source, target);
+      await ensurePilotSkillSymlink(entry.source, target);
     } catch (err) {
       await onLog(
         "stderr",

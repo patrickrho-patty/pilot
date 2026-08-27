@@ -1,4 +1,4 @@
-# Brand Rename Toolkit — paperclip → (name TBD)
+# Brand Rename Toolkit — pilot → (name TBD)
 
 Date: 2026-08-26
 Status: **tooling committed, execution blocked on final brand name** (Pilot is
@@ -13,7 +13,7 @@ under reconsideration; Patrick will announce the final name).
   rule `env-var-access-rename` matched exactly 1,368 sites; applied → 219
   files changed; controlled `tsc --noEmit` before/after showed **identical
   error sets (0 new)**; reverted cleanly. The `env-string-literal-rename`
-  rule adds 290 more sites ("PAPERCLIP_X" string keys in spawn/env objects).
+  rule adds 290 more sites ("PILOT_X" string keys in spawn/env objects).
 
 ## Tooling (committed)
 
@@ -45,10 +45,10 @@ ast-grep scan -U     # apply (clean tree, one category per commit)
 
 ## Hard constraints learned from the blast-radius audit
 
-- **365 distinct `PAPERCLIP_*` env vars** are runtime contracts read by 63
+- **365 distinct `PILOT_*` env vars** are runtime contracts read by 63
   adapter/plugin files, agent sandboxes mid-session, user scripts, the
   `pilot-secrets` k8s secret, and CI. A hard flip breaks all of them at once:
-  ship a compat layer that reads `<NEW>_X ?? PAPERCLIP_X` for one release
+  ship a compat layer that reads `<NEW>_X ?? PILOT_X` for one release
   window before tier-3 rewrites land.
 - **`/paperclip` mount holds live embedded-Postgres data** on the EBS PVC.
   Rename = data migration; do it last or never (mount path is chart-level and

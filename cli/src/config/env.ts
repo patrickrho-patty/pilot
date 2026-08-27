@@ -5,8 +5,8 @@ import { config as loadDotenv, parse as parseEnvFileContents } from "dotenv";
 import { updateEnvFileContents, writeEnvFileAtomicallyIfChanged } from "@paperclipai/shared/env-file";
 import { resolveConfigPath } from "./store.js";
 
-const JWT_SECRET_ENV_KEY = "PAPERCLIP_AGENT_JWT_SECRET";
-const PAPERCLIP_OWNED_ENV_KEY_PATTERN = /^PAPERCLIP_[A-Z0-9_]+$/;
+const JWT_SECRET_ENV_KEY = "PILOT_AGENT_JWT_SECRET";
+const PILOT_OWNED_ENV_KEY_PATTERN = /^(?:PILOT|PAPERCLIP)_[A-Z0-9_]+$/;
 function resolveEnvFilePath(configPath?: string) {
   return path.resolve(path.dirname(resolveConfigPath(configPath)), ".env");
 }
@@ -32,15 +32,15 @@ function emptyEnvFileContents() {
   ].join("\n");
 }
 
-function paperclipOwnedEntries(entries: Record<string, string>): Record<string, string> {
+function pilotOwnedEntries(entries: Record<string, string>): Record<string, string> {
   return Object.fromEntries(
     Object.entries(entries).filter(
-      ([key, value]) => PAPERCLIP_OWNED_ENV_KEY_PATTERN.test(key) && value.trim().length > 0,
+      ([key, value]) => PILOT_OWNED_ENV_KEY_PATTERN.test(key) && value.trim().length > 0,
     ),
   );
 }
 
-export function resolvePaperclipEnvFile(configPath?: string): string {
+export function resolvePilotEnvFile(configPath?: string): string {
   return resolveEnvFilePath(configPath);
 }
 
@@ -48,7 +48,7 @@ export function resolveAgentJwtEnvFile(configPath?: string): string {
   return resolveEnvFilePath(configPath);
 }
 
-export function loadPaperclipEnvFile(configPath?: string): void {
+export function loadPilotEnvFile(configPath?: string): void {
   loadAgentJwtEnvFile(resolveEnvFilePath(configPath));
 }
 
@@ -94,32 +94,32 @@ export function ensureAgentJwtSecret(configPath?: string): { secret: string; cre
 }
 
 export function writeAgentJwtEnv(secret: string, filePath = resolveEnvFilePath()): void {
-  mergePaperclipEnvEntries({ [JWT_SECRET_ENV_KEY]: secret }, filePath);
+  mergePilotEnvEntries({ [JWT_SECRET_ENV_KEY]: secret }, filePath);
 }
 
-export function readPaperclipEnvEntries(filePath = resolveEnvFilePath()): Record<string, string> {
+export function readPilotEnvEntries(filePath = resolveEnvFilePath()): Record<string, string> {
   if (!fs.existsSync(filePath)) return {};
   return parseEnvFile(fs.readFileSync(filePath, "utf-8"));
 }
 
-export function writePaperclipEnvEntries(entries: Record<string, string>, filePath = resolveEnvFilePath()): void {
+export function writePilotEnvEntries(entries: Record<string, string>, filePath = resolveEnvFilePath()): void {
   const previousContents = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : null;
-  const nextContents = updateEnvFileContents(previousContents ?? emptyEnvFileContents(), paperclipOwnedEntries(entries), {
+  const nextContents = updateEnvFileContents(previousContents ?? emptyEnvFileContents(), pilotOwnedEntries(entries), {
     valueEncoding: "minimal",
   });
   writeEnvFileAtomicallyIfChanged(filePath, previousContents, nextContents);
 }
 
-export function mergePaperclipEnvEntries(
+export function mergePilotEnvEntries(
   entries: Record<string, string>,
   filePath = resolveEnvFilePath(),
 ): Record<string, string> {
-  const current = readPaperclipEnvEntries(filePath);
-  const managedEntries = paperclipOwnedEntries(entries);
+  const current = readPilotEnvEntries(filePath);
+  const managedEntries = pilotOwnedEntries(entries);
   const next = {
     ...current,
     ...managedEntries,
   };
-  writePaperclipEnvEntries(managedEntries, filePath);
+  writePilotEnvEntries(managedEntries, filePath);
   return next;
 }

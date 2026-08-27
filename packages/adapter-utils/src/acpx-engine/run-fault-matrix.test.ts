@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   prepareAdapterExecutionTargetRuntime,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
   startAdapterExecutionTargetProcessSessionBridge,
 } from "@paperclipai/adapter-utils/execution-target";
 import { runChildProcess } from "../server-utils.js";
@@ -31,7 +31,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", async (importActual) => {
   return {
     ...actual,
     prepareAdapterExecutionTargetRuntime: vi.fn(actual.prepareAdapterExecutionTargetRuntime),
-    startAdapterExecutionTargetPaperclipBridge: vi.fn(actual.startAdapterExecutionTargetPaperclipBridge),
+    startAdapterExecutionTargetPilotBridge: vi.fn(actual.startAdapterExecutionTargetPilotBridge),
     startAdapterExecutionTargetProcessSessionBridge: vi.fn(actual.startAdapterExecutionTargetProcessSessionBridge),
   };
 });
@@ -155,7 +155,7 @@ function stubBridges(options: { stopRejects?: boolean } = {}) {
         throw new Error("bridge stop boom");
       })
     : vi.fn(async () => {});
-  vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementation(async () => {
+  vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementation(async () => {
     return { env: {}, stop } as never;
   });
   vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementation(async () => {
@@ -304,7 +304,7 @@ describe("composed ACPX run fault matrix", () => {
     const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
     const capture = captureDisposition();
     const stop = vi.fn(async () => {});
-    vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementationOnce(async () => {
+    vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementationOnce(async () => {
       throw new Error("paperclip bridge boom");
     });
     vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementationOnce(

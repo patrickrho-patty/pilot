@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, request as pwRequest, test, type APIRequestContext, type APIResponse, type Locator, type Page } from "@playwright/test";
 import { createLocalAgentJwt } from "../../server/src/agent-auth-jwt";
 
-const PORT = Number(process.env.PAPERCLIP_E2E_PORT ?? 3199);
+const PORT = Number(process.env.PILOT_E2E_PORT ?? 3199);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 type Stage = { id: string; key: string; name: string; kind: string; position: number };

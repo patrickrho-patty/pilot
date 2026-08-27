@@ -1,5 +1,5 @@
 /**
- * `@paperclipai/plugin-sdk` — Paperclip plugin worker-side SDK.
+ * `@paperclipai/plugin-sdk` — Pilot plugin worker-side SDK.
  *
  * This is the main entrypoint for plugin worker code.  For plugin UI bundles,
  * import from `@paperclipai/plugin-sdk/ui` instead.
@@ -96,7 +96,7 @@ export {
 // Plugin definition and lifecycle types
 export type {
   PluginDefinition,
-  PaperclipPlugin,
+  PilotPlugin,
   PluginHealthDiagnostics,
   PluginConfigChangeContext,
   PluginConfigValidationResult,
@@ -327,7 +327,7 @@ export type {
 // Plugin authors import manifest types from here so they have a single
 // dependency (@paperclipai/plugin-sdk) for all plugin authoring needs.
 export type {
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   PluginJobDeclaration,
   PluginWebhookDeclaration,
   PluginToolDeclaration,

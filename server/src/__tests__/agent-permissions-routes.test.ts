@@ -444,7 +444,7 @@ describe.sequential("agent permission routes", () => {
       },
       adapterConfig: {
         command: "pnpm agent:run",
-        env: { PAPERCLIP_API_KEY: "secret-test-key" },
+        env: { PILOT_API_KEY: "secret-test-key" },
       },
       runtimeConfig: {
         modelProfiles: {
@@ -466,7 +466,7 @@ describe.sequential("agent permission routes", () => {
     expect(res.status).toBe(200);
     expect(res.body.adapterConfig).toMatchObject({
       command: "pnpm agent:run",
-      env: { PAPERCLIP_API_KEY: "secret-test-key" },
+      env: { PILOT_API_KEY: "secret-test-key" },
     });
     expect(res.body.runtimeConfig).toMatchObject({
       modelProfiles: {

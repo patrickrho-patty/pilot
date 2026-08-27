@@ -1,4 +1,4 @@
-import type { PaperclipPluginManifestV1 } from "@paperclipai/plugin-sdk";
+import type { PilotPluginManifestV1 } from "@paperclipai/plugin-sdk";
 
 const PLUGIN_ID = "paperclip.daytona-sandbox-provider";
 // The bundled-plugin boot reconcile refreshes the persisted manifest for an
@@ -13,7 +13,7 @@ const PLUGIN_ID = "paperclip.daytona-sandbox-provider";
 // 0.1.5 adds the `duplexCommandStream` sandbox capability to the driver.
 const PLUGIN_VERSION = "0.1.5";
 
-const manifest: PaperclipPluginManifestV1 = {
+const manifest: PilotPluginManifestV1 = {
   id: PLUGIN_ID,
   apiVersion: 1,
   version: PLUGIN_VERSION,

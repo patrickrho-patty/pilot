@@ -109,7 +109,7 @@ export async function preparePiRuntimeConfig(input: {
 }): Promise<PreparedPiRuntimeConfig> {
   const resolveEnv = (name: string): string | undefined => input.env[name] ?? process.env[name];
   const { providers, warning } = parseProviderConfig(
-    input.env.PAPERCLIP_PI_PROVIDERS ?? process.env.PAPERCLIP_PI_PROVIDERS,
+    input.env.PILOT_PI_PROVIDERS ?? process.env.PILOT_PI_PROVIDERS,
     resolveEnv,
   );
   if (!providers) {

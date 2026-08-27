@@ -7,7 +7,7 @@ import {
   PLUGIN_STATE_SCOPE_KINDS,
   definePlugin,
   runWorker,
-  type PaperclipPlugin,
+  type PilotPlugin,
   type EnvSecretRefBinding,
   type PluginContext,
   type PluginEntityQuery,
@@ -958,7 +958,7 @@ async function registerJobs(ctx: PluginContext): Promise<void> {
   });
 }
 
-const plugin: PaperclipPlugin = definePlugin({
+const plugin: PilotPlugin = definePlugin({
   async setup(ctx) {
     currentContext = ctx;
     runtimeLaunchers.set(RUNTIME_LAUNCHER.id, RUNTIME_LAUNCHER);

@@ -4,7 +4,7 @@ import pc from "picocolors";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { createDb, instanceUserRoles, invites } from "@paperclipai/db";
 import { inferBindModeFromHost } from "@paperclipai/shared";
-import { loadPaperclipEnvFile } from "../config/env.js";
+import { loadPilotEnvFile } from "../config/env.js";
 import { readConfig, resolveConfigPath } from "../config/store.js";
 
 function hashToken(token: string) {
@@ -32,8 +32,8 @@ function resolveDbUrl(configPath?: string, explicitDbUrl?: string) {
 function resolveBaseUrl(configPath?: string, explicitBaseUrl?: string) {
   if (explicitBaseUrl) return explicitBaseUrl.replace(/\/+$/, "");
   const fromEnv =
-    process.env.PAPERCLIP_PUBLIC_URL ??
-    process.env.PAPERCLIP_AUTH_PUBLIC_BASE_URL ??
+    process.env.PILOT_PUBLIC_URL ??
+    process.env.PILOT_AUTH_PUBLIC_BASE_URL ??
     process.env.BETTER_AUTH_URL ??
     process.env.BETTER_AUTH_BASE_URL;
   if (fromEnv?.trim()) return fromEnv.trim().replace(/\/+$/, "");
@@ -59,7 +59,7 @@ export async function bootstrapCeoInvite(opts: {
   dbUrl?: string;
 }) {
   const configPath = resolveConfigPath(opts.config);
-  loadPaperclipEnvFile(configPath);
+  loadPilotEnvFile(configPath);
   const config = readConfig(configPath);
   if (!config) {
     p.log.error(`No config found at ${configPath}. Run ${pc.cyan("paperclip onboard")} first.`);

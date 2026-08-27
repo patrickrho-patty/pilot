@@ -4,7 +4,7 @@ import { getStoredBoardCredential, loginBoardCli } from "../../client/board-auth
 import { buildCliCommandLabel } from "../../client/command-label.js";
 import { readConfig } from "../../config/store.js";
 import { readContext, resolveProfile, type ClientContextProfile } from "../../client/context.js";
-import { ApiRequestError, PaperclipApiClient } from "../../client/http.js";
+import { ApiRequestError, PilotApiClient } from "../../client/http.js";
 
 export interface BaseClientOptions {
   config?: string;
@@ -19,7 +19,7 @@ export interface BaseClientOptions {
 }
 
 export interface ResolvedClientContext {
-  api: PaperclipApiClient;
+  api: PilotApiClient;
   companyId?: string;
   profileName: string;
   profile: ClientContextProfile;
@@ -61,7 +61,7 @@ export function resolveCommandContext(
 
   const companyId =
     options.companyId?.trim() ||
-    process.env.PAPERCLIP_COMPANY_ID?.trim() ||
+    process.env.PILOT_COMPANY_ID?.trim() ||
     profile.companyId;
 
   if (opts?.requireCompany && !companyId) {
@@ -71,12 +71,12 @@ export function resolveCommandContext(
   }
 
   // Agent-authenticated mutations (checkout, release, interactions, PATCH of an
-  // in-progress issue) require the X-Paperclip-Run-Id header (the server returns
+  // in-progress issue) require the X-Pilot-Run-Id header (the server returns
   // "401 Agent run id required" without it). Source it from --run-id, else the
   // PAPERCLIP_RUN_ID env the adapter/embodiment context already exports.
-  const runId = options.runId?.trim() || process.env.PAPERCLIP_RUN_ID?.trim() || undefined;
+  const runId = options.runId?.trim() || process.env.PILOT_RUN_ID?.trim() || undefined;
 
-  const api = new PaperclipApiClient({
+  const api = new PilotApiClient({
     apiBase,
     apiKey,
     runId,
@@ -111,7 +111,7 @@ export function resolveCommandContext(
 export function resolveApiBase(options: Pick<BaseClientOptions, "apiBase" | "config">, profile: ClientContextProfile = {}): string {
   return normalizeApiBase(
     options.apiBase?.trim() ||
-    process.env.PAPERCLIP_API_URL?.trim() ||
+    process.env.PILOT_API_URL?.trim() ||
     profile.apiBase ||
     inferApiBaseFromConfig(options.config),
   );
@@ -171,7 +171,7 @@ function resolveApiKey(
   const optionValue = options.apiKey?.trim();
   if (optionValue) return { value: optionValue, source: "explicit" };
 
-  const envValue = process.env.PAPERCLIP_API_KEY?.trim();
+  const envValue = process.env.PILOT_API_KEY?.trim();
   if (envValue) return { value: envValue, source: "env" };
 
   const profileEnvValue = readKeyFromProfileEnv(profile);
@@ -261,8 +261,8 @@ function renderValue(value: unknown): string {
 }
 
 export function inferApiBaseFromConfig(configPath?: string): string {
-  const envHost = process.env.PAPERCLIP_SERVER_HOST?.trim() || "localhost";
-  let port = Number(process.env.PAPERCLIP_SERVER_PORT || "");
+  const envHost = process.env.PILOT_SERVER_HOST?.trim() || "localhost";
+  let port = Number(process.env.PILOT_SERVER_PORT || "");
 
   if (!Number.isFinite(port) || port <= 0) {
     try {

@@ -86,7 +86,7 @@ function makeSite(overrides: Partial<SandboxRunSiteOptions> = {}) {
     onReuseLog: async () => {},
     startPaperclipBridge: async () => {
       bridgeCalls.push("paperclip:start");
-      return { env: { PAPERCLIP_API_KEY: "run-token" }, stop: async () => {} } as never;
+      return { env: { PILOT_API_KEY: "run-token" }, stop: async () => {} } as never;
     },
     startProcessSessionBridge: async ({ launchEnv }) => {
       bridgeCalls.push("process-session:start");
@@ -159,17 +159,17 @@ describe("sandbox run site", () => {
 
   it("test_sandbox_site_preserves_bridge_overlap_and_callback_sequencing", async () => {
     const events: string[] = [];
-    let releasePaperclip!: () => void;
-    const paperclipGate = new Promise<void>((resolve) => {
-      releasePaperclip = resolve;
+    let releasePilot!: () => void;
+    const pilotGate = new Promise<void>((resolve) => {
+      releasePilot = resolve;
     });
     let processLaunchEnv: Record<string, string> | null = null;
     const { site } = makeSite({
       startPaperclipBridge: async () => {
         events.push("paperclip:start");
-        await paperclipGate;
+        await pilotGate;
         events.push("paperclip:env-ready");
-        return { env: { PAPERCLIP_API_KEY: "run-token" }, stop: async () => {} } as never;
+        return { env: { PILOT_API_KEY: "run-token" }, stop: async () => {} } as never;
       },
       startProcessSessionBridge: async ({ launchEnv }) => {
         events.push("process-session:start");
@@ -182,19 +182,19 @@ describe("sandbox run site", () => {
 
     await site.placeWorkspace(makeContext("s"));
     const transportPromise = site.startTransport(makeContext("s"));
-    // Both bridges start before the paperclip env resolves: their setup overlaps.
+    // Both bridges start before the pilot env resolves: their setup overlaps.
     await Promise.resolve();
     await Promise.resolve();
     expect(events).toContain("paperclip:start");
     expect(events).toContain("process-session:start");
     expect(events).not.toContain("process-session:launch");
 
-    // Release the paperclip env; the process-session launch now observes the
+    // Release the pilot env; the process-session launch now observes the
     // merged run-scoped env (the single sequencing point).
-    releasePaperclip();
+    releasePilot();
     const transport = await transportPromise;
     expect(events.indexOf("paperclip:env-ready")).toBeLessThan(events.indexOf("process-session:launch"));
-    expect(processLaunchEnv).toEqual({ BASE: "1", CODEX_HOME: "/remote/home", PAPERCLIP_API_KEY: "run-token" });
+    expect(processLaunchEnv).toEqual({ BASE: "1", CODEX_HOME: "/remote/home", PILOT_API_KEY: "run-token" });
     expect(transport.launchEnv).toEqual(processLaunchEnv);
   });
 

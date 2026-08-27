@@ -20,7 +20,7 @@ function secret(
     name,
     provider: "local_encrypted",
     status: "active" as SecretStatus,
-    managedMode: "paperclip_managed",
+    managedMode: "pilot_managed",
     externalRef: null,
     providerConfigId: null,
     providerMetadata: null,
@@ -174,7 +174,7 @@ export const Validation: Story = {
       <Editor
         initial={{
           "API-URL": { type: "plain", value: "https://api.example.com" },
-          PAPERCLIP_TOKEN: { type: "plain", value: "override" },
+          PILOT_TOKEN: { type: "plain", value: "override" },
           ABANDONED: { type: "secret_ref", secretId: "gone-1234", version: "latest" },
           LEGACY: { type: "secret_ref", secretId: "s-legacy", version: "latest" },
         }}

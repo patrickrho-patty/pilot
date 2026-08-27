@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  listPaperclipSkillEntries,
+  listPilotSkillEntries,
   removeMaintainerOnlySkillSymlinks,
 } from "@paperclipai/adapter-utils/server-utils";
 
@@ -32,7 +32,7 @@ describe("paperclip skill utils", () => {
     await fs.mkdir(path.join(root, ".agents", "skills", "release"), { recursive: true });
     await fs.mkdir(path.join(root, ".agents", "skills", "terminal-bench-loop"), { recursive: true });
 
-    const entries = await listPaperclipSkillEntries(moduleDir);
+    const entries = await listPilotSkillEntries(moduleDir);
 
     expect(entries.map((entry) => entry.key)).toEqual([
       "paperclipai/paperclip/paperclip",
@@ -52,12 +52,12 @@ describe("paperclip skill utils", () => {
 
     expect(skillBody).toContain("Generated Artifacts and Work Products");
     expect(skillBody).toContain("references/artifacts.md");
-    expect(skillBody).not.toContain("/api/companies/$PAPERCLIP_COMPANY_ID/issues/$PAPERCLIP_TASK_ID/attachments");
+    expect(skillBody).not.toContain("/api/companies/$PILOT_COMPANY_ID/issues/$PILOT_TASK_ID/attachments");
     expect(referenceBody).toContain("Generated Artifacts and Work Products");
     expect(referenceBody).toContain("scripts/paperclip-upload-artifact.sh");
     expect(referenceBody).toContain("POST");
-    expect(referenceBody).toContain("/api/companies/$PAPERCLIP_COMPANY_ID/issues/$PAPERCLIP_TASK_ID/attachments");
-    expect(referenceBody).toContain("/api/issues/$PAPERCLIP_TASK_ID/work-products");
+    expect(referenceBody).toContain("/api/companies/$PILOT_COMPANY_ID/issues/$PILOT_TASK_ID/attachments");
+    expect(referenceBody).toContain("/api/issues/$PILOT_TASK_ID/work-products");
     await expect(
       fs.access(path.resolve("skills/paperclip/scripts/paperclip-upload-artifact.sh")),
     ).resolves.toBeUndefined();
@@ -99,7 +99,7 @@ describe("paperclip skill utils", () => {
     expect(skillBody).toContain("name: create-issue-interaction-ui");
     expect(normalizedLowerSkillBody).toContain("developer/maintainer skill");
     expect(normalizedLowerSkillBody).toContain(
-      "not the operational agents that run inside a deployed paperclip company",
+      "not the operational agents that run inside a deployed pilot company",
     );
     expect(skillBody).toContain("packages/shared/src/constants.ts");
     expect(skillBody).toContain("server/src/services/issue-thread-interactions.ts");

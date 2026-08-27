@@ -15,7 +15,7 @@ import {
   DEFAULT_FEEDBACK_DATA_SHARING_PREFERENCE,
   DEFAULT_BACKUP_RETENTION,
   DEFAULT_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS,
-  PAPERCLIP_CLOUD_MANAGED_BY,
+  PILOT_CLOUD_MANAGED_BY,
   instanceGeneralSettingsSchema,
   type InstanceGeneralSettings,
   instanceExperimentalSettingsSchema,
@@ -68,7 +68,7 @@ export function isTruthyRuntimeEnvValue(value: string | undefined) {
 }
 
 function getRuntimeInstanceId(env: Record<string, string | undefined>) {
-  const instanceId = env.PAPERCLIP_INSTANCE_ID?.trim();
+  const instanceId = env.PILOT_INSTANCE_ID?.trim();
   return instanceId ? instanceId : null;
 }
 
@@ -116,7 +116,7 @@ export function applyExperimentalSettingsPatch(
   }
 
   const runtimeEnv = options.runtimeEnv ?? process.env;
-  if (!isTruthyRuntimeEnvValue(runtimeEnv.PAPERCLIP_IN_WORKTREE)) {
+  if (!isTruthyRuntimeEnvValue(runtimeEnv.PILOT_IN_WORKTREE)) {
     return nextExperimental;
   }
 
@@ -180,7 +180,7 @@ export async function resolveWorktreeRunExecutionActivationState(options: {
   runtimeEnv?: Record<string, string | undefined>;
 }): Promise<WorktreeRunExecutionActivationState> {
   const runtimeEnv = options.runtimeEnv ?? process.env;
-  if (!isTruthyRuntimeEnvValue(runtimeEnv.PAPERCLIP_IN_WORKTREE)) {
+  if (!isTruthyRuntimeEnvValue(runtimeEnv.PILOT_IN_WORKTREE)) {
     return suppressWorktreeRunExecution("not_worktree_runtime");
   }
   try {
@@ -317,7 +317,7 @@ export function applyManagedExperimentalOverlay(
     [ManagedExperimentalFeatureKey, boolean]
   >) {
     next[key] = value;
-    managedKeys[key] = { managed: true, managedBy: PAPERCLIP_CLOUD_MANAGED_BY };
+    managedKeys[key] = { managed: true, managedBy: PILOT_CLOUD_MANAGED_BY };
   }
   return { experimental: next, managedKeys };
 }

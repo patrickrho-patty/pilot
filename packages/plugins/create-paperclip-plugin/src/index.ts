@@ -115,7 +115,7 @@ function packLocalPackage(packagePath: string, outputDir: string): string {
 }
 
 /**
- * Generate a complete Paperclip plugin starter project.
+ * Generate a complete Pilot plugin starter project.
  *
  * Output includes manifest/worker/UI entries, SDK harness tests, bundler presets,
  * and a local dev server script for hot-reload workflow.
@@ -303,9 +303,9 @@ export default defineConfig({
   if (template === "environment") {
     writeFile(
       path.join(outputDir, "src", "manifest.ts"),
-      `import type { PaperclipPluginManifestV1 } from "@paperclipai/plugin-sdk";
+      `import type { PilotPluginManifestV1 } from "@paperclipai/plugin-sdk";
 
-const manifest: PaperclipPluginManifestV1 = {
+const manifest: PilotPluginManifestV1 = {
   id: ${quote(manifestId)},
   apiVersion: 1,
   version: "0.1.0",
@@ -530,9 +530,9 @@ describe("environment plugin scaffold", () => {
   } else {
     writeFile(
       path.join(outputDir, "src", "manifest.ts"),
-      `import type { PaperclipPluginManifestV1 } from "@paperclipai/plugin-sdk";
+      `import type { PilotPluginManifestV1 } from "@paperclipai/plugin-sdk";
 
-const manifest: PaperclipPluginManifestV1 = {
+const manifest: PilotPluginManifestV1 = {
   id: ${quote(manifestId)},
   apiVersion: 1,
   version: "0.1.0",

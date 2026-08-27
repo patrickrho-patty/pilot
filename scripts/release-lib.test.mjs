@@ -19,7 +19,7 @@ function runPublishHelper({
   publishTool = "pnpm",
   waitForRegistry = false,
 }) {
-  const fixtureDir = mkdtempSync(join(tmpdir(), "paperclip-release-lib-"));
+  const fixtureDir = mkdtempSync(join(tmpdir(), "pilot-release-lib-"));
   const binDir = join(fixtureDir, "bin");
   const stateDir = join(fixtureDir, "state");
   const callLog = join(fixtureDir, "calls.log");

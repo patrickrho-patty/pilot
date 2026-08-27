@@ -4,7 +4,7 @@ import pc from "picocolors";
 import type { Agent, Company } from "@paperclipai/shared";
 import { createAgentKeySchema, createBoardApiKeySchema } from "@paperclipai/shared";
 import { loginBoardCli } from "../../client/board-auth.js";
-import { PaperclipApiClient } from "../../client/http.js";
+import { PilotApiClient } from "../../client/http.js";
 import { resolveProfile, readContext, setCurrentProfile, upsertProfile } from "../../client/context.js";
 import {
   addCommonClientOptions,
@@ -40,7 +40,7 @@ export function registerConnectCommand(program: Command): void {
       .command("connect")
       .description("Interactively connect the CLI as a board operator or agent")
       .option("--persona <persona>", "Persona to configure: board or agent")
-      .option("--api-key-env-var-name <name>", "Env var name to store in the profile", "PAPERCLIP_API_KEY")
+      .option("--api-key-env-var-name <name>", "Env var name to store in the profile", "PILOT_API_KEY")
       .option("--token-name <name>", "Token label to create")
       .action(async (opts: ConnectOptions) => {
         try {
@@ -79,12 +79,12 @@ async function connectWizard(opts: ConnectOptions) {
     requestedCompanyId: opts.companyId ?? resolvedProfile.profile.companyId ?? null,
     command: "paperclipai connect",
   });
-  const boardApi = new PaperclipApiClient({ apiBase, apiKey: boardLogin.token });
+  const boardApi = new PilotApiClient({ apiBase, apiKey: boardLogin.token });
   const companies = (await boardApi.get<Company[]>("/api/companies")) ?? [];
 
   const persona = await choosePersona(opts.persona);
   const profileName = opts.profile?.trim() || await askProfileName(resolvedProfile.name);
-  const apiKeyEnvVarName = opts.apiKeyEnvVarName?.trim() || "PAPERCLIP_API_KEY";
+  const apiKeyEnvVarName = opts.apiKeyEnvVarName?.trim() || "PILOT_API_KEY";
 
   if (persona === "board") {
     const company = await chooseCompany(companies, opts.companyId ?? resolvedProfile.profile.companyId, {
@@ -157,7 +157,7 @@ async function connectWizard(opts: ConnectOptions) {
 }
 
 async function verifyHealth(apiBase: string): Promise<void> {
-  const api = new PaperclipApiClient({ apiBase });
+  const api = new PilotApiClient({ apiBase });
   await api.get("/api/health");
 }
 

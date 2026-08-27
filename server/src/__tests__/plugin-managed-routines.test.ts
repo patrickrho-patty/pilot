@@ -18,7 +18,7 @@ import {
   routineTriggers,
   routines,
 } from "@paperclipai/db";
-import type { PaperclipPluginManifestV1 } from "@paperclipai/shared";
+import type { PilotPluginManifestV1 } from "@paperclipai/shared";
 import {
   getEmbeddedPostgresTestSupport,
   startEmbeddedPostgresTestDatabase,
@@ -44,7 +44,7 @@ function issuePrefix(id: string) {
   return `T${id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
 }
 
-function manifest(): PaperclipPluginManifestV1 {
+function manifest(): PilotPluginManifestV1 {
   return {
     id: "paperclip.managed-routines-test",
     apiVersion: 1,

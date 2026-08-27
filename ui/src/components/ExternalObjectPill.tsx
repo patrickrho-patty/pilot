@@ -98,7 +98,7 @@ interface ExternalObjectPillProps {
 }
 
 /**
- * External-object equivalent of `IssueReferencePill`. Same `paperclip-mention-chip`
+ * External-object equivalent of `IssueReferencePill`. Same `pilot-mention-chip`
  * base so external references feel native to readers (Jakob's Law).
  */
 export function ExternalObjectPill({

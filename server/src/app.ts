@@ -4,7 +4,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { Db } from "@paperclipai/db";
-import { derivePaperclipViteHmrPort, type DeploymentExposure, type DeploymentMode } from "@paperclipai/shared";
+import { derivePilotViteHmrPort, type DeploymentExposure, type DeploymentMode } from "@paperclipai/shared";
 import type { InspectDatabaseBackupHealthOptions } from "./services/database-backup-health.js";
 import type { StorageService } from "./storage/types.js";
 import { httpLogger, errorHandler } from "./middleware/index.js";
@@ -141,7 +141,7 @@ export function isDatabaseConnectionUnavailableError(err: unknown): boolean {
 }
 
 export function resolveViteHmrPort(serverPort: number): number {
-  return derivePaperclipViteHmrPort(serverPort);
+  return derivePilotViteHmrPort(serverPort);
 }
 
 export function resolveViteHmrHost(bindHost: string): string | undefined {
@@ -523,8 +523,8 @@ export async function createApp(
   api.use(approvalRoutes(db, { pluginWorkerManager: workerManager }));
   api.use(secretRoutes(db));
   const trustedLocalStdioRuntimeHost =
-    process.env.PAPERCLIP_TRUSTED_MCP_RUNTIME_HOST
-    ?? process.env.PAPERCLIP_TOOL_RUNTIME_TRUSTED_HOST
+    process.env.PILOT_TRUSTED_MCP_RUNTIME_HOST
+    ?? process.env.PILOT_TOOL_RUNTIME_TRUSTED_HOST
     ?? null;
   api.use(costRoutes(db, { pluginWorkerManager: workerManager }));
   api.use(activityRoutes(db));
@@ -722,7 +722,7 @@ export async function createApp(
     const publicUiRoot = path.resolve(uiRoot, "public");
     const hmrPort = resolveViteHmrPort(opts.serverPort);
     const hmrHost = resolveViteHmrHost(opts.bindHost);
-    const hmrProtocol = resolveViteHmrProtocol(process.env.PAPERCLIP_VITE_HMR_PROTOCOL);
+    const hmrProtocol = resolveViteHmrProtocol(process.env.PILOT_VITE_HMR_PROTOCOL);
     const hmrServer = createHttpServer((_req, res) => {
       res.writeHead(426, { "Content-Type": "text/plain" });
       res.end("Upgrade Required");

@@ -38,7 +38,7 @@ import {
 import type {
   PluginApiRouteDeclaration,
   PluginStatus,
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   PluginBridgeErrorCode,
   PluginLauncherRenderContextSnapshot,
 } from "@paperclipai/shared";
@@ -108,9 +108,9 @@ function assertPluginManagementVisible() {
 }
 
 /** UI slot declaration extracted from plugin manifest */
-type PluginUiSlotDeclaration = NonNullable<NonNullable<PaperclipPluginManifestV1["ui"]>["slots"]>[number];
+type PluginUiSlotDeclaration = NonNullable<NonNullable<PilotPluginManifestV1["ui"]>["slots"]>[number];
 /** Launcher declaration extracted from plugin manifest */
-type PluginLauncherDeclaration = NonNullable<PaperclipPluginManifestV1["launchers"]>[number];
+type PluginLauncherDeclaration = NonNullable<PilotPluginManifestV1["launchers"]>[number];
 
 /**
  * Normalized UI contribution for frontend slot host consumption.
@@ -134,7 +134,7 @@ type PluginUiContribution = {
 
 /** Request body for POST /api/plugins/install */
 interface PluginInstallRequest {
-  /** npm package name (e.g., @paperclip/plugin-linear) or local path */
+  /** npm package name (e.g., @pilot/plugin-linear) or local path */
   packageName: string;
   /** Target version for npm packages (optional, defaults to latest) */
   version?: string;
@@ -246,16 +246,16 @@ async function findPackageJsonFiles(root: string, maxDepth = 4): Promise<string[
 }
 
 function manifestSourcePath(packageRoot: string, pkgJson: Record<string, unknown>): string | null {
-  const paperclipPlugin = pkgJson.paperclipPlugin;
+  const pilotPlugin = pkgJson.paperclipPlugin;
   if (
-    !paperclipPlugin
-    || typeof paperclipPlugin !== "object"
-    || Array.isArray(paperclipPlugin)
+    !pilotPlugin
+    || typeof pilotPlugin !== "object"
+    || Array.isArray(pilotPlugin)
   ) {
     return null;
   }
 
-  const manifestPath = (paperclipPlugin as Record<string, unknown>).manifest;
+  const manifestPath = (pilotPlugin as Record<string, unknown>).manifest;
   if (typeof manifestPath !== "string") return null;
 
   const sourcePath = manifestPath
@@ -310,12 +310,12 @@ async function discoverBundledPlugins(): Promise<DiscoveredBundledPlugin[]> {
   for (const packageJsonPath of await findPackageJsonFiles(pluginRoot)) {
     const packageRoot = path.dirname(packageJsonPath);
     const pkgJson = await readJsonFile(packageJsonPath);
-    const paperclipPlugin = pkgJson?.paperclipPlugin;
+    const pilotPlugin = pkgJson?.paperclipPlugin;
     if (
       !pkgJson
-      || !paperclipPlugin
-      || typeof paperclipPlugin !== "object"
-      || Array.isArray(paperclipPlugin)
+      || !pilotPlugin
+      || typeof pilotPlugin !== "object"
+      || Array.isArray(pilotPlugin)
     ) {
       continue;
     }
@@ -899,7 +899,7 @@ export function pluginRoutes(
    * [
    *   {
    *     "pluginId": "plg_123",
-   *     "pluginKey": "paperclip.claude-usage",
+   *     "pluginKey": "pilot.claude-usage",
    *     "displayName": "Claude Usage",
    *     "version": "1.0.0",
    *     "uiEntryFile": "index.js",

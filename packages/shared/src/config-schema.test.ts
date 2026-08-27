@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  findPaperclipConfigKeyWarnings,
-  mergePaperclipConfig,
-  paperclipConfigSchema,
+  findPilotConfigKeyWarnings,
+  mergePilotConfig,
+  pilotConfigSchema,
 } from "./config-schema.js";
 
 describe("paperclip config schema", () => {
   it("defaults omitted runtime paths to legacy instance-root locations", () => {
-    const parsed = paperclipConfigSchema.parse({
+    const parsed = pilotConfigSchema.parse({
       $meta: {
         version: 1,
         updatedAt: "2026-05-10T00:00:00.000Z",
@@ -30,7 +30,7 @@ describe("paperclip config schema", () => {
   });
 
   it("retains extension keys at the top level and every nested config boundary", () => {
-    const parsed = paperclipConfigSchema.parse({
+    const parsed = pilotConfigSchema.parse({
       $meta: {
         version: 1,
         updatedAt: "2026-05-10T00:00:00.000Z",
@@ -81,7 +81,7 @@ describe("paperclip config schema", () => {
   });
 
   it("merges retained extensions without resurrecting removed known fields", () => {
-    const source = paperclipConfigSchema.parse({
+    const source = pilotConfigSchema.parse({
       $meta: {
         version: 1,
         updatedAt: "2026-05-10T00:00:00.000Z",
@@ -97,7 +97,7 @@ describe("paperclip config schema", () => {
       server: { port: 3100, serverExtension: "keep" },
       topLevelExtension: "keep",
     });
-    const update = paperclipConfigSchema.parse({
+    const update = pilotConfigSchema.parse({
       ...source,
       llm: {
         provider: "openai",
@@ -108,7 +108,7 @@ describe("paperclip config schema", () => {
       },
     });
 
-    const merged = mergePaperclipConfig(source, update);
+    const merged = mergePilotConfig(source, update);
 
     expect(merged.server.port).toBe(3200);
     expect(merged.server.serverExtension).toBe("keep");
@@ -118,7 +118,7 @@ describe("paperclip config schema", () => {
   });
 
   it("warns about likely misspellings while leaving arbitrary extensions alone", () => {
-    expect(findPaperclipConfigKeyWarnings({
+    expect(findPilotConfigKeyWarnings({
       servr: {},
       server: {
         ports: 3100,

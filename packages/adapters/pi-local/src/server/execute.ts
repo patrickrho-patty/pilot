@@ -10,7 +10,7 @@ import {
   adapterExecutionTargetSessionIdentity,
   adapterExecutionTargetSessionMatches,
   adapterExecutionTargetUsesManagedHome,
-  adapterExecutionTargetUsesPaperclipBridge,
+  adapterExecutionTargetUsesPilotBridge,
   describeAdapterExecutionTarget,
   ensureAdapterExecutionTargetCommandResolvable,
   ensureAdapterExecutionTargetFile,
@@ -21,29 +21,29 @@ import {
   resolveAdapterExecutionTargetCommandForLogs,
   runAdapterExecutionTargetProcess,
   runAdapterExecutionTargetShellCommand,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
 } from "@paperclipai/adapter-utils/execution-target";
 import {
   asString,
   asNumber,
   asStringArray,
   parseObject,
-  buildPaperclipEnv,
+  buildPilotEnv,
   joinPromptSections,
   buildInvocationEnvForLogs,
   ensureAbsoluteDirectory,
-  ensurePaperclipSkillSymlink,
+  ensurePilotSkillSymlink,
   ensurePathInEnv,
-  refreshPaperclipWorkspaceEnvForExecution,
-  readPaperclipRuntimeSkillEntries,
-  readPaperclipIssueWorkModeFromContext,
-  resolvePaperclipDesiredSkillNames,
+  refreshPilotWorkspaceEnvForExecution,
+  readPilotRuntimeSkillEntries,
+  readPilotIssueWorkModeFromContext,
+  resolvePilotDesiredSkillNames,
   removeMaintainerOnlySkillSymlinks,
   renderTemplate,
-  renderPaperclipWakePrompt,
-  isPaperclipRecoveryWakePayload,
-  stringifyPaperclipWakePayload,
-  DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+  renderPilotWakePrompt,
+  isPilotRecoveryWakePayload,
+  stringifyPilotWakePayload,
+  DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
   runChildProcess,
 } from "@paperclipai/adapter-utils/server-utils";
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
@@ -54,7 +54,7 @@ import { SANDBOX_INSTALL_COMMAND } from "../index.js";
 
 const __moduleDir = path.dirname(fileURLToPath(import.meta.url));
 
-const PAPERCLIP_SESSIONS_DIR = path.join(os.homedir(), ".pi", "paperclips");
+const PILOT_SESSIONS_DIR = path.join(os.homedir(), ".pi", "paperclips");
 const PI_AGENT_SKILLS_DIR = path.join(os.homedir(), ".pi", "agent", "skills");
 
 function firstNonEmptyLine(text: string): string {
@@ -104,7 +104,7 @@ async function ensurePiSkillsInjected(
     const target = path.join(PI_AGENT_SKILLS_DIR, entry.runtimeName);
 
     try {
-      const result = await ensurePaperclipSkillSymlink(entry.source, target);
+      const result = await ensurePilotSkillSymlink(entry.source, target);
       if (result === "skipped") continue;
       await onLog(
         "stderr",
@@ -123,8 +123,8 @@ async function buildPiSkillsDir(config: Record<string, unknown>): Promise<string
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-pi-skills-"));
   const target = path.join(tmp, "skills");
   await fs.mkdir(target, { recursive: true });
-  const availableEntries = await readPaperclipRuntimeSkillEntries(config, __moduleDir);
-  const desiredNames = new Set(resolvePaperclipDesiredSkillNames(config, availableEntries));
+  const availableEntries = await readPilotRuntimeSkillEntries(config, __moduleDir);
+  const desiredNames = new Set(resolvePilotDesiredSkillNames(config, availableEntries));
   for (const entry of availableEntries) {
     if (!desiredNames.has(entry.key)) continue;
     await fs.symlink(entry.source, path.join(target, entry.runtimeName));
@@ -137,13 +137,13 @@ function resolvePiBiller(env: Record<string, string>, provider: string | null): 
 }
 
 async function ensureSessionsDir(): Promise<string> {
-  await fs.mkdir(PAPERCLIP_SESSIONS_DIR, { recursive: true });
-  return PAPERCLIP_SESSIONS_DIR;
+  await fs.mkdir(PILOT_SESSIONS_DIR, { recursive: true });
+  return PILOT_SESSIONS_DIR;
 }
 
 function buildSessionPath(agentId: string, timestamp: string): string {
   const safeTimestamp = timestamp.replace(/[:.]/g, "-");
-  return path.join(PAPERCLIP_SESSIONS_DIR, `${safeTimestamp}-${agentId}.jsonl`);
+  return path.join(PILOT_SESSIONS_DIR, `${safeTimestamp}-${agentId}.jsonl`);
 }
 
 function buildRemoteSessionPath(runtimeRootDir: string, agentId: string, timestamp: string): string {
@@ -223,7 +223,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
   const promptTemplate = asString(
     config.promptTemplate,
-    DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+    DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
   );
   const command = asString(config.command, "pi");
   const model = asString(config.model, "").trim();
@@ -256,16 +256,16 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     await ensureSessionsDir();
   }
 
-  const piSkillEntries = await readPaperclipRuntimeSkillEntries(config, __moduleDir);
-  const desiredPiSkillNames = resolvePaperclipDesiredSkillNames(config, piSkillEntries);
+  const piSkillEntries = await readPilotRuntimeSkillEntries(config, __moduleDir);
+  const desiredPiSkillNames = resolvePilotDesiredSkillNames(config, piSkillEntries);
   if (!executionTargetIsRemote) {
     await ensurePiSkillsInjected(onLog, piSkillEntries, desiredPiSkillNames);
   }
 
   // Build environment
   const envConfig = parseObject(config.env);
-  const env: Record<string, string> = { ...buildPaperclipEnv(agent) };
-  env.PAPERCLIP_RUN_ID = runId;
+  const env: Record<string, string> = { ...buildPilotEnv(agent) };
+  env.PILOT_RUN_ID = runId;
 
   const wakeTaskId =
     (typeof context.taskId === "string" && context.taskId.trim().length > 0 && context.taskId.trim()) ||
@@ -290,18 +290,18 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const linkedIssueIds = Array.isArray(context.issueIds)
     ? context.issueIds.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
-  const wakePayloadJson = stringifyPaperclipWakePayload(context.paperclipWake);
-  const issueWorkMode = readPaperclipIssueWorkModeFromContext(context);
+  const wakePayloadJson = stringifyPilotWakePayload(context.paperclipWake);
+  const issueWorkMode = readPilotIssueWorkModeFromContext(context);
     
-  if (wakeTaskId) env.PAPERCLIP_TASK_ID = wakeTaskId;
-  if (issueWorkMode) env.PAPERCLIP_ISSUE_WORK_MODE = issueWorkMode;
-  if (wakeReason) env.PAPERCLIP_WAKE_REASON = wakeReason;
-  if (wakeCommentId) env.PAPERCLIP_WAKE_COMMENT_ID = wakeCommentId;
-  if (approvalId) env.PAPERCLIP_APPROVAL_ID = approvalId;
-  if (approvalStatus) env.PAPERCLIP_APPROVAL_STATUS = approvalStatus;
-  if (linkedIssueIds.length > 0) env.PAPERCLIP_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
-  if (wakePayloadJson) env.PAPERCLIP_WAKE_PAYLOAD_JSON = wakePayloadJson;
-  refreshPaperclipWorkspaceEnvForExecution({
+  if (wakeTaskId) env.PILOT_TASK_ID = wakeTaskId;
+  if (issueWorkMode) env.PILOT_ISSUE_WORK_MODE = issueWorkMode;
+  if (wakeReason) env.PILOT_WAKE_REASON = wakeReason;
+  if (wakeCommentId) env.PILOT_WAKE_COMMENT_ID = wakeCommentId;
+  if (approvalId) env.PILOT_APPROVAL_ID = approvalId;
+  if (approvalStatus) env.PILOT_APPROVAL_STATUS = approvalStatus;
+  if (linkedIssueIds.length > 0) env.PILOT_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
+  if (wakePayloadJson) env.PILOT_WAKE_PAYLOAD_JSON = wakePayloadJson;
+  refreshPilotWorkspaceEnvForExecution({
     env,
     envConfig,
     workspaceCwd: effectiveWorkspaceCwd,
@@ -315,7 +315,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     executionCwd: effectiveExecutionCwd,
   });
   if (authToken) {
-    env.PAPERCLIP_API_KEY = authToken;
+    env.PILOT_API_KEY = authToken;
   }
   // Materialize custom Pi providers (PAPERCLIP_PI_PROVIDERS) into a managed
   // PI_CODING_AGENT_DIR before runtimeEnv is computed, so both local validation
@@ -327,7 +327,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   }
   try {
     // Prepend installed skill `bin/` dirs to PATH so an agent's bash tool can
-    // invoke skill binaries (e.g. `paperclip-get-issue`) by name. Without this,
+    // invoke skill binaries (e.g. `pilot-get-issue`) by name. Without this,
     // any pi_local agent whose AGENTS.md calls a skill command via bash hits
     // exit 127 "command not found". Only include skills that ensurePiSkillsInjected
     // actually linked — otherwise non-injected skills' binaries would be reachable
@@ -399,7 +399,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     let remoteRuntimeRootDir: string | null = null;
     let localSkillsDir: string | null = null;
     let remoteSkillsDir: string | null = null;
-    let paperclipBridge: Awaited<ReturnType<typeof startAdapterExecutionTargetPaperclipBridge>> = null;
+    let pilotBridge: Awaited<ReturnType<typeof startAdapterExecutionTargetPilotBridge>> = null;
 
     if (executionTargetIsRemote) {
       try {
@@ -435,7 +435,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
         restoreRemoteWorkspace = () =>
           preparedRemoteRuntime.restoreWorkspace((line) => onLog("stdout", line));
         effectiveExecutionCwd = preparedRemoteRuntime.workspaceRemoteDir ?? effectiveExecutionCwd;
-        refreshPaperclipWorkspaceEnvForExecution({
+        refreshPilotWorkspaceEnvForExecution({
           env,
           envConfig,
           workspaceCwd: effectiveWorkspaceCwd,
@@ -465,18 +465,18 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       }
     }
     const runtimeExecutionTarget = overrideAdapterExecutionTargetRemoteCwd(executionTarget, effectiveExecutionCwd);
-    if (executionTargetIsRemote && adapterExecutionTargetUsesPaperclipBridge(runtimeExecutionTarget)) {
-      paperclipBridge = await startAdapterExecutionTargetPaperclipBridge({
+    if (executionTargetIsRemote && adapterExecutionTargetUsesPilotBridge(runtimeExecutionTarget)) {
+      pilotBridge = await startAdapterExecutionTargetPilotBridge({
         runId,
         target: runtimeExecutionTarget,
         runtimeRootDir: remoteRuntimeRootDir,
         adapterKey: "pi",
         timeoutSec,
-        hostApiToken: env.PAPERCLIP_API_KEY,
+        hostApiToken: env.PILOT_API_KEY,
         onLog,
       });
-      if (paperclipBridge) {
-        Object.assign(env, paperclipBridge.env);
+      if (pilotBridge) {
+        Object.assign(env, pilotBridge.env);
         loggedEnv = buildInvocationEnvForLogs(env, {
           runtimeEnv: Object.fromEntries(
             Object.entries(ensurePathInEnv({ ...process.env, ...env })).filter(
@@ -573,7 +573,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
           `${instructionsContents}\n\n` +
           `The above agent instructions were loaded from ${resolvedInstructionsFilePath}. ` +
           `Resolve any relative file references from ${instructionsFileDir}.\n\n` +
-          DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE;
+          DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE;
       } catch (err) {
         instructionsReadFailed = true;
         const reason = err instanceof Error ? err.message : String(err);
@@ -603,9 +603,9 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       !canResumeSession && bootstrapPromptTemplate.trim().length > 0
         ? renderTemplate(bootstrapPromptTemplate, templateData).trim()
         : "";
-    const wakePrompt = renderPaperclipWakePrompt(context.paperclipWake, { resumedSession: canResumeSession });
+    const wakePrompt = renderPilotWakePrompt(context.paperclipWake, { resumedSession: canResumeSession });
     const shouldUseResumeDeltaPrompt = canResumeSession && wakePrompt.length > 0;
-    const renderedHeartbeatPrompt = shouldUseResumeDeltaPrompt || isPaperclipRecoveryWakePayload(context.paperclipWake)
+    const renderedHeartbeatPrompt = shouldUseResumeDeltaPrompt || isPilotRecoveryWakePayload(context.paperclipWake)
       ? ""
       : renderTemplate(promptTemplate, templateData);
     const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
@@ -713,7 +713,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
         onSpawn,
         onRuntimeProgress: ctx.onRuntimeProgress,
         onLog: bufferedOnLog,
-        runLogTail: paperclipBridge?.runLogTail,
+        runLogTail: pilotBridge?.runLogTail,
       });
 
       // Flush any remaining buffer content
@@ -836,7 +836,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       return toResult(initial);
     } finally {
       await Promise.all([
-        paperclipBridge?.stop(),
+        pilotBridge?.stop(),
         restoreRemoteWorkspace?.(),
         localSkillsDir ? fs.rm(path.dirname(localSkillsDir), { recursive: true, force: true }).catch(() => undefined) : Promise.resolve(),
       ]);

@@ -3,7 +3,7 @@ import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { mergePaperclipConfig, paperclipConfigSchema } from "@paperclipai/shared";
+import { mergePilotConfig, pilotConfigSchema } from "@paperclipai/shared";
 import {
   updateEnvFileContents,
   writeEnvFileAtomicallyIfChanged,
@@ -17,7 +17,7 @@ import { agentInstructionsService } from "../services/agent-instructions.js";
  * Seeds hand edits across every formerly-destructive setup/sync surface, reruns the
  * setup/sync mechanism, and asserts each edit survives. Each block drives the SAME
  * production code the writers/reconcilers use:
- *   - config.json          -> mergePaperclipConfig + paperclipConfigSchema (shared core
+ *   - config.json          -> mergePilotConfig + pilotConfigSchema (shared core
  *                             used by BOTH writers: cli/src/config/store.ts:writeConfig
  *                             and server/src/worktree-config.ts:writeConfigFile)
  *   - .env                 -> updateEnvFileContents + writeEnvFileAtomicallyIfChanged
@@ -49,8 +49,8 @@ afterEach(async () => {
       cleanupDirs.delete(dir);
     }),
   );
-  delete process.env.PAPERCLIP_HOME;
-  delete process.env.PAPERCLIP_INSTANCE_ID;
+  delete process.env.PILOT_HOME;
+  delete process.env.PILOT_INSTANCE_ID;
 });
 
 const BASE_CONFIG = {
@@ -62,11 +62,11 @@ const BASE_CONFIG = {
 
 /** Emulates a writer round-trip on disk: parse the update, merge over the parsed source. */
 function writerRoundTrip(configPath: string, update: unknown): void {
-  const parsedUpdate = paperclipConfigSchema.parse(update);
-  const source = paperclipConfigSchema.parse(
+  const parsedUpdate = pilotConfigSchema.parse(update);
+  const source = pilotConfigSchema.parse(
     JSON.parse(fsSync.readFileSync(configPath, "utf8")),
   );
-  const next = paperclipConfigSchema.parse(mergePaperclipConfig(source, parsedUpdate));
+  const next = pilotConfigSchema.parse(mergePilotConfig(source, parsedUpdate));
   fsSync.writeFileSync(configPath, JSON.stringify(next, null, 2) + "\n");
 }
 
@@ -76,7 +76,7 @@ describe("setup/sync rerun survival — cross-cutting", () => {
     const configPath = path.join(dir, "config.json");
 
     // Seed a config that carries operator extension keys the schema does not know about.
-    const seeded = paperclipConfigSchema.parse({
+    const seeded = pilotConfigSchema.parse({
       ...BASE_CONFIG,
       customTopLevel: { keepMe: true, nested: [1, 2, 3] },
       server: { ...BASE_CONFIG.server, customServerKey: "operator-owned" },
@@ -149,8 +149,8 @@ describe("setup/sync rerun survival — cross-cutting", () => {
 
   it("keeps operator edits and additions in a managed instructions tree across a re-materialize", async () => {
     const home = await tmp("pap16587-instr-home-");
-    process.env.PAPERCLIP_HOME = home;
-    process.env.PAPERCLIP_INSTANCE_ID = "test-instance";
+    process.env.PILOT_HOME = home;
+    process.env.PILOT_INSTANCE_ID = "test-instance";
 
     const svc = agentInstructionsService();
     const agent = { id: "agent-1", companyId: "company-1", name: "Agent 1", adapterConfig: {} };

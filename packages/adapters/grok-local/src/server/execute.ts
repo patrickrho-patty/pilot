@@ -23,21 +23,21 @@ import {
   asString,
   asStringArray,
   buildInvocationEnvForLogs,
-  buildPaperclipEnv,
+  buildPilotEnv,
   ensureAbsoluteDirectory,
   ensurePathInEnv,
   joinPromptSections,
-  materializePaperclipSkillCopy,
+  materializePilotSkillCopy,
   parseObject,
-  readPaperclipIssueWorkModeFromContext,
-  readPaperclipRuntimeSkillEntries,
+  readPilotIssueWorkModeFromContext,
+  readPilotRuntimeSkillEntries,
   renderTemplate,
-  renderPaperclipWakePrompt,
-  isPaperclipRecoveryWakePayload,
-  resolvePaperclipDesiredSkillNames,
-  stringifyPaperclipWakePayload,
-  refreshPaperclipWorkspaceEnvForExecution,
-  DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+  renderPilotWakePrompt,
+  isPilotRecoveryWakePayload,
+  resolvePilotDesiredSkillNames,
+  stringifyPilotWakePayload,
+  refreshPilotWorkspaceEnvForExecution,
+  DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
 } from "@paperclipai/adapter-utils/server-utils";
 import { DEFAULT_GROK_LOCAL_MODEL } from "../index.js";
 import { isGrokUnknownSessionError, parseGrokJsonl } from "./parse.js";
@@ -58,14 +58,14 @@ function hasNonEmptyEnvValue(env: Record<string, string>, key: string): boolean 
   return typeof raw === "string" && raw.trim().length > 0;
 }
 
-function renderPaperclipEnvNote(env: Record<string, string>): string {
-  const paperclipKeys = Object.keys(env)
+function renderPilotEnvNote(env: Record<string, string>): string {
+  const pilotKeys = Object.keys(env)
     .filter((key) => key.startsWith("PAPERCLIP_"))
     .sort();
-  if (paperclipKeys.length === 0) return "";
+  if (pilotKeys.length === 0) return "";
   return [
     "Paperclip runtime note:",
-    `The following PAPERCLIP_* environment variables are available in this run: ${paperclipKeys.join(", ")}`,
+    `The following PAPERCLIP_* environment variables are available in this run: ${pilotKeys.join(", ")}`,
     "Do not assume these variables are missing without checking your shell environment.",
     "",
     "",
@@ -73,7 +73,7 @@ function renderPaperclipEnvNote(env: Record<string, string>): string {
 }
 
 function renderApiAccessNote(env: Record<string, string>): string {
-  if (!hasNonEmptyEnvValue(env, "PAPERCLIP_API_URL") || !hasNonEmptyEnvValue(env, "PAPERCLIP_API_KEY")) return "";
+  if (!hasNonEmptyEnvValue(env, "PILOT_API_URL") || !hasNonEmptyEnvValue(env, "PILOT_API_KEY")) return "";
   return [
     "Paperclip API access note:",
     "Use shell commands with curl to make Paperclip API requests when needed.",
@@ -163,7 +163,7 @@ async function stageGrokProjectAssets(input: {
         );
         continue;
       }
-      await materializePaperclipSkillCopy(skill.source, target);
+      await materializePilotSkillCopy(skill.source, target);
       ensureCleanupDir(target);
       stagedSkillsCount += 1;
     }
@@ -199,7 +199,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
   const promptTemplate = asString(
     config.promptTemplate,
-    DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+    DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
   );
   const command = asString(config.command, "grok");
   const model = asString(config.model, DEFAULT_GROK_LOCAL_MODEL).trim();
@@ -232,8 +232,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   let effectiveExecutionCwd = adapterExecutionTargetRemoteCwd(executionTarget, cwd);
   await ensureAbsoluteDirectory(cwd, { createIfMissing: true });
 
-  const grokSkillEntries = await readPaperclipRuntimeSkillEntries(config, __moduleDir);
-  const desiredGrokSkillNames = resolvePaperclipDesiredSkillNames(config, grokSkillEntries);
+  const grokSkillEntries = await readPilotRuntimeSkillEntries(config, __moduleDir);
+  const desiredGrokSkillNames = resolvePilotDesiredSkillNames(config, grokSkillEntries);
   const instructionsFilePath = asString(config.instructionsFilePath, "").trim();
   const stagedAssets = await stageGrokProjectAssets({
     cwd,
@@ -246,8 +246,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
   try {
     const envConfig = parseObject(config.env);
-    const env: Record<string, string> = { ...buildPaperclipEnv(agent) };
-    env.PAPERCLIP_RUN_ID = runId;
+    const env: Record<string, string> = { ...buildPilotEnv(agent) };
+    env.PILOT_RUN_ID = runId;
     const wakeTaskId =
       (typeof context.taskId === "string" && context.taskId.trim().length > 0 && context.taskId.trim()) ||
       (typeof context.issueId === "string" && context.issueId.trim().length > 0 && context.issueId.trim()) ||
@@ -271,17 +271,17 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     const linkedIssueIds = Array.isArray(context.issueIds)
       ? context.issueIds.filter((value: unknown): value is string => typeof value === "string" && value.trim().length > 0)
       : [];
-    const wakePayloadJson = stringifyPaperclipWakePayload(context.paperclipWake);
-    const issueWorkMode = readPaperclipIssueWorkModeFromContext(context);
-    if (wakeTaskId) env.PAPERCLIP_TASK_ID = wakeTaskId;
-    if (issueWorkMode) env.PAPERCLIP_ISSUE_WORK_MODE = issueWorkMode;
-    if (wakeReason) env.PAPERCLIP_WAKE_REASON = wakeReason;
-    if (wakeCommentId) env.PAPERCLIP_WAKE_COMMENT_ID = wakeCommentId;
-    if (approvalId) env.PAPERCLIP_APPROVAL_ID = approvalId;
-    if (approvalStatus) env.PAPERCLIP_APPROVAL_STATUS = approvalStatus;
-    if (linkedIssueIds.length > 0) env.PAPERCLIP_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
-    if (wakePayloadJson) env.PAPERCLIP_WAKE_PAYLOAD_JSON = wakePayloadJson;
-    refreshPaperclipWorkspaceEnvForExecution({
+    const wakePayloadJson = stringifyPilotWakePayload(context.paperclipWake);
+    const issueWorkMode = readPilotIssueWorkModeFromContext(context);
+    if (wakeTaskId) env.PILOT_TASK_ID = wakeTaskId;
+    if (issueWorkMode) env.PILOT_ISSUE_WORK_MODE = issueWorkMode;
+    if (wakeReason) env.PILOT_WAKE_REASON = wakeReason;
+    if (wakeCommentId) env.PILOT_WAKE_COMMENT_ID = wakeCommentId;
+    if (approvalId) env.PILOT_APPROVAL_ID = approvalId;
+    if (approvalStatus) env.PILOT_APPROVAL_STATUS = approvalStatus;
+    if (linkedIssueIds.length > 0) env.PILOT_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
+    if (wakePayloadJson) env.PILOT_WAKE_PAYLOAD_JSON = wakePayloadJson;
+    refreshPilotWorkspaceEnvForExecution({
       env,
       envConfig,
       workspaceCwd: effectiveWorkspaceCwd,
@@ -295,7 +295,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       executionCwd: effectiveExecutionCwd,
     });
     if (authToken) {
-      env.PAPERCLIP_API_KEY = authToken;
+      env.PILOT_API_KEY = authToken;
     }
 
     const timeoutSec = resolveAdapterExecutionTargetTimeoutSec(
@@ -334,7 +334,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       restoreRemoteWorkspace = () =>
         preparedExecutionTargetRuntime.restoreWorkspace((line) => onLog("stdout", line));
       effectiveExecutionCwd = preparedExecutionTargetRuntime.workspaceRemoteDir ?? effectiveExecutionCwd;
-      refreshPaperclipWorkspaceEnvForExecution({
+      refreshPilotWorkspaceEnvForExecution({
         env,
         envConfig,
         workspaceCwd: effectiveWorkspaceCwd,
@@ -413,18 +413,18 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       run: { id: runId, source: "on_demand" },
       context,
     };
-    const wakePrompt = renderPaperclipWakePrompt(context.paperclipWake, { resumedSession: Boolean(sessionId) });
+    const wakePrompt = renderPilotWakePrompt(context.paperclipWake, { resumedSession: Boolean(sessionId) });
     const shouldUseResumeDeltaPrompt = Boolean(sessionId) && wakePrompt.length > 0;
-    const renderedPrompt = shouldUseResumeDeltaPrompt || isPaperclipRecoveryWakePayload(context.paperclipWake)
+    const renderedPrompt = shouldUseResumeDeltaPrompt || isPilotRecoveryWakePayload(context.paperclipWake)
       ? ""
       : renderTemplate(promptTemplate, templateData);
     const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
-    const paperclipEnvNote = renderPaperclipEnvNote(env);
+    const pilotEnvNote = renderPilotEnvNote(env);
     const apiAccessNote = renderApiAccessNote(env);
     const prompt = joinPromptSections([
       wakePrompt,
       sessionHandoffNote,
-      paperclipEnvNote,
+      pilotEnvNote,
       apiAccessNote,
       renderedPrompt,
     ]);
@@ -432,7 +432,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       promptChars: prompt.length,
       wakePromptChars: wakePrompt.length,
       sessionHandoffChars: sessionHandoffNote.length,
-      runtimeNoteChars: paperclipEnvNote.length + apiAccessNote.length,
+      runtimeNoteChars: pilotEnvNote.length + apiAccessNote.length,
       heartbeatPromptChars: renderedPrompt.length,
     };
 

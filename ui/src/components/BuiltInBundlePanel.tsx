@@ -36,7 +36,7 @@ import type {
  * Both "apply an available stock update" and "reset drifted edits" route
  * through the same scoped reset (`onResetResource(kind)` →
  * `built-in-agents/:key/reset { resources: [kind] }`), which re-materializes
- * that one resource to Paperclip's newest shipped default without touching
+ * that one resource to Pilot's newest shipped default without touching
  * adapter credentials or the other resources.
  */
 

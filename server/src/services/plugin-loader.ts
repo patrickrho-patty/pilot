@@ -5,7 +5,7 @@
  *
  * 1. **Discovery** — Scans the local plugin directory
  *    (`~/.paperclip/plugins/`) and `node_modules` for packages matching
- *    the `paperclip-plugin-*` naming convention. Aggregates results with
+ *    the `pilot-plugin-*` naming convention. Aggregates results with
  *    path-based deduplication.
  *
  * 2. **Installation** — `installPlugin()` downloads from npm (or reads a
@@ -34,7 +34,7 @@ import { promisify } from "node:util";
 import type { Db } from "@paperclipai/db";
 import { PLUGIN_RPC_ERROR_CODES } from "@paperclipai/plugin-sdk";
 import type {
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   PluginLauncherDeclaration,
   PluginRecord,
   PluginUiSlotDeclaration,
@@ -65,8 +65,8 @@ const STANDALONE_BUNDLED_PLUGIN_SDK_PACKAGE = "@paperclipai/plugin-sdk";
 // ---------------------------------------------------------------------------
 
 /**
- * Naming convention for npm-published Paperclip plugins.
- * Packages matching this pattern are considered Paperclip plugins.
+ * Naming convention for npm-published Pilot plugins.
+ * Packages matching this pattern are considered Pilot plugins.
  *
  * @see PLUGIN_SPEC.md §10 — Package Contract
  */
@@ -148,7 +148,7 @@ const SANDBOX_PROVIDER_CREDENTIAL_ENV_PASSTHROUGH: Record<
 };
 
 export function buildPluginWorkerEnv(input: {
-  manifest: Pick<PaperclipPluginManifestV1, "capabilities"> & {
+  manifest: Pick<PilotPluginManifestV1, "capabilities"> & {
     environmentDrivers?: ReadonlyArray<{ driverKey: string }>;
   };
   packageName?: string;
@@ -161,8 +161,8 @@ export function buildPluginWorkerEnv(input: {
 }): Record<string, string> {
   const processEnv = input.processEnv ?? process.env;
   const env: Record<string, string> = {
-    PAPERCLIP_DEPLOYMENT_MODE: input.instanceInfo.deploymentMode ?? "",
-    PAPERCLIP_DEPLOYMENT_EXPOSURE: input.instanceInfo.deploymentExposure ?? "",
+    PILOT_DEPLOYMENT_MODE: input.instanceInfo.deploymentMode ?? "",
+    PILOT_DEPLOYMENT_EXPOSURE: input.instanceInfo.deploymentExposure ?? "",
   };
   const canRegisterEnvironmentDrivers = Array.isArray(input.manifest.capabilities)
     && input.manifest.capabilities.includes("environment.drivers.register");
@@ -209,7 +209,7 @@ export interface DiscoveredPlugin {
   /** Source that found this package. */
   source: PluginSource;
   /** The parsed and validated manifest if available, null if discovery-only. */
-  manifest: PaperclipPluginManifestV1 | null;
+  manifest: PilotPluginManifestV1 | null;
 }
 
 /**
@@ -219,7 +219,7 @@ export interface DiscoveredPlugin {
  */
 export type PluginSource =
   | "local-filesystem"  // ~/.paperclip/plugins/ local directory
-  | "npm"               // npm packages matching paperclip-plugin-* convention
+  | "npm"               // npm packages matching pilot-plugin-* convention
   | "registry";         // future: remote plugin registry URL
 
 type ParsedSemver = {
@@ -254,7 +254,7 @@ type LocalPluginBuildCommand = {
   cwd: string;
 };
 
-function getDeclaredPageRoutePaths(manifest: PaperclipPluginManifestV1): string[] {
+function getDeclaredPageRoutePaths(manifest: PilotPluginManifestV1): string[] {
   return (manifest.ui?.slots ?? [])
     .filter((slot): slot is PluginUiSlotDeclaration => slot.type === "page" && typeof slot.routePath === "string" && slot.routePath.length > 0)
     .map((slot) => slot.routePath!);
@@ -284,7 +284,7 @@ export interface PluginLoaderOptions {
   enableLocalFilesystem?: boolean;
 
   /**
-   * Whether to discover installed npm packages matching the paperclip-plugin-*
+   * Whether to discover installed npm packages matching the pilot-plugin-*
    * naming convention.
    * Defaults to true.
    */
@@ -307,7 +307,7 @@ export interface PluginLoaderOptions {
  */
 export interface PluginInstallOptions {
   /**
-   * npm package name to install (e.g. "paperclip-plugin-linear" or "@acme/plugin-linear").
+   * npm package name to install (e.g. "pilot-plugin-linear" or "@acme/plugin-linear").
    * Either packageName or localPath must be set.
    */
   packageName?: string;
@@ -366,7 +366,7 @@ export interface PluginRuntimeServices {
    * events.emit, config.get). Each plugin gets its own set of handlers
    * scoped to its capabilities and plugin ID.
    */
-  buildHostHandlers: (pluginId: string, manifest: PaperclipPluginManifestV1) => WorkerToHostHandlers;
+  buildHostHandlers: (pluginId: string, manifest: PilotPluginManifestV1) => WorkerToHostHandlers;
   /**
    * Host instance information passed to the worker during initialization.
    * Includes the instance ID and host version.
@@ -482,8 +482,8 @@ export interface PluginLoader {
   discoverFromLocalFilesystem(dir?: string): Promise<PluginDiscoveryResult>;
 
   /**
-   * Discover Paperclip plugins installed as npm packages in the current
-   * Node.js environment matching the "paperclip-plugin-*" naming convention.
+   * Discover Pilot plugins installed as npm packages in the current
+   * Node.js environment matching the "pilot-plugin-*" naming convention.
    *
    * Looks for packages in node_modules that match the naming convention.
    *
@@ -495,15 +495,15 @@ export interface PluginLoader {
    * Load and parse the plugin manifest from a package directory.
    *
    * Reads the package.json, finds the manifest entrypoint declared under
-   * the "paperclipPlugin.manifest" key, loads the manifest module, and
+   * the "pilotPlugin.manifest" key, loads the manifest module, and
    * validates it against the plugin manifest schema.
    *
-   * Returns null if the package is not a Paperclip plugin.
-   * Throws if the package is a Paperclip plugin but the manifest is invalid.
+   * Returns null if the package is not a Pilot plugin.
+   * Throws if the package is a Pilot plugin but the manifest is invalid.
    *
    * @see PLUGIN_SPEC.md §10 — Package Contract
    */
-  loadManifest(packagePath: string): Promise<PaperclipPluginManifestV1 | null>;
+  loadManifest(packagePath: string): Promise<PilotPluginManifestV1 | null>;
 
   /**
    * Install a plugin package and register it in the database.
@@ -536,8 +536,8 @@ export interface PluginLoader {
    * @see PLUGIN_SPEC.md §25.3 — Upgrade Lifecycle
    */
   upgradePlugin(pluginId: string, options: Omit<PluginInstallOptions, "installDir">): Promise<{
-    oldManifest: PaperclipPluginManifestV1;
-    newManifest: PaperclipPluginManifestV1;
+    oldManifest: PilotPluginManifestV1;
+    newManifest: PilotPluginManifestV1;
     discovered: DiscoveredPlugin;
   }>;
 
@@ -646,8 +646,8 @@ export interface PluginLoader {
 // ---------------------------------------------------------------------------
 
 /**
- * Check whether a package name matches the Paperclip plugin naming convention.
- * Accepts both the "paperclip-plugin-" prefix and scoped "@scope/plugin-" packages.
+ * Check whether a package name matches the Pilot plugin naming convention.
+ * Accepts both the "pilot-plugin-" prefix and scoped "@scope/plugin-" packages.
  *
  * @see PLUGIN_SPEC.md §10 — Package Contract
  */
@@ -723,18 +723,18 @@ export function resolveDeclaredPluginEntrypoints(
   packageRoot: string,
   pkgJson: Record<string, unknown>,
 ): PluginEntrypointPath[] {
-  const paperclipPlugin = pkgJson["paperclipPlugin"];
+  const pilotPlugin = pkgJson["paperclipPlugin"];
   if (
-    paperclipPlugin === null
-    || typeof paperclipPlugin !== "object"
-    || Array.isArray(paperclipPlugin)
+    pilotPlugin === null
+    || typeof pilotPlugin !== "object"
+    || Array.isArray(pilotPlugin)
   ) {
     return [];
   }
 
   const entrypoints: PluginEntrypointPath[] = [];
   for (const key of ["manifest", "worker", "ui"] as const) {
-    const relativePath = (paperclipPlugin as Record<string, unknown>)[key];
+    const relativePath = (pilotPlugin as Record<string, unknown>)[key];
     if (typeof relativePath === "string" && relativePath.length > 0) {
       entrypoints.push({
         key,
@@ -782,7 +782,7 @@ function formatLocalPluginManualBuildHint(
   const manualBuildCommand = buildLocalPluginRecoveryCommand(packageRoot, pkgJson, { repoRoot: options.repoRoot });
   if (!manualBuildCommand) return "";
 
-  const autoBuildDisabled = (options.processEnv ?? process.env)["PAPERCLIP_DISABLE_PLUGIN_AUTOBUILD"] === "1"
+  const autoBuildDisabled = (options.processEnv ?? process.env)["PILOT_DISABLE_PLUGIN_AUTOBUILD"] === "1"
     ? " Auto-build is disabled by PAPERCLIP_DISABLE_PLUGIN_AUTOBUILD=1."
     : "";
 
@@ -875,7 +875,7 @@ export async function ensureLocalPluginBuilt(
   } = {},
 ): Promise<void> {
   const processEnv = options.processEnv ?? process.env;
-  if (processEnv["PAPERCLIP_DISABLE_PLUGIN_AUTOBUILD"] === "1") return;
+  if (processEnv["PILOT_DISABLE_PLUGIN_AUTOBUILD"] === "1") return;
   if (!isRepoBundledPluginPath(packageRoot, { repoRoot: options.repoRoot })) return;
 
   const missingEntrypoints = listMissingDeclaredPluginEntrypoints(packageRoot, pkgJson);
@@ -939,7 +939,7 @@ export async function ensureLocalPluginBuilt(
 /**
  * Resolve the manifest entrypoint from a package.json and package root.
  *
- * The spec defines a "paperclipPlugin" key in package.json with a "manifest"
+ * The spec defines a "pilotPlugin" key in package.json with a "manifest"
  * subkey pointing to the manifest module.  This helper resolves the path.
  *
  * @see PLUGIN_SPEC.md §10 — Package Contract
@@ -948,13 +948,13 @@ function resolveManifestPath(
   packageRoot: string,
   pkgJson: Record<string, unknown>,
 ): string | null {
-  const paperclipPlugin = pkgJson["paperclipPlugin"];
+  const pilotPlugin = pkgJson["paperclipPlugin"];
   if (
-    paperclipPlugin !== null &&
-    typeof paperclipPlugin === "object" &&
-    !Array.isArray(paperclipPlugin)
+    pilotPlugin !== null &&
+    typeof pilotPlugin === "object" &&
+    !Array.isArray(pilotPlugin)
   ) {
-    const manifestRelPath = (paperclipPlugin as Record<string, unknown>)[
+    const manifestRelPath = (pilotPlugin as Record<string, unknown>)[
       "manifest"
     ];
     if (typeof manifestRelPath === "string") {
@@ -1042,7 +1042,7 @@ function compareSemver(left: string, right: string): number {
   return 0;
 }
 
-function getMinimumHostVersion(manifest: PaperclipPluginManifestV1): string | undefined {
+function getMinimumHostVersion(manifest: PilotPluginManifestV1): string | undefined {
   return manifest.minimumHostVersion ?? manifest.minimumPaperclipVersion;
 }
 
@@ -1054,7 +1054,7 @@ function getMinimumHostVersion(manifest: PaperclipPluginManifestV1): string | un
  * `launchers` field and the preferred `ui.launchers` field.
  */
 export function getPluginUiContributionMetadata(
-  manifest: PaperclipPluginManifestV1,
+  manifest: PilotPluginManifestV1,
 ): PluginUiContributionMetadata | null {
   const slots = manifest.ui?.slots ?? [];
   const launchers = [
@@ -1098,7 +1098,7 @@ export function getPluginUiContributionMetadata(
  *
  * // Install a specific plugin
  * const discovered = await loader.installPlugin({
- *   packageName: "paperclip-plugin-linear",
+ *   packageName: "pilot-plugin-linear",
  *   version: "^1.0.0",
  * });
  * ```
@@ -1149,7 +1149,7 @@ export function pluginLoader(
   const log = logger.child({ service: "plugin-loader" });
   const hostVersion = runtimeServices?.instanceInfo.hostVersion;
 
-  async function assertPageRoutePathsAvailable(manifest: PaperclipPluginManifestV1): Promise<void> {
+  async function assertPageRoutePathsAvailable(manifest: PilotPluginManifestV1): Promise<void> {
     const requestedRoutePaths = getDeclaredPageRoutePaths(manifest);
     if (requestedRoutePaths.length === 0) return;
 
@@ -1161,7 +1161,7 @@ export function pluginLoader(
     const installedPlugins = await registry.listInstalled();
     for (const plugin of installedPlugins) {
       if (plugin.pluginKey === manifest.id) continue;
-      const installedManifest = plugin.manifestJson as PaperclipPluginManifestV1 | null;
+      const installedManifest = plugin.manifestJson as PilotPluginManifestV1 | null;
       if (!installedManifest) continue;
       const installedRoutePaths = new Set(getDeclaredPageRoutePaths(installedManifest));
       const conflictingRoute = requestedRoutePaths.find((routePath) => installedRoutePaths.has(routePath));
@@ -1333,7 +1333,7 @@ export function pluginLoader(
    */
   async function loadManifestFromPath(
     manifestPath: string,
-  ): Promise<PaperclipPluginManifestV1> {
+  ): Promise<PilotPluginManifestV1> {
     let raw: unknown;
 
     try {
@@ -1355,7 +1355,7 @@ export function pluginLoader(
 
   async function loadManifestFromPackageRoot(
     packageRoot: string,
-  ): Promise<PaperclipPluginManifestV1 | null> {
+  ): Promise<PilotPluginManifestV1 | null> {
     const pkgJson = await readPackageJson(packageRoot);
     if (!pkgJson) return null;
 
@@ -1400,7 +1400,7 @@ export function pluginLoader(
 
   /**
    * Build a DiscoveredPlugin from a resolved package directory, or null
-   * if the package is not a Paperclip plugin.
+   * if the package is not a Pilot plugin.
    */
   async function buildDiscoveredPlugin(
     packagePath: string,
@@ -1413,10 +1413,10 @@ export function pluginLoader(
     const version = typeof pkgJson["version"] === "string" ? pkgJson["version"] : "0.0.0";
 
     // Determine if this is a plugin package at all
-    const hasPaperclipPlugin = "paperclipPlugin" in pkgJson;
+    const hasPilotPlugin = "paperclipPlugin" in pkgJson;
     const nameMatchesConvention = isPluginPackageName(packageName);
 
-    if (!hasPaperclipPlugin && !nameMatchesConvention) {
+    if (!hasPilotPlugin && !nameMatchesConvention) {
       return null;
     }
 
@@ -1686,15 +1686,15 @@ export function pluginLoader(
     // loadManifest
     // -----------------------------------------------------------------------
 
-    async loadManifest(packagePath: string): Promise<PaperclipPluginManifestV1 | null> {
+    async loadManifest(packagePath: string): Promise<PilotPluginManifestV1 | null> {
       const pkgJson = await readPackageJson(packagePath);
       if (!pkgJson) return null;
 
-      const hasPaperclipPlugin = "paperclipPlugin" in pkgJson;
+      const hasPilotPlugin = "paperclipPlugin" in pkgJson;
       const packageName = typeof pkgJson["name"] === "string" ? pkgJson["name"] : "";
       const nameMatchesConvention = isPluginPackageName(packageName);
 
-      if (!hasPaperclipPlugin && !nameMatchesConvention) {
+      if (!hasPilotPlugin && !nameMatchesConvention) {
         return null;
       }
 
@@ -1775,15 +1775,15 @@ export function pluginLoader(
       pluginId: string,
       upgradeOptions: Omit<PluginInstallOptions, "installDir">,
     ): Promise<{
-      oldManifest: PaperclipPluginManifestV1;
-      newManifest: PaperclipPluginManifestV1;
+      oldManifest: PilotPluginManifestV1;
+      newManifest: PilotPluginManifestV1;
       discovered: DiscoveredPlugin;
     }> {
       const plugin = (await registry.getById(pluginId)) as {
         id: string;
         packageName: string;
         packagePath: string | null;
-        manifestJson: PaperclipPluginManifestV1;
+        manifestJson: PilotPluginManifestV1;
       } | null;
       if (!plugin) throw new Error(`Plugin not found: ${pluginId}`);
 

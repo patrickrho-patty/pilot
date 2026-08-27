@@ -15,7 +15,7 @@ const {
   resolveAdapterExecutionTargetCommandForLogs,
   runAdapterExecutionTargetProcess,
   runAdapterExecutionTargetShellCommand,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
 } = vi.hoisted(() => ({
   ensureAdapterExecutionTargetCommandResolvable: vi.fn(async () => undefined),
   ensureAdapterExecutionTargetRuntimeCommandInstalled: vi.fn(async () => undefined),
@@ -45,7 +45,7 @@ const {
     pid: null,
     startedAt: new Date().toISOString(),
   })),
-  startAdapterExecutionTargetPaperclipBridge: vi.fn(async () => null),
+  startAdapterExecutionTargetPilotBridge: vi.fn(async () => null),
 }));
 
 vi.mock("@paperclipai/adapter-utils/execution-target", async () => {
@@ -60,7 +60,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", async () => {
     resolveAdapterExecutionTargetCommandForLogs,
     runAdapterExecutionTargetProcess,
     runAdapterExecutionTargetShellCommand,
-    startAdapterExecutionTargetPaperclipBridge,
+    startAdapterExecutionTargetPilotBridge,
   };
 });
 

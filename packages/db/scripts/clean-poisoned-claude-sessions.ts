@@ -18,7 +18,7 @@
  *     [--claude-config-dir ~/.claude] \
  *     [--dry-run] [--json]
  *
- * Or in a Paperclip checkout shell:
+ * Or in a Pilot checkout shell:
  *   pnpm --filter @paperclipai/db exec tsx scripts/clean-poisoned-claude-sessions.ts --dry-run
  *
  * Exits 0 on success even when nothing was healed. Idempotent.
@@ -226,8 +226,8 @@ function readDatabaseUrlFromConfig(configPath: string): string {
 function defaultConfigPath(): string | null {
   const candidates: string[] = [];
   const home = os.homedir();
-  if (process.env.PAPERCLIP_HOME) {
-    candidates.push(path.join(process.env.PAPERCLIP_HOME, "config.json"));
+  if (process.env.PILOT_HOME) {
+    candidates.push(path.join(process.env.PILOT_HOME, "config.json"));
   }
   candidates.push(path.join(home, ".paperclip", "instances", "default", "config.json"));
   for (const candidate of candidates) {

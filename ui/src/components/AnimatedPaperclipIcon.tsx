@@ -1,7 +1,7 @@
 import type { SVGProps } from "react";
 import { cn } from "../lib/utils";
 
-export function AnimatedPaperclipIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
+export function AnimatedPilotIcon({ className, ...props }: SVGProps<SVGSVGElement>) {
   return (
     <svg
       viewBox="-1 -1 26 26"
@@ -22,14 +22,14 @@ export function AnimatedPaperclipIcon({ className, ...props }: SVGProps<SVGSVGEl
   );
 }
 
-/** Full-page loading state: a large, centered, gray animated paperclip. */
-export function PaperclipLoading({ className }: { className?: string }) {
+/** Full-page loading state: a large, centered, gray animated pilot. */
+export function PilotLoading({ className }: { className?: string }) {
   return (
     <div
       role="status"
       className={cn("flex min-h-dvh w-full items-center justify-center", className)}
     >
-      <AnimatedPaperclipIcon className="h-24 w-24 text-muted-foreground" />
+      <AnimatedPilotIcon className="h-24 w-24 text-muted-foreground" />
       <span className="sr-only">Loading…</span>
     </div>
   );

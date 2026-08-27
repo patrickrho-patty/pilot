@@ -2,7 +2,7 @@
  * Server-side execution logic for the Hermes Agent adapter.
  *
  * Spawns `hermes chat -q "..." -Q` as a child process, streams output,
- * and returns structured results to Paperclip.
+ * and returns structured results to Pilot.
  *
  * Verified CLI flags (hermes chat):
  *   -q/--query         single query (non-interactive)
@@ -29,15 +29,15 @@ import type {
 
 import {
   runChildProcess,
-  buildPaperclipEnv,
+  buildPilotEnv,
   renderTemplate,
   ensureAbsoluteDirectory,
-  DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+  DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
   joinPromptSections,
-  renderPaperclipWakePrompt,
-  selectPaperclipTaskMarkdown,
-  stringifyPaperclipWakePayload,
-  isPaperclipRecoveryWakePayload,
+  renderPilotWakePrompt,
+  selectPilotTaskMarkdown,
+  stringifyPilotWakePayload,
+  isPilotRecoveryWakePayload,
 } from "@paperclipai/adapter-utils/server-utils";
 
 import {
@@ -117,7 +117,7 @@ const HERMES_DEFAULT_PROMPT_TEMPLATE = [
   "    --data-binary @-",
   "```",
   "",
-  DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+  DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
 ].join("\n");
 
 function renderConditionalSections(template: string, vars: Record<string, unknown>): string {
@@ -151,26 +151,26 @@ export function buildPrompt(
   const projectName = cfgString(context.projectName) || cfgString(ctx.config?.projectName) || "";
 
   // Build API URL — ensure it has the /api path
-  let paperclipApiUrl =
+  let pilotApiUrl =
     cfgString(config.paperclipApiUrl) ||
-    process.env.PAPERCLIP_API_URL ||
+    process.env.PILOT_API_URL ||
     "http://127.0.0.1:3100/api";
   // Ensure /api suffix
-  if (!paperclipApiUrl.endsWith("/api")) {
-    paperclipApiUrl = paperclipApiUrl.replace(/\/+$/, "") + "/api";
+  if (!pilotApiUrl.endsWith("/api")) {
+    pilotApiUrl = pilotApiUrl.replace(/\/+$/, "") + "/api";
   }
 
-  const paperclipTaskMarkdown = selectPaperclipTaskMarkdown(context, {
+  const pilotTaskMarkdown = selectPilotTaskMarkdown(context, {
     resumedSession: options.resumedSession === true,
   });
-  const wakePrompt = renderPaperclipWakePrompt(context.paperclipWake, {
+  const wakePrompt = renderPilotWakePrompt(context.paperclipWake, {
     resumedSession: options.resumedSession === true,
     // The task-context markdown is the authoritative brief on this lane; keep
     // the wake prompt's description copy out so the prompt carries it once.
-    suppressIssueDescription: paperclipTaskMarkdown.length > 0,
+    suppressIssueDescription: pilotTaskMarkdown.length > 0,
   });
   const sessionHandoffMarkdown = cfgString(context.paperclipSessionHandoffMarkdown)?.trim() || "";
-  const wakePayloadJson = stringifyPaperclipWakePayload(context.paperclipWake) || "";
+  const wakePayloadJson = stringifyPilotWakePayload(context.paperclipWake) || "";
 
   const vars: Record<string, unknown> = {
     agentId: ctx.agent?.id || "",
@@ -188,23 +188,23 @@ export function buildPrompt(
     commentId,
     wakeReason,
     projectName,
-    paperclipApiUrl,
+    paperclipApiUrl: pilotApiUrl,
     paperclipWakePrompt: wakePrompt,
-    paperclipTaskMarkdown,
-    taskContext: paperclipTaskMarkdown,
+    paperclipTaskMarkdown: pilotTaskMarkdown,
+    taskContext: pilotTaskMarkdown,
     paperclipWakeJson: wakePayloadJson,
     wakePayloadJson,
-    paperclipApiKeyEnv: "PAPERCLIP_API_KEY",
-    paperclipRunIdEnv: "PAPERCLIP_RUN_ID",
+    paperclipApiKeyEnv: "PILOT_API_KEY",
+    paperclipRunIdEnv: "PILOT_RUN_ID",
   };
 
-  const rendered = isPaperclipRecoveryWakePayload(context.paperclipWake)
+  const rendered = isPilotRecoveryWakePayload(context.paperclipWake)
     ? ""
     : renderTemplate(renderConditionalSections(template, vars), vars);
   return joinPromptSections([
     wakePrompt,
     sessionHandoffMarkdown,
-    paperclipTaskMarkdown,
+    pilotTaskMarkdown,
     rendered,
   ]);
 }
@@ -381,8 +381,8 @@ export async function execute(
     model,
   });
 
-  // ── Load agent instructions file (Paperclip instruction bundles) ──────
-  // Paperclip can materialize managed instructions into instructionsFilePath;
+  // ── Load agent instructions file (Pilot instruction bundles) ──────
+  // Pilot can materialize managed instructions into instructionsFilePath;
   // when present, inject that bundle into the Hermes prompt.
   const instructionsFilePath = cfgString(config.instructionsFilePath);
   let agentInstructions = "";
@@ -399,7 +399,7 @@ export async function execute(
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       // Non-fatal: log to stdout with an explicit "Warning:" prefix so the
-      // Paperclip UI doesn't render this as a red error (stderr output is
+      // Pilot UI doesn't render this as a red error (stderr output is
       // surfaced as an error signal even when execution continues).
       await ctx.onLog(
         "stdout",
@@ -447,7 +447,7 @@ export async function execute(
   args.push("--source", "tool");
 
   // Bypass Hermes dangerous-command approval prompts.
-  // Paperclip agents run as non-interactive subprocesses with no TTY,
+  // Pilot agents run as non-interactive subprocesses with no TTY,
   // so approval prompts would always timeout and deny legitimate commands
   // (curl, python3 -c, etc.). Agents operate in a sandbox — the approval
   // system is designed for human-attended interactive sessions.
@@ -466,26 +466,26 @@ export async function execute(
   const env: Record<string, string> = {
     ...(process.env as Record<string, string>),
     ...(userEnv && typeof userEnv === "object" ? userEnv : {}),
-    ...buildPaperclipEnv(ctx.agent),
+    ...buildPilotEnv(ctx.agent),
   };
 
-  if (ctx.runId) env.PAPERCLIP_RUN_ID = ctx.runId;
+  if (ctx.runId) env.PILOT_RUN_ID = ctx.runId;
 
   // PAPERCLIP_API_KEY is never accepted from config — the harness-minted run
-  // token is the only source of Paperclip API identity.
-  delete env.PAPERCLIP_API_KEY;
-  if ((ctx as any).authToken) env.PAPERCLIP_API_KEY = (ctx as any).authToken;
+  // token is the only source of Pilot API identity.
+  delete env.PILOT_API_KEY;
+  if ((ctx as any).authToken) env.PILOT_API_KEY = (ctx as any).authToken;
 
   // BUG FIX: Read task context from ctx.context (wake context), not ctx.config (adapter config)
   const ctxContext = (ctx as any).context || {};
   const envTaskId = cfgString(ctxContext.taskId) || cfgString(ctxContext.issueId) || cfgString(ctx.config?.taskId);
-  if (envTaskId) env.PAPERCLIP_TASK_ID = envTaskId;
+  if (envTaskId) env.PILOT_TASK_ID = envTaskId;
   const envWakeReason = cfgString(ctxContext.wakeReason) || cfgString(ctx.config?.wakeReason);
-  if (envWakeReason) env.PAPERCLIP_WAKE_REASON = envWakeReason;
+  if (envWakeReason) env.PILOT_WAKE_REASON = envWakeReason;
   const envCommentId = cfgString(ctxContext.commentId) || cfgString(ctxContext.wakeCommentId) || cfgString(ctx.config?.commentId);
-  if (envCommentId) env.PAPERCLIP_WAKE_COMMENT_ID = envCommentId;
-  const wakePayloadJson = stringifyPaperclipWakePayload(ctxContext.paperclipWake);
-  if (wakePayloadJson) env.PAPERCLIP_WAKE_PAYLOAD_JSON = wakePayloadJson;
+  if (envCommentId) env.PILOT_WAKE_COMMENT_ID = envCommentId;
+  const wakePayloadJson = stringifyPilotWakePayload(ctxContext.paperclipWake);
+  if (wakePayloadJson) env.PILOT_WAKE_PAYLOAD_JSON = wakePayloadJson;
 
   // ── Resolve working directory ──────────────────────────────────────────
   const cwd =
@@ -510,7 +510,7 @@ export async function execute(
 
   // ── Execute ────────────────────────────────────────────────────────────
   // Hermes writes non-error noise to stderr (MCP init, INFO logs, etc).
-  // Paperclip renders all stderr as red/error in the UI.
+  // Pilot renders all stderr as red/error in the UI.
   // Wrap onLog to reclassify benign stderr lines as stdout.
   const wrappedOnLog = async (stream: "stdout" | "stderr", chunk: string) => {
     if (stream === "stderr") {
@@ -580,7 +580,7 @@ export async function execute(
     executionResult.summary = parsed.response.slice(0, 2000);
   }
 
-  // Set resultJson so Paperclip can persist run metadata (used for UI display + auto-comments)
+  // Set resultJson so Pilot can persist run metadata (used for UI display + auto-comments)
   executionResult.resultJson = {
     result: parsed.response || "",
     session_id: parsed.sessionId || null,

@@ -269,7 +269,7 @@ test("verifyPackageRegistryProblems accepts the nightly channel and flags nightl
 test("verifyPackageRegistryState allows intentional canary latest but still checks dependencies", () => {
   const packageDocsByName = new Map([
     [
-      "paperclipai",
+      "pilotai",
       {
         "dist-tags": {
           latest: "2026.427.0-canary.3",
@@ -296,8 +296,8 @@ test("verifyPackageRegistryState allows intentional canary latest but still chec
 
   assert.deepEqual(
     verifyPackageRegistryState({
-      packageName: "paperclipai",
-      packageDoc: packageDocsByName.get("paperclipai"),
+      packageName: "pilotai",
+      packageDoc: packageDocsByName.get("pilotai"),
       packageDocsByName,
       channel: "canary",
       distTag: "canary",

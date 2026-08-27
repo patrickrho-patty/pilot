@@ -4,7 +4,7 @@
  * `detail.devtools` and are named after components). React never clears them, so
  * on a long-lived tab they accumulate into *millions* of native
  * `PerformanceMeasure` entries — gigabytes of memory that `performance.memory`
- * does not even report. On a busy Paperclip tab this was measured at ~340
+ * does not even report. On a busy Pilot tab this was measured at ~340
  * measures/sec, reaching 12M+ entries after ~12h and dominating the tab's
  * footprint.
  *
@@ -14,7 +14,7 @@
  * tracks pass explicit start/end times and leave no marks), so mark-based timing
  * elsewhere is unaffected.
  *
- * Set `window.__paperclipKeepPerfMeasures = true` to keep them — e.g. while
+ * Set `window.__pilotKeepPerfMeasures = true` to keep them — e.g. while
  * recording a React Performance Track in the DevTools Performance panel.
  */
 const DEFAULT_INTERVAL_MS = 10_000;

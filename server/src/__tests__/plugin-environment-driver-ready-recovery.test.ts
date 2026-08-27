@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { PaperclipPluginManifestV1 } from "@paperclipai/shared";
+import type { PilotPluginManifestV1 } from "@paperclipai/shared";
 import { createManagedBundledPluginWorkerRecovery } from "../app.js";
 import { listReadyPluginEnvironmentDrivers } from "../services/plugin-environment-driver.js";
 import { pluginLoader, type PluginLoader } from "../services/plugin-loader.js";
@@ -22,7 +22,7 @@ vi.mock("../services/plugin-registry.js", () => ({
 const PLUGIN_ID = "plugin-daytona";
 const PLUGIN_KEY = "paperclip.daytona-sandbox-provider";
 
-const manifest: PaperclipPluginManifestV1 = {
+const manifest: PilotPluginManifestV1 = {
   id: PLUGIN_KEY,
   apiVersion: 1,
   version: "1.0.0",

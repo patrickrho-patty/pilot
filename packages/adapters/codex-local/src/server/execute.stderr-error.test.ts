@@ -6,7 +6,7 @@ const {
   ensureAdapterExecutionTargetCommandResolvable,
   ensureAdapterExecutionTargetRuntimeCommandInstalled,
   prepareCodexRuntimeConfig,
-  readPaperclipRuntimeSkillEntries,
+  readPilotRuntimeSkillEntries,
   resolveAdapterExecutionTargetCommandForLogs,
   runAdapterExecutionTargetProcess,
   tempCodexHome,
@@ -14,7 +14,7 @@ const {
   ensureAdapterExecutionTargetCommandResolvable: vi.fn(async () => undefined),
   ensureAdapterExecutionTargetRuntimeCommandInstalled: vi.fn(async () => undefined),
   prepareCodexRuntimeConfig: vi.fn(async () => ({ cleanup: vi.fn(async () => undefined), notes: [] })),
-  readPaperclipRuntimeSkillEntries: vi.fn(async () => []),
+  readPilotRuntimeSkillEntries: vi.fn(async () => []),
   resolveAdapterExecutionTargetCommandForLogs: vi.fn(async () => "codex"),
   runAdapterExecutionTargetProcess: vi.fn(),
   tempCodexHome: "/tmp/paperclip-codex-stderr-error-test-home",
@@ -46,7 +46,7 @@ vi.mock("@paperclipai/adapter-utils/server-utils", async () => {
   );
   return {
     ...actual,
-    readPaperclipRuntimeSkillEntries,
+    readPilotRuntimeSkillEntries,
   };
 });
 

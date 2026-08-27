@@ -3,11 +3,11 @@
  *
  * PREREQUISITES (operator must perform before running this test):
  *   1. Create the kind cluster:
- *        kind create cluster --name paperclip
+ *        kind create cluster --name pilot
  *   2. Pre-load the alpine image so the Job can start without network access:
  *        docker pull alpine:3.20
  *        docker tag alpine:3.20 localhost/paperclip-agent:latest
- *        kind load docker-image localhost/paperclip-agent:latest --name paperclip
+ *        kind load docker-image localhost/paperclip-agent:latest --name pilot
  *   3. For the sandbox-cr backend test, the agent-sandbox controller must be installed:
  *        kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/latest/download/install.yaml
  *      And a tini-bearing image pre-loaded (e.g. the same localhost/paperclip-agent:latest
@@ -16,7 +16,7 @@
  *        RUN_K8S_INTEGRATION_TESTS=1 pnpm test
  *
  * The namespace is derived from companySlug ("spike-e2e") + namespacePrefix
- * ("paperclip-"), resolving to "paperclip-spike-e2e".
+ * ("pilot-"), resolving to "pilot-spike-e2e".
  */
 
 import { describe, it, expect, beforeAll, afterAll } from "vitest";

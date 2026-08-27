@@ -1,15 +1,15 @@
 # Hero Capsule Bank
 
-The hero capsule bank is the one approved decorative exception to the rule that capsules represent individual agents. It is a canonical Paperclip brand surface. Do not improvise a different capsule bank.
+The hero capsule bank is the one approved decorative exception to the rule that capsules represent individual agents. It is a canonical Pilot brand surface. Do not improvise a different capsule bank.
 
 ## Source Precedence
 
-1. `paperclip-content/td/capsules.md` - byte-accurate technical source for geometry, gradients, grain, crop, and wave.
-2. Paperclip feature-video HyperFrames skill:
+1. `pilot-content/td/capsules.md` - byte-accurate technical source for geometry, gradients, grain, crop, and wave.
+2. Pilot feature-video HyperFrames skill:
    - `references/capsule-bank-spec.md`
    - `references/brand-tokens.md`
    - `references/composition-recipes.md`
-3. `paperclip-content/videos/wireframe-skill-launch/src/HeroCapsuleBank.tsx` - working Remotion implementation.
+3. `pilot-content/videos/wireframe-skill-launch/src/HeroCapsuleBank.tsx` - working Remotion implementation.
 
 ## Coordinate System
 

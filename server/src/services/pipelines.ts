@@ -3720,7 +3720,7 @@ export function pipelineService(db: Db, deps: { heartbeat?: IssueAssignmentWakeu
       const normalizedEnv = input.env === null
         ? null
         : await secretsSvc.normalizeEnvBindingsForPersistence(input.companyId, input.env, {
-            strictMode: process.env.PAPERCLIP_SECRETS_STRICT_MODE === "true",
+            strictMode: process.env.PILOT_SECRETS_STRICT_MODE === "true",
             fieldPath: "env",
           }) as Record<string, EnvBinding>;
       const actorPatch = routineActorPatch(input.actor);

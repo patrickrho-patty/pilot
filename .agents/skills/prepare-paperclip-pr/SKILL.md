@@ -1,10 +1,10 @@
 ---
-name: prepare-paperclip-pr
-description: Prepare a Paperclip branch for PR with commits, template body, and checks.
+name: prepare-pilot-pr
+description: Prepare a Pilot branch for PR with commits, template body, and checks.
 ---
-# Prepare Paperclip PR
+# Prepare Pilot PR
 
-The standard Paperclip procedure for turning branch work into a reviewed,
+The standard Pilot procedure for turning branch work into a reviewed,
 green pull request against `paperclipai/paperclip` master. Apply it once per
 PR (if a task splits a branch into several PRs, run the whole procedure for
 each one).
@@ -12,7 +12,7 @@ each one).
 ## 0. Preconditions — worktree safety
 
 * Do all PR work in a **git worktree** on a dedicated branch. The main
-  `~/paperclip` checkout typically runs the live Paperclip server — never
+  `~/paperclip` checkout typically runs the live Pilot server — never
   check out branches there. If you are already on a worktree/branch, verify it
   (`git rev-parse --git-dir`, `git branch --show-current`) and proceed.
 * If the main checkout is unexpectedly off `master`, fix that first without
@@ -27,7 +27,7 @@ each one).
   Do not stash and forget; do not leave files behind. If commits are missing,
   make them.
 * Commit messages must end with exactly:
-  `Co-Authored-By: Paperclip <noreply@paperclip.ing>`
+  `Co-Authored-By: Pilot <noreply@pilot.ing>`
 
 ## 2. Get changes cleanly on top of master
 

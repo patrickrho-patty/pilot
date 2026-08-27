@@ -1,0 +1,16 @@
+id: env-string-literal-rename-ts
+language: TypeScript
+# Rewrites "PAPERCLIP_X" string literals (env-name keys in spawn/env objects).
+# TIER 3 — sites that SET env for spawned agents may need dual-name emission.
+severity: info
+rule:
+  pattern: '"$NAME"'
+constraints:
+  NAME:
+    regex: ^PAPERCLIP_[A-Z0-9_]+$
+transform:
+  SUFFIX:
+    substring:
+      source: $NAME
+      startChar: 10
+fix: '"PILOT_$SUFFIX"'

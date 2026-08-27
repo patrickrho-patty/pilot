@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import {
-  findPaperclipConfigKeyWarnings,
-  paperclipConfigSchema,
-  type PaperclipConfig,
+  findPilotConfigKeyWarnings,
+  pilotConfigSchema,
+  type PilotConfig,
 } from "@paperclipai/shared";
 import { ZodError } from "zod";
-import { resolvePaperclipConfigPath } from "./paths.js";
+import { resolvePilotConfigPath } from "./paths.js";
 
 function formatConfigValidationError(error: ZodError): string {
   return error.issues
@@ -16,8 +16,8 @@ function formatConfigValidationError(error: ZodError): string {
     .join("; ");
 }
 
-export function readConfigFile(): PaperclipConfig | null {
-  const configPath = resolvePaperclipConfigPath();
+export function readConfigFile(): PilotConfig | null {
+  const configPath = resolvePilotConfigPath();
 
   if (!fs.existsSync(configPath)) return null;
 
@@ -30,8 +30,8 @@ export function readConfigFile(): PaperclipConfig | null {
   }
 
   try {
-    const config = paperclipConfigSchema.parse(raw);
-    for (const warning of findPaperclipConfigKeyWarnings(config)) {
+    const config = pilotConfigSchema.parse(raw);
+    for (const warning of findPilotConfigKeyWarnings(config)) {
       console.warn(
         `Unknown config key ${warning.path}; did you mean ${warning.suggestion}? It will be preserved.`,
       );

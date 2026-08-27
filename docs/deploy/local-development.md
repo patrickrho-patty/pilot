@@ -1,9 +1,9 @@
 ---
 title: Local Development
-summary: Set up Paperclip for local development
+summary: Set up Pilot for local development
 ---
 
-Run Paperclip locally with zero external dependencies.
+Run Pilot locally with zero external dependencies.
 
 ## Prerequisites
 
@@ -22,27 +22,27 @@ This starts:
 - **API server** at `http://localhost:3100`
 - **UI** served by the API server in dev middleware mode (same origin)
 
-No Docker or external database required. Paperclip uses embedded PostgreSQL automatically.
+No Docker or external database required. Pilot uses embedded PostgreSQL automatically.
 
 ## One-Command Bootstrap
 
 For a first-time install:
 
 ```sh
-pnpm paperclipai run
+pnpm pilotai run
 ```
 
 This does:
 
 1. Auto-onboards if config is missing
-2. Runs `paperclipai doctor` with repair enabled
+2. Runs `pilotai doctor` with repair enabled
 3. Starts the server when checks pass
 
 ## Bind Presets In Dev
 
 Default `pnpm dev` stays in `local_trusted` with loopback-only binding.
 
-To open Paperclip to a private network with login enabled:
+To open Pilot to a private network with login enabled:
 
 ```sh
 pnpm dev --bind lan
@@ -86,18 +86,18 @@ For safer parallel local experiments, initialize a dedicated worktree instance i
 ```sh
 npx paperclipai worktree:make local-lab --seed-mode minimal
 cd ~/paperclip-local-lab
-pnpm paperclipai worktree env                       # inspect generated env exports
+pnpm pilotai worktree env                       # inspect generated env exports
 eval "$(npx paperclipai worktree env)"             # bash/zsh
-pnpm paperclipai run
-pnpm paperclipai doctor
+pnpm pilotai run
+pnpm pilotai doctor
 ```
 
 If the experiment gets noisy, repair or reseed the worktree without touching the main branch:
 
 ```sh
 # worktree repair rebuilds the local checkout metadata, so run the checked-out CLI through the direct-exec form.
-node cli/node_modules/tsx/dist/cli.mjs cli/src/index.ts worktree repair --branch paperclip-local-lab
-npx paperclipai worktree reseed --from . --to paperclip-local-lab
+node cli/node_modules/tsx/dist/cli.mjs cli/src/index.ts worktree repair --branch pilot-local-lab
+npx paperclipai worktree reseed --from . --to pilot-local-lab
 ```
 
 When done, shut it down and remove the isolated state explicitly:
@@ -128,5 +128,5 @@ pnpm dev
 Override with environment variables:
 
 ```sh
-PAPERCLIP_HOME=/custom/path PAPERCLIP_INSTANCE_ID=dev pnpm paperclipai run
+PILOT_HOME=/custom/path PILOT_INSTANCE_ID=dev pnpm pilotai run
 ```

@@ -11,7 +11,7 @@ type ParsedCodexProvidersConfig = {
   modelProvider: string | null;
 };
 
-// Marker comments delimiting the Paperclip-managed regions of config.toml.
+// Marker comments delimiting the Pilot-managed regions of config.toml.
 // TOML requires root-level keys (model_provider) to appear before the first
 // table header, while [model_providers.*] tables must not swallow the user's
 // root keys, so the managed content is split into a root block prepended to
@@ -340,7 +340,7 @@ export async function prepareCodexRuntimeConfig(input: {
   const resolveEnv = (name: string): string | undefined => input.env[name] ?? process.env[name];
   const notes: string[] = [];
   const parsed = parseCodexProvidersConfig(
-    input.env.PAPERCLIP_CODEX_PROVIDERS ?? process.env.PAPERCLIP_CODEX_PROVIDERS,
+    input.env.PILOT_CODEX_PROVIDERS ?? process.env.PILOT_CODEX_PROVIDERS,
     resolveEnv,
     notes,
   );

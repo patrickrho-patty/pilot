@@ -2973,8 +2973,8 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("creates and resolves an agent-initiated user authorization grant card", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
     const company = await createCompany(db);
     const agent = await createAgent(db, company.id);
     const { issue, run } = await createIssueAndRun(db, company.id, agent.id);
@@ -3059,9 +3059,9 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("starts and completes OAuth app sign-in with PKCE state and secret-backed tokens", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
-    vi.stubEnv("PAPERCLIP_PUBLIC_URL", "https://paperclip-public.example");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
+    vi.stubEnv("PILOT_PUBLIC_URL", "https://paperclip-public.example");
     const company = await createCompany(db);
     const app = createRouteApp(db);
 
@@ -3178,8 +3178,8 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("requires non-viewer board access to start OAuth for active app connections", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
-    vi.stubEnv("PAPERCLIP_PUBLIC_URL", "http://paperclip.test");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
+    vi.stubEnv("PILOT_PUBLIC_URL", "http://paperclip.test");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const connect = await service.connectGalleryApp(company.id, { galleryKey: "slack", name: "Slack reauth" });
@@ -3253,9 +3253,9 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("binds OAuth callback completion to the initiating board session", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
-    vi.stubEnv("PAPERCLIP_PUBLIC_URL", "http://paperclip.test");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
+    vi.stubEnv("PILOT_PUBLIC_URL", "http://paperclip.test");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const connect = await service.connectGalleryApp(company.id, { galleryKey: "slack", name: "Slack bound" });
@@ -3337,10 +3337,10 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("discovers Notion MCP OAuth metadata, registers one public client, and reuses it", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_NOTION_CLIENT_ID", "");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_NOTION_CLIENT_SECRET", "");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_CLIENT_ID", "");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_CLIENT_SECRET", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_NOTION_CLIENT_ID", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_NOTION_CLIENT_SECRET", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_CLIENT_ID", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_CLIENT_SECRET", "");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const connected = await service.connectGalleryApp(company.id, {
@@ -3456,10 +3456,10 @@ describeEmbeddedPostgres("tool access service", () => {
       "client_id",
     ],
   ])("rejects DCR responses that return %s", async (_label, registrationResponse, field) => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_NOTION_CLIENT_ID", "");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_NOTION_CLIENT_SECRET", "");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_CLIENT_ID", "");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_CLIENT_SECRET", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_NOTION_CLIENT_ID", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_NOTION_CLIENT_SECRET", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_CLIENT_ID", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_CLIENT_SECRET", "");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const connected = await service.connectGalleryApp(company.id, {
@@ -3514,8 +3514,8 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("fails fast when Notion DCR is attempted from a non-loopback HTTP origin", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_NOTION_CLIENT_ID", "");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_CLIENT_ID", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_NOTION_CLIENT_ID", "");
+    vi.stubEnv("PILOT_TOOL_OAUTH_CLIENT_ID", "");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const connected = await service.connectGalleryApp(company.id, {
@@ -3539,8 +3539,8 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("leases rotating OAuth refresh tokens across service instances before concurrent remote app calls", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const concurrentService = toolAccessService(db);
@@ -3644,8 +3644,8 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("treats invalid_grant as terminal without replaying a rotated refresh token", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const connect = await service.connectGalleryApp(company.id, { galleryKey: "slack", name: "Slack invalid grant" });
@@ -3735,8 +3735,8 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("does not disable a connection when invalid_grant used a superseded refresh-token version", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const connect = await service.connectGalleryApp(company.id, {
@@ -3818,8 +3818,8 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("fails closed instead of replaying a refresh token after an abandoned lease", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const fixture = await createOAuthConnection(db, company.id);
@@ -3869,8 +3869,8 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("uses OAuth client credentials for shared machine-to-machine MCP connections", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_M2M_CLIENT_ID", "m2m-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_M2M_CLIENT_SECRET", "m2m-client-secret");
+    vi.stubEnv("PILOT_TOOL_OAUTH_M2M_CLIENT_ID", "m2m-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_M2M_CLIENT_SECRET", "m2m-client-secret");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const connection = await service.createConnection(company.id, {
@@ -3930,8 +3930,8 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("fails expired OAuth credentials without a refresh token and returns reconnect links", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_ID", "slack-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_SLACK_CLIENT_SECRET", "slack-client-secret");
     const company = await createCompany(db);
     const service = toolAccessService(db);
     const connect = await service.connectGalleryApp(company.id, { galleryKey: "slack", name: "Slack no refresh" });
@@ -4116,7 +4116,7 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("cancels invalid-signature pending action requests but keeps unsigned in-flight ones out of the review queue without cancelling them", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_ACTION_SIGNING_SECRET", "current-secret");
+    vi.stubEnv("PILOT_TOOL_ACTION_SIGNING_SECRET", "current-secret");
     const company = await createCompany(db);
     const [application] = await db.insert(toolApplications).values({
       companyId: company.id,
@@ -4773,9 +4773,9 @@ describeEmbeddedPostgres("tool access service", () => {
   });
 
   it("discovers OAuth for pasted MCP links and completes sign-in without a gallery entry", async () => {
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_GENERIC_EXAMPLE_TEST_CLIENT_ID", "generic-client-id");
-    vi.stubEnv("PAPERCLIP_TOOL_OAUTH_GENERIC_EXAMPLE_TEST_CLIENT_SECRET", "generic-client-secret");
-    vi.stubEnv("PAPERCLIP_PUBLIC_URL", "http://paperclip.test");
+    vi.stubEnv("PILOT_TOOL_OAUTH_GENERIC_EXAMPLE_TEST_CLIENT_ID", "generic-client-id");
+    vi.stubEnv("PILOT_TOOL_OAUTH_GENERIC_EXAMPLE_TEST_CLIENT_SECRET", "generic-client-secret");
+    vi.stubEnv("PILOT_PUBLIC_URL", "http://paperclip.test");
     const company = await createCompany(db);
     const app = createRouteApp(db);
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {

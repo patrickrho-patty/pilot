@@ -1,4 +1,4 @@
-# paperclipai
+# pilotai
 
 ## 0.3.1
 

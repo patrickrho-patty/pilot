@@ -116,12 +116,12 @@
   --chip-match-identifier-bg: var(--muted);
   --chip-match-identifier-fg: var(--muted-foreground);
   --chip-match-identifier-border: var(--border);
-  --paperclip-doc-annotation-highlight-open: #fef08a;
-  --paperclip-doc-annotation-highlight-focused: #fde047;
-  --paperclip-doc-annotation-highlight-stale: #fef08a;
-  --paperclip-doc-annotation-highlight-resolved: #fef9c3;
+  --pilot-doc-annotation-highlight-open: #fef08a;
+  --pilot-doc-annotation-highlight-focused: #fde047;
+  --pilot-doc-annotation-highlight-stale: #fef08a;
+  --pilot-doc-annotation-highlight-resolved: #fef9c3;
 
-  /* Brand agent-capsule gradient stops (paperclip.ing/brand/).
+  /* Brand agent-capsule gradient stops (pilot.ing/brand/).
      "The capsule is the agent" — each agent gets a 2-stop gradient,
      --agent-Na (top) → --agent-Nb (bottom). Brand-fixed hex, identical
      across themes. Indices 1–10; consumed by AgentCapsule. */
@@ -332,10 +332,10 @@
   --chip-match-identifier-bg: var(--muted);
   --chip-match-identifier-fg: var(--muted-foreground);
   --chip-match-identifier-border: var(--border);
-  --paperclip-doc-annotation-highlight-open: #a16207;
-  --paperclip-doc-annotation-highlight-focused: #ca8a04;
-  --paperclip-doc-annotation-highlight-stale: #854d0e;
-  --paperclip-doc-annotation-highlight-resolved: #713f12;
+  --pilot-doc-annotation-highlight-open: #a16207;
+  --pilot-doc-annotation-highlight-focused: #ca8a04;
+  --pilot-doc-annotation-highlight-stale: #854d0e;
+  --pilot-doc-annotation-highlight-resolved: #713f12;
 
   /* Dark-mode AA overrides for the status-icon hues that need a mode-specific
      value (PAP-238). in_progress / blocked stay identical (same blue / red both
@@ -347,23 +347,23 @@
   --status-task-icon-cancelled: #9a958a;
 }
 
-::highlight(paperclip-doc-annotation-open) {
-  background-color: var(--paperclip-doc-annotation-highlight-open);
+::highlight(pilot-doc-annotation-open) {
+  background-color: var(--pilot-doc-annotation-highlight-open);
   color: inherit;
 }
 
-::highlight(paperclip-doc-annotation-focused) {
-  background-color: var(--paperclip-doc-annotation-highlight-focused);
+::highlight(pilot-doc-annotation-focused) {
+  background-color: var(--pilot-doc-annotation-highlight-focused);
   color: inherit;
 }
 
-::highlight(paperclip-doc-annotation-stale) {
-  background-color: var(--paperclip-doc-annotation-highlight-stale);
+::highlight(pilot-doc-annotation-stale) {
+  background-color: var(--pilot-doc-annotation-highlight-stale);
   color: inherit;
 }
 
-::highlight(paperclip-doc-annotation-resolved) {
-  background-color: var(--paperclip-doc-annotation-highlight-resolved);
+::highlight(pilot-doc-annotation-resolved) {
+  background-color: var(--pilot-doc-annotation-highlight-resolved);
   color: inherit;
 }
 
@@ -981,7 +981,7 @@
   transform-origin: 50% 50%;
 }
 
-@keyframes paperclip-thinking-draw {
+@keyframes pilot-thinking-draw {
   0% {
     stroke-dasharray: 0 85.717;
     stroke-dashoffset: -85.717;
@@ -1010,7 +1010,7 @@
 }
 
 .paperclip-thinking-icon-path {
-  animation: paperclip-thinking-draw 1s linear infinite;
+  animation: pilot-thinking-draw 1s linear infinite;
 }
 
 /* Muted variant (task-chat v7 activity rows): the sweep runs over the
@@ -1340,7 +1340,7 @@ a.paperclip-mention-chip[data-mention-kind="project"]::before {
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 999px;
-  background-color: var(--paperclip-mention-project-color, currentColor);
+  background-color: var(--pilot-mention-project-color, currentColor);
 }
 
 .paperclip-mdxeditor-content a.paperclip-mention-chip[data-mention-kind="agent"]::before,
@@ -1348,8 +1348,8 @@ a.paperclip-mention-chip[data-mention-kind="agent"]::before {
   width: 0.75rem;
   height: 0.75rem;
   background-color: currentColor;
-  -webkit-mask-image: var(--paperclip-mention-icon-mask);
-  mask-image: var(--paperclip-mention-icon-mask);
+  -webkit-mask-image: var(--pilot-mention-icon-mask);
+  mask-image: var(--pilot-mention-icon-mask);
   -webkit-mask-position: center;
   mask-position: center;
   -webkit-mask-repeat: no-repeat;
@@ -1996,7 +1996,7 @@ span.paperclip-mention-chip[data-mention-kind="external-object"] {
    - pages/CompanySkills.tsx (DISCOVERY_ACCENTS) — persisted/compared skill.color JS data, not just rendered.
    - components/IssueColumns.tsx (accentColor fallback) — also feeds pickTextColorForPillBg() contrast math.
    - components/CompanyPatternIcon.tsx — canvas fillStyle computed at runtime from numeric props, not a static literal.
-   - components/FileViewerSheet.tsx — half-migrated var(--paperclip-code-highlight-*, fallback) pattern at the time of Batch 1; RESOLVED in Batch 4 via *-resolved wrapper tokens (see the Batch 4 MISC token block below) — no longer allowlisted.
+   - components/FileViewerSheet.tsx — half-migrated var(--pilot-code-highlight-*, fallback) pattern at the time of Batch 1; RESOLVED in Batch 4 via *-resolved wrapper tokens (see the Batch 4 MISC token block below) — no longer allowlisted.
    - pages/InviteUxLab.tsx (brandColor prop, x2) — demo/showcase-only prop feeding CompanyPatternIcon's hexToHue() color math, not a rendered CSS value.
 */
 :root {
@@ -2400,12 +2400,12 @@ span.paperclip-mention-chip[data-mention-kind="external-object"] {
   --blur-1px: 1px; /* Extracted from ui/src/components/ChatComposer.tsx (backdrop-blur-[1px]). */
   --blur-2px: 2px; /* Extracted from ui/src/components/IssueChatThread.tsx (backdrop-blur-[2px]). */
   --drop-shadow-extract-1: 0 1px 2px rgba(0,0,0,0.65); /* Extracted from ui/src/components/CompanyPatternIcon.tsx (drop-shadow-[0_1px_2px_rgba(0,0,0,0.65)]). */
-  --code-bg-resolved: var(--paperclip-code-bg, var(--muted)); /* Extracted from ui/src/components/FileViewerSheet.tsx (bg-[var(--paperclip-code-bg,theme(colors.muted.DEFAULT))]). */
-  --paperclip-code-highlight-bg: rgba(250,204,21,0.12); /* DECISION-SHEET.md A5: FileViewerSheet.tsx referenced this var without it ever being defined, relying on the var() fallback; minted here at exactly the former fallback value (zero pixels). */
-  --paperclip-code-highlight-border: rgb(234,179,8); /* DECISION-SHEET.md A5: same as --paperclip-code-highlight-bg — minted at the former fallback value. */
-  --code-highlight-bg-resolved: var(--paperclip-code-highlight-bg); /* Extracted from ui/src/components/FileViewerSheet.tsx; fallback dropped in A5 now that --paperclip-code-highlight-bg is a real token (was var(--paperclip-code-highlight-bg, rgba(250,204,21,0.12))). */
-  --code-gutter-fg-resolved: var(--paperclip-code-gutter-fg, var(--muted-foreground)); /* Extracted from ui/src/components/FileViewerSheet.tsx (text-[var(--paperclip-code-gutter-fg,theme(colors.muted.foreground))]). */
-  --code-highlight-border-resolved: var(--paperclip-code-highlight-border); /* Extracted from ui/src/components/FileViewerSheet.tsx; fallback dropped in A5 now that --paperclip-code-highlight-border is a real token (was var(--paperclip-code-highlight-border, rgb(234,179,8))). */
+  --code-bg-resolved: var(--pilot-code-bg, var(--muted)); /* Extracted from ui/src/components/FileViewerSheet.tsx (bg-[var(--pilot-code-bg,theme(colors.muted.DEFAULT))]). */
+  --pilot-code-highlight-bg: rgba(250,204,21,0.12); /* DECISION-SHEET.md A5: FileViewerSheet.tsx referenced this var without it ever being defined, relying on the var() fallback; minted here at exactly the former fallback value (zero pixels). */
+  --pilot-code-highlight-border: rgb(234,179,8); /* DECISION-SHEET.md A5: same as --pilot-code-highlight-bg — minted at the former fallback value. */
+  --code-highlight-bg-resolved: var(--pilot-code-highlight-bg); /* Extracted from ui/src/components/FileViewerSheet.tsx; fallback dropped in A5 now that --pilot-code-highlight-bg is a real token (was var(--pilot-code-highlight-bg, rgba(250,204,21,0.12))). */
+  --code-gutter-fg-resolved: var(--pilot-code-gutter-fg, var(--muted-foreground)); /* Extracted from ui/src/components/FileViewerSheet.tsx (text-[var(--pilot-code-gutter-fg,theme(colors.muted.foreground))]). */
+  --code-highlight-border-resolved: var(--pilot-code-highlight-border); /* Extracted from ui/src/components/FileViewerSheet.tsx; fallback dropped in A5 now that --pilot-code-highlight-border is a real token (was var(--pilot-code-highlight-border, rgb(234,179,8))). */
   --gradient-extract-25: linear-gradient(135deg,var(--primary) 0%,var(--accent) 55%,var(--muted) 100%); /* Extracted from ui/src/components/SidebarAccountMenu.tsx; corrected for full-color semantic tokens. */
   --gradient-extract-26: linear-gradient(135deg,var(--primary) 0%,var(--accent) 58%,color-mix(in oklab,var(--background) 76%,white 24%) 100%); /* Extracted from ui/src/pages/ProfileSettings.tsx; corrected for full-color semantic tokens. */
 }

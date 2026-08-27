@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 
 const ISSUE_PATTERNS = [
   /(?:fixes|closes|resolves|refs)\s+#\d+/i,
-  /(?:^|[\s(])https:\/\/github\.com\/paperclipai\/paperclip\/issues\/\d+(?=$|[\s),:;!?]|[.](?![\w-]))/i,
+  /(?:^|[\s(])https:\/\/github\.com\/pilotai\/paperclip\/issues\/\d+(?=$|[\s),:;!?]|[.](?![\w-]))/i,
   /(?<!\w)#\d+/,
 ];
 
@@ -33,7 +33,7 @@ const TEMPLATE_FIELDS = {
     ['What happened', 'What happened?'],
     ['Expected behavior', 'Expected behaviour'],
     ['Steps to reproduce', 'Reproduction steps', 'Repro steps'],
-    ['Paperclip version', 'Paperclip version or commit', 'Version or commit', 'Version/commit'],
+    ['Pilot version', 'Pilot version or commit', 'Version or commit', 'Version/commit'],
     ['Deployment mode'],
   ],
   feature: [

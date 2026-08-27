@@ -205,16 +205,16 @@ type EventIngestionSettings = {
 
 type WikiEventIngestionSource = "issues" | "comments" | "documents";
 
-type PaperclipIngestionSourceScope =
+type PilotIngestionSourceScope =
   | { kind: "active_projects"; limit: number; statuses?: Array<"in_progress" | "todo" | "done"> }
   | { kind: "selected_projects"; projectIds: string[] }
   | { kind: "root_issues"; issueIds: string[] }
   | { kind: "company_all"; requiresBoardConfirmation: true };
 
-type PaperclipIngestionProfile = {
+type PilotIngestionProfile = {
   version: 1;
   enabled: boolean;
-  sourceScopes: PaperclipIngestionSourceScope[];
+  sourceScopes: PilotIngestionSourceScope[];
   sourceKinds: {
     issues: boolean;
     comments: boolean;
@@ -236,10 +236,10 @@ type PaperclipIngestionProfile = {
   };
 };
 
-type PaperclipIngestionProfileData = {
+type PilotIngestionProfileData = {
   wikiId: string;
   space: Pick<WikiSpace, "id" | "slug" | "displayName" | "accessScope" | "status">;
-  profile: PaperclipIngestionProfile;
+  profile: PilotIngestionProfile;
   effectiveState: "enabled" | "disabled" | "policy_blocked" | "pending_approval" | "enabled_no_scopes";
   policyBlocks: string[];
   historicalPageCount: number;
@@ -780,12 +780,12 @@ function useSpaceFolderStatus(companyId: string | null, spaceSlug: string | null
   return usePluginData<WikiSpaceWithFolderStatus>("space", params);
 }
 
-function usePaperclipIngestionProfile(companyId: string | null, spaceSlug: string | null) {
+function usePilotIngestionProfile(companyId: string | null, spaceSlug: string | null) {
   const params = useMemo(() => {
     if (!companyId || !spaceSlug) return undefined;
     return { companyId, spaceSlug };
   }, [companyId, spaceSlug]);
-  return usePluginData<PaperclipIngestionProfileData>("paperclip-ingestion-profile", params);
+  return usePluginData<PilotIngestionProfileData>("paperclip-ingestion-profile", params);
 }
 
 function usePageContent(companyId: string | null, path: string | null, spaceSlug?: string | null) {
@@ -4712,7 +4712,7 @@ function aggregateLintFindings(findings: Record<string, unknown>[]): { total: nu
 }
 
 // ---------------------------------------------------------------------------
-// History tab: native Paperclip issue table for recent LLM Wiki operation
+// History tab: native Pilot issue table for recent LLM Wiki operation
 // issues. Each plugin run is represented by an issue, so the standard issue
 // history view is the right surface here.
 // ---------------------------------------------------------------------------
@@ -6854,7 +6854,7 @@ function SpaceEditCard({
         </CardBody>
       </Card>
 
-      <PaperclipIngestionSpaceCard companyId={companyId} space={space} refresh={refresh} />
+      <PilotIngestionSpaceCard companyId={companyId} space={space} refresh={refresh} />
 
       <Card style={{ opacity: 0.56 }}>
         <CardHeader title="Access" />
@@ -6911,7 +6911,7 @@ function SpaceEditCard({
   );
 }
 
-function paperclipIngestionStateBadge(data: PaperclipIngestionProfileData | null): { tone: Tone; label: string } {
+function pilotIngestionStateBadge(data: PilotIngestionProfileData | null): { tone: Tone; label: string } {
   if (!data) return { tone: "default", label: "Loading" };
   if (data.effectiveState === "policy_blocked") return { tone: "blocked", label: "Locked" };
   if (data.effectiveState === "pending_approval") return { tone: "queued", label: "Pending approval" };
@@ -6920,26 +6920,26 @@ function paperclipIngestionStateBadge(data: PaperclipIngestionProfileData | null
   return { tone: "default", label: data.historicalPageCount > 0 ? `Off · ${data.historicalPageCount} historical pages` : "Off" };
 }
 
-function PaperclipIngestionSpaceCard({ companyId, space, refresh }: { companyId: string | null; space: WikiSpace; refresh: () => void }) {
-  const profileQuery = usePaperclipIngestionProfile(companyId, space.slug);
+function PilotIngestionSpaceCard({ companyId, space, refresh }: { companyId: string | null; space: WikiSpace; refresh: () => void }) {
+  const profileQuery = usePilotIngestionProfile(companyId, space.slug);
   const updateProfile = usePluginAction("update-paperclip-ingestion-profile");
   const toast = usePluginToast();
   const data = profileQuery.data ?? null;
-  const [draft, setDraft] = useState<PaperclipIngestionProfile | null>(null);
+  const [draft, setDraft] = useState<PilotIngestionProfile | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     setDraft(data?.profile ?? null);
   }, [data?.space.slug, data?.profile]);
 
-  const badge = paperclipIngestionStateBadge(data);
+  const badge = pilotIngestionStateBadge(data);
   const locked = data?.effectiveState === "policy_blocked";
   const sourceScope = draft?.sourceScopes[0];
   const activeProjectLimit = sourceScope?.kind === "active_projects" ? sourceScope.limit : 3;
   const canSave = Boolean(companyId && draft && !busy && !locked);
   const emptyScopes = Boolean(draft?.enabled && draft.sourceScopes.length === 0);
 
-  function patchDraft(patch: Partial<PaperclipIngestionProfile>) {
+  function patchDraft(patch: Partial<PilotIngestionProfile>) {
     setDraft((current) => current ? { ...current, ...patch } : current);
   }
 

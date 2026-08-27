@@ -5,7 +5,7 @@ const {
   ensureAdapterExecutionTargetRuntimeCommandInstalled,
   executeCodexAcp,
   prepareCodexRuntimeConfig,
-  readPaperclipRuntimeSkillEntries,
+  readPilotRuntimeSkillEntries,
   resolveAdapterExecutionTargetCommandForLogs,
   runAdapterExecutionTargetProcess,
   tempCodexHome,
@@ -16,7 +16,7 @@ const {
     throw new Error('Transform failed with 1 error: execute.ts:818:0: ERROR: Unexpected "<<"');
   }),
   prepareCodexRuntimeConfig: vi.fn(async () => ({ cleanup: vi.fn(async () => undefined), notes: [] })),
-  readPaperclipRuntimeSkillEntries: vi.fn(async () => []),
+  readPilotRuntimeSkillEntries: vi.fn(async () => []),
   resolveAdapterExecutionTargetCommandForLogs: vi.fn(async () => "codex"),
   runAdapterExecutionTargetProcess: vi.fn(async () => ({
     exitCode: 0,
@@ -69,7 +69,7 @@ vi.mock("@paperclipai/adapter-utils/server-utils", async () => {
   );
   return {
     ...actual,
-    readPaperclipRuntimeSkillEntries,
+    readPilotRuntimeSkillEntries,
   };
 });
 

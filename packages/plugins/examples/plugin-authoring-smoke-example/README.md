@@ -1,6 +1,6 @@
 # Plugin Authoring Smoke Example
 
-A Paperclip plugin
+A Pilot plugin
 
 ## Development
 
@@ -11,7 +11,7 @@ pnpm dev:ui         # local dev server with hot-reload events
 pnpm test
 ```
 
-## Install Into Paperclip
+## Install Into Pilot
 
 ```bash
 npx paperclipai plugin install ./

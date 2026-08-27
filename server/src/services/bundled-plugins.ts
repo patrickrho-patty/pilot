@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
-import type { PaperclipPluginManifestV1 } from "@paperclipai/shared";
+import type { PilotPluginManifestV1 } from "@paperclipai/shared";
 
 /**
  * Bundled plugin auto-provisioning.
@@ -38,7 +38,7 @@ export const DEFAULT_BUNDLED_CATALOG_ROOT = "/app/packages/plugins";
 /**
  * Env var that relocates the bundled catalog root (dev images, tests).
  */
-export const BUNDLED_CATALOG_ROOT_ENV_VAR = "PAPERCLIP_BUNDLED_PLUGIN_ROOT";
+export const BUNDLED_CATALOG_ROOT_ENV_VAR = "PILOT_BUNDLED_PLUGIN_ROOT";
 
 export interface BundledPluginCatalogEntry {
   /** Key the managed config's `plugins.autoInstall` list uses. */
@@ -85,7 +85,7 @@ export const BUNDLED_PLUGIN_CATALOG: readonly BundledPluginCatalogEntry[] = [
     key: "kubernetes",
     pluginKey: "paperclip.kubernetes-sandbox-provider",
     relativePath: "sandbox-providers/kubernetes",
-    pathOverrideEnvVar: "PAPERCLIP_KUBERNETES_PLUGIN_PATH",
+    pathOverrideEnvVar: "PILOT_KUBERNETES_PLUGIN_PATH",
   },
   {
     key: "modal",
@@ -192,7 +192,7 @@ interface RegistryPluginRow {
   pluginKey: string;
   status: string;
   version: string;
-  manifestJson: PaperclipPluginManifestV1;
+  manifestJson: PilotPluginManifestV1;
 }
 
 export interface BundledPluginProvisionerDeps {
@@ -200,14 +200,14 @@ export interface BundledPluginProvisionerDeps {
     getByKey(pluginKey: string): Promise<RegistryPluginRow | null>;
     update(
       id: string,
-      data: { version?: string; manifest?: PaperclipPluginManifestV1 },
+      data: { version?: string; manifest?: PilotPluginManifestV1 },
     ): Promise<unknown>;
   };
   loader: {
     installPlugin(options: { localPath: string }): Promise<{
       manifest: { id: string } | null;
     }>;
-    loadManifest(packagePath: string): Promise<PaperclipPluginManifestV1 | null>;
+    loadManifest(packagePath: string): Promise<PilotPluginManifestV1 | null>;
   };
   lifecycle: {
     load(pluginId: string): Promise<unknown>;

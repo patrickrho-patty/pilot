@@ -3,12 +3,12 @@ title: CLI Overview
 summary: CLI installation and setup
 ---
 
-The Paperclip CLI handles instance setup, diagnostics, and control-plane operations.
+The Pilot CLI handles instance setup, diagnostics, and control-plane operations.
 
 ## Usage
 
 ```sh
-pnpm paperclipai --help
+pnpm pilotai --help
 ```
 
 ## Global Options
@@ -17,7 +17,7 @@ All commands support:
 
 | Flag | Description |
 |------|-------------|
-| `--data-dir <path>` | Local Paperclip data root (isolates from `~/.paperclip`) |
+| `--data-dir <path>` | Local Pilot data root (isolates from `~/.paperclip`) |
 | `--api-base <url>` | API base URL |
 | `--api-key <token>` | API authentication token |
 | `--context <path>` | Context file path |
@@ -41,10 +41,10 @@ Store defaults to avoid repeating flags:
 npx paperclipai context set --api-base http://localhost:3100 --company-id <id>
 
 # View current context
-pnpm paperclipai context show
+pnpm pilotai context show
 
 # List profiles
-pnpm paperclipai context list
+pnpm pilotai context list
 
 # Switch profile
 npx paperclipai context use default
@@ -53,11 +53,11 @@ npx paperclipai context use default
 To avoid storing secrets in context, use an env var:
 
 ```sh
-npx paperclipai context set --api-key-env-var-name PAPERCLIP_API_KEY
-export PAPERCLIP_API_KEY=...
+npx paperclipai context set --api-key-env-var-name PILOT_API_KEY
+export PILOT_API_KEY=...
 ```
 
-Secret operations are available under `paperclipai secrets`:
+Secret operations are available under `pilotai secrets`:
 
 ```sh
 npx paperclipai secrets declarations --company-id <company-id> --kind secret

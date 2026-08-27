@@ -19,7 +19,7 @@ import {
 import { errorHandler } from "../middleware/index.js";
 import { issueRoutes } from "../routes/issues.js";
 import { companySearchService } from "../services/company-search.js";
-import { buildPaperclipWakePayload } from "../services/heartbeat.js";
+import { buildPilotWakePayload } from "../services/heartbeat.js";
 import { issueReferenceService } from "../services/issue-references.js";
 import { issueService } from "../services/issues.js";
 import type { StorageService } from "../storage/types.js";
@@ -161,7 +161,7 @@ describeEmbeddedPostgres("deleted issue comment redaction", () => {
     expect(JSON.stringify(heartbeatContext.body)).not.toContain("secret deleted body");
     expect(JSON.stringify(heartbeatContext.body)).not.toContain("secret metadata");
 
-    const wakePayload = await buildPaperclipWakePayload({
+    const wakePayload = await buildPilotWakePayload({
       db,
       companyId,
       contextSnapshot: {

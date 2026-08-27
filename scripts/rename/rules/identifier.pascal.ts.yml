@@ -1,0 +1,18 @@
+id: identifier-pascal-ts
+language: TypeScript
+# TIER 2 — renames identifier nodes containing 'Paperclip' -> 'Pilot'. Strings, comments,
+# and import path literals are untouched by construction.
+severity: info
+rule:
+  kind: identifier
+  pattern: $ID
+constraints:
+  ID:
+    regex: Paperclip
+transform:
+  NEW:
+    replace:
+      source: $ID
+      replace: Paperclip
+      by: Pilot
+fix: $NEW

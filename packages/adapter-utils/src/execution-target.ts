@@ -189,7 +189,7 @@ export interface AdapterExecutionTargetProcessOptions {
   onSpawn?: (meta: { pid: number; processGroupId: number | null; startedAt: string }) => Promise<void>;
   terminalResultCleanup?: TerminalResultCleanupOptions;
   /**
-   * Sandbox-only: factory from the Paperclip bridge handle that streams the
+   * Sandbox-only: factory from the Pilot bridge handle that streams the
    * CLI's stdout/stderr during the run. When provided, the batched provider
    * onLog is suppressed and incremental chunks flow through `onLog` instead.
    */
@@ -205,7 +205,7 @@ export interface AdapterExecutionTargetShellOptions {
   onLog?: (stream: "stdout" | "stderr", chunk: string) => Promise<void>;
 }
 
-export interface AdapterExecutionTargetPaperclipBridgeHandle {
+export interface AdapterExecutionTargetPilotBridgeHandle {
   env: Record<string, string>;
   /**
    * Present when the sandbox target opted into run-log streaming
@@ -277,17 +277,17 @@ function resolveHostForUrl(rawHost: string): string {
   return host;
 }
 
-function resolveDefaultPaperclipApiUrl(): string {
+function resolveDefaultPilotApiUrl(): string {
   const runtimeHost = resolveHostForUrl(
-    process.env.PAPERCLIP_LISTEN_HOST ?? process.env.HOST ?? "localhost",
+    process.env.PILOT_LISTEN_HOST ?? process.env.HOST ?? "localhost",
   );
-  // 3100 matches the default Paperclip dev server port when the runtime does not provide one.
-  const runtimePort = process.env.PAPERCLIP_LISTEN_PORT ?? process.env.PORT ?? "3100";
+  // 3100 matches the default Pilot dev server port when the runtime does not provide one.
+  const runtimePort = process.env.PILOT_LISTEN_PORT ?? process.env.PORT ?? "3100";
   return `http://${runtimeHost}:${runtimePort}`;
 }
 
 function isBridgeDebugEnabled(env: NodeJS.ProcessEnv): boolean {
-  const value = env.PAPERCLIP_BRIDGE_DEBUG?.trim().toLowerCase();
+  const value = env.PILOT_BRIDGE_DEBUG?.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes";
 }
 
@@ -363,7 +363,7 @@ export function resolveAdapterExecutionTargetCwd(
   return adapterExecutionTargetRemoteCwd(target, localFallbackCwd);
 }
 
-export function adapterExecutionTargetUsesPaperclipBridge(
+export function adapterExecutionTargetUsesPilotBridge(
   target: AdapterExecutionTarget | null | undefined,
 ): boolean {
   return target?.kind === "remote";
@@ -459,7 +459,7 @@ export function formatAdapterExecutionTimeoutErrorMessage(
 
 /**
  * One-line start-of-run statement of the effective wall-clock timeout and its
- * source. Callers prefix with `[paperclip] ` and append a newline.
+ * source. Callers prefix with `[pilot] ` and append a newline.
  */
 export function formatAdapterExecutionTimeoutStartLogLine(
   resolution: AdapterExecutionTargetTimeoutResolution,
@@ -1020,7 +1020,7 @@ export async function ensureAdapterExecutionTargetFile(
  * For local targets this delegates to the local `ensureAbsoluteDirectory` helper
  * (Node fs). For remote (SSH/sandbox) targets it shells out and runs
  * `mkdir -p` (when allowed) followed by a `[ -d ]` check so the result reflects
- * the directory state inside the environment, not on the Paperclip host.
+ * the directory state inside the environment, not on the Pilot host.
  *
  * Throws an Error with a human-readable message on failure.
  */
@@ -1375,7 +1375,7 @@ async function writeProcessSessionProxyScript(dir: string, port: number, token: 
 
 // Content-hash-skip the process-session remote script write, mirroring the
 // sandbox callback bridge entrypoint sha256 gate. The script is a static
-// Paperclip-authored `.mjs` that only changes when the build changes, so on a
+// Pilot-authored `.mjs` that only changes when the build changes, so on a
 // warm start (same sandbox, script already present) the single sha-gate exec
 // skips the ~3-exec base64 upload entirely. `syncRemoteTextFileWithHashSkip`
 // fails loud on a check error rather than silently re-uploading.
@@ -1452,7 +1452,7 @@ export async function startAdapterExecutionTargetProcessSessionBridge(input: {
   // The launch env is consumed ONLY when building the base64 `commandPayload`
   // below — never during the env-INDEPENDENT dir/script setup. Accepting a
   // resolver (in addition to a plain object) lets a caller overlap that setup
-  // with other work — e.g. starting the paperclip callback bridge — and hand the
+  // with other work — e.g. starting the pilot callback bridge — and hand the
   // merged env in right before the launch.
   env: Record<string, string> | (() => Promise<Record<string, string>>);
   timeoutSec?: number | null;
@@ -1532,7 +1532,7 @@ export async function startAdapterExecutionTargetProcessSessionBridge(input: {
   });
 
   // Resolve the launch env AFTER the env-independent setup above, so a caller
-  // can defer it until an upstream dependency (e.g. the paperclip bridge's env)
+  // can defer it until an upstream dependency (e.g. the pilot bridge's env)
   // is ready without blocking the dir/script setup.
   const launchEnv = typeof input.env === "function" ? await input.env() : input.env;
   const commandPayload = Buffer.from(JSON.stringify({
@@ -1560,7 +1560,7 @@ export async function startAdapterExecutionTargetProcessSessionBridge(input: {
       ),
       cwd: target.remoteCwd,
       env: {
-        PAPERCLIP_SANDBOX_EXEC_CHANNEL: "bridge",
+        PILOT_SANDBOX_EXEC_CHANNEL: "bridge",
       },
       timeoutMs,
       // The wrapper launch is bridge plumbing. Keep it off the persistent
@@ -1858,9 +1858,9 @@ export async function startAdapterExecutionTargetProcessSessionBridge(input: {
             args: shellCommandArgs(`node ${shellQuote(remoteScriptPath)}`),
             cwd: target.remoteCwd,
             env: {
-              PAPERCLIP_PROCESS_SESSION_DIR: sessionDir,
-              PAPERCLIP_PROCESS_SESSION_COMMAND_B64: streamCommandPayload,
-              PAPERCLIP_SANDBOX_EXEC_CHANNEL: "bridge",
+              PILOT_PROCESS_SESSION_DIR: sessionDir,
+              PILOT_PROCESS_SESSION_COMMAND_B64: streamCommandPayload,
+              PILOT_SANDBOX_EXEC_CHANNEL: "bridge",
             },
             timeoutMs,
             useSession: true,
@@ -1990,7 +1990,7 @@ const PROCESS_SESSION_STDIN_POLL_TAIL = `child.stdin.on("error", () => {});
 // and write an error event, so a lost message fails loud, and let later files
 // run.
 const stdinMaxParseRetries = (() => {
-  const raw = Number.parseInt(process.env.PAPERCLIP_PROCESS_SESSION_STDIN_MAX_RETRIES || "", 10);
+  const raw = Number.parseInt((process.env.PILOT_PROCESS_SESSION_STDIN_MAX_RETRIES ?? process.env.PAPERCLIP_PROCESS_SESSION_STDIN_MAX_RETRIES) || "", 10);
   return Number.isFinite(raw) && raw > 0 ? raw : 100;
 })();
 const stdinParseRetries = new Map();
@@ -2098,8 +2098,8 @@ function getProcessSessionRemoteStreamSource(): string {
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-const sessionDir = process.env.PAPERCLIP_PROCESS_SESSION_DIR;
-const commandPayload = process.env.PAPERCLIP_PROCESS_SESSION_COMMAND_B64;
+const sessionDir = process.env.PILOT_PROCESS_SESSION_DIR ?? process.env.PAPERCLIP_PROCESS_SESSION_DIR;
+const commandPayload = process.env.PILOT_PROCESS_SESSION_COMMAND_B64 ?? process.env.PAPERCLIP_PROCESS_SESSION_COMMAND_B64;
 if (!sessionDir || !commandPayload) throw new Error("Missing process session bridge env.");
 
 const stdinDir = path.posix.join(sessionDir, "stdin");
@@ -2142,8 +2142,8 @@ function getProcessSessionRemoteEventFileSource(): string {
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-const sessionDir = process.env.PAPERCLIP_PROCESS_SESSION_DIR;
-const commandPayload = process.env.PAPERCLIP_PROCESS_SESSION_COMMAND_B64;
+const sessionDir = process.env.PILOT_PROCESS_SESSION_DIR ?? process.env.PAPERCLIP_PROCESS_SESSION_DIR;
+const commandPayload = process.env.PILOT_PROCESS_SESSION_COMMAND_B64 ?? process.env.PAPERCLIP_PROCESS_SESSION_COMMAND_B64;
 if (!sessionDir || !commandPayload) throw new Error("Missing process session bridge env.");
 
 const stdinDir = path.posix.join(sessionDir, "stdin");
@@ -2184,7 +2184,7 @@ child.on("close", (code, signal) => void writeEvent({ type: "exit", code, signal
 ${PROCESS_SESSION_STDIN_POLL_TAIL}`;
 }
 
-export async function startAdapterExecutionTargetPaperclipBridge(input: {
+export async function startAdapterExecutionTargetPilotBridge(input: {
   runId: string;
   target: AdapterExecutionTarget | null | undefined;
   runtimeRootDir: string | null | undefined;
@@ -2204,8 +2204,8 @@ export async function startAdapterExecutionTargetPaperclipBridge(input: {
   // request's execs group under one wrapper span. When it is absent, the request
   // work runs under the run parent with no wrapper span.
   runtimeSpan?: RuntimeSpanRunner;
-}): Promise<AdapterExecutionTargetPaperclipBridgeHandle | null> {
-  if (!adapterExecutionTargetUsesPaperclipBridge(input.target)) {
+}): Promise<AdapterExecutionTargetPilotBridgeHandle | null> {
+  if (!adapterExecutionTargetUsesPilotBridge(input.target)) {
     return null;
   }
   if (!input.target || input.target.kind !== "remote") {
@@ -2231,7 +2231,7 @@ export async function startAdapterExecutionTargetPaperclipBridge(input: {
     typeof input.maxBodyBytes === "number" && Number.isFinite(input.maxBodyBytes) && input.maxBodyBytes > 0
       ? Math.trunc(input.maxBodyBytes)
       : DEFAULT_SANDBOX_CALLBACK_BRIDGE_MAX_BODY_BYTES;
-  // The bridge worker runs inside the same process that serves the Paperclip
+  // The bridge worker runs inside the same process that serves the Pilot
   // API, so forwarded sandbox calls must target the LOCAL listen origin. The
   // PAPERCLIP_RUNTIME_API_URL / PAPERCLIP_API_URL exports now prefer a
   // configured public base URL, which is the origin browsers and external
@@ -2239,11 +2239,11 @@ export async function startAdapterExecutionTargetPaperclipBridge(input: {
   // breaks deployments whose public origin sits behind a session-gated proxy
   // (every forwarded agent API call is rejected at the edge). Server boot
   // exports PAPERCLIP_LISTEN_HOST / PAPERCLIP_LISTEN_PORT before any run
-  // executes, and resolveDefaultPaperclipApiUrl() maps wildcard listen hosts
+  // executes, and resolveDefaultPilotApiUrl() maps wildcard listen hosts
   // to the loopback address of the same family (0.0.0.0 -> 127.0.0.1,
   // :: -> [::1]), so the fallback is always loopback-reachable.
   // input.hostApiUrl stays available as an explicit override seam.
-  const hostApiUrl = input.hostApiUrl?.trim() || resolveDefaultPaperclipApiUrl();
+  const hostApiUrl = input.hostApiUrl?.trim() || resolveDefaultPilotApiUrl();
   const shellCommand = adapterExecutionTargetShellCommand(target);
   const runner = adapterExecutionTargetCommandRunner(target);
   const bridgeTimeoutMs =
@@ -2362,10 +2362,10 @@ export async function startAdapterExecutionTargetPaperclipBridge(input: {
 
   return {
     env: {
-      PAPERCLIP_API_URL: server.baseUrl,
-      PAPERCLIP_API_KEY: bridgeToken,
-      PAPERCLIP_API_BRIDGE_MODE: "queue_v1",
-      PAPERCLIP_BRIDGE_QUEUE_DIR: queueDir,
+      PILOT_API_URL: server.baseUrl,
+      PILOT_API_KEY: bridgeToken,
+      PILOT_API_BRIDGE_MODE: "queue_v1",
+      PILOT_BRIDGE_QUEUE_DIR: queueDir,
     },
     runLogTail,
     stop: async () => {

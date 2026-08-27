@@ -1,13 +1,13 @@
 # Docker Quickstart
 
-Run Paperclip in Docker without installing Node or pnpm locally.
+Run Pilot in Docker without installing Node or pnpm locally.
 
 All commands below assume you are in the **project root** (the directory containing `package.json`), not inside `docker/`.
 
 ## Building the image
 
 ```sh
-docker build -t paperclip-local .
+docker build -t pilot-local .
 ```
 
 The Dockerfile installs common agent tools (`git`, `gh`, `curl`, `wget`, `ripgrep`, `python3`) and the Claude, Codex, and OpenCode CLIs.
@@ -20,22 +20,22 @@ Build arguments:
 | `USER_GID` | `1000` | GID for the container `node` group |
 
 ```sh
-docker build -t paperclip-local \
+docker build -t pilot-local \
   --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) .
 ```
 
 ## One-liner (build + run)
 
 ```sh
-docker build -t paperclip-local . && \
-docker run --name paperclip \
+docker build -t pilot-local . && \
+docker run --name pilot \
   -p 3100:3100 \
   -e HOST=0.0.0.0 \
-  -e PAPERCLIP_HOME=/paperclip \
+  -e PILOT_HOME=/paperclip \
   -e BETTER_AUTH_SECRET=$(openssl rand -hex 32) \
-  -e PAPERCLIP_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32) \
-  -v "$(pwd)/data/docker-paperclip:/paperclip" \
-  paperclip-local
+  -e PILOT_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32) \
+  -v "$(pwd)/data/docker-pilot:/paperclip" \
+  pilot-local
 ```
 
 Open: `http://localhost:3100`
@@ -47,7 +47,7 @@ Data persistence:
 - local secrets key
 - local agent workspace data
 
-All persisted under your bind mount (`./data/docker-paperclip` in the example above).
+All persisted under your bind mount (`./data/docker-pilot` in the example above).
 
 ## Docker Compose
 
@@ -57,38 +57,38 @@ Single container, no external database. Data persists via a bind mount.
 
 ```sh
 BETTER_AUTH_SECRET=$(openssl rand -hex 32) \
-PAPERCLIP_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32) \
+PILOT_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32) \
   docker compose -f docker/docker-compose.quickstart.yml up --build
 ```
 
 Defaults:
 
 - host port: `3100`
-- persistent data dir: `./data/docker-paperclip`
+- persistent data dir: `./data/docker-pilot`
 
 Optional overrides:
 
 ```sh
-PAPERCLIP_PORT=3200 PAPERCLIP_DATA_DIR=../data/pc \
+PILOT_PORT=3200 PILOT_DATA_DIR=../data/pc \
   docker compose -f docker/docker-compose.quickstart.yml up --build
 ```
 
-**Note:** `PAPERCLIP_DATA_DIR` is resolved relative to the compose file (`docker/`), so `../data/pc` maps to `data/pc` in the project root.
+**Note:** `PILOT_DATA_DIR` is resolved relative to the compose file (`docker/`), so `../data/pc` maps to `data/pc` in the project root.
 
-If you change host port or use a non-local domain, set `PAPERCLIP_PUBLIC_URL` to the external URL you will use in browser/auth flows.
+If you change host port or use a non-local domain, set `PILOT_PUBLIC_URL` to the external URL you will use in browser/auth flows.
 
 Pass `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` to enable local adapter runs.
 
 ### Full stack (with PostgreSQL)
 
-Paperclip server + PostgreSQL 17. The database is health-checked before the server starts.
+Pilot server + PostgreSQL 17. The database is health-checked before the server starts.
 
 ```sh
 BETTER_AUTH_SECRET=$(openssl rand -hex 32) \
   docker compose -f docker/docker-compose.yml up --build
 ```
 
-PostgreSQL data persists in a named Docker volume (`pgdata`). Paperclip data persists in `paperclip-data`.
+PostgreSQL data persists in a named Docker volume (`pgdata`). Pilot data persists in `pilot-data`.
 
 ### Untrusted PR review
 
@@ -101,18 +101,18 @@ docker compose -f docker/docker-compose.untrusted-review.yml run --rm --service-
 
 ## Authenticated Compose (Single Public URL)
 
-For authenticated deployments, set one canonical public URL and let Paperclip derive auth/callback defaults:
+For authenticated deployments, set one canonical public URL and let Pilot derive auth/callback defaults:
 
 ```yaml
 services:
-  paperclip:
+  pilot:
     environment:
-      PAPERCLIP_DEPLOYMENT_MODE: authenticated
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: private
-      PAPERCLIP_PUBLIC_URL: https://desk.koker.net
+      PILOT_DEPLOYMENT_MODE: authenticated
+      PILOT_DEPLOYMENT_EXPOSURE: private
+      PILOT_PUBLIC_URL: https://desk.koker.net
 ```
 
-`PAPERCLIP_PUBLIC_URL` is used as the primary source for:
+`PILOT_PUBLIC_URL` is used as the primary source for:
 
 - auth public base URL
 - Better Auth base URL defaults
@@ -121,17 +121,17 @@ services:
 
 For fresh `authenticated/private` Docker or appliance-style installs, the first
 admin can now be claimed entirely from the browser after sign-in. Open the
-Paperclip URL, sign in or create an account, then choose `Claim this instance`
+Pilot URL, sign in or create an account, then choose `Claim this instance`
 on the setup screen. This browser claim is disabled for `authenticated/public`;
 public deployments should run the high-entropy CLI invite fallback instead:
 
 ```sh
-pnpm paperclipai auth bootstrap-ceo
+pnpm pilotai auth bootstrap-ceo
 ```
 
-Granular overrides remain available if needed (`PAPERCLIP_AUTH_PUBLIC_BASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_TRUSTED_ORIGINS`, `PAPERCLIP_ALLOWED_HOSTNAMES`).
+Granular overrides remain available if needed (`PILOT_AUTH_PUBLIC_BASE_URL`, `BETTER_AUTH_URL`, `BETTER_AUTH_TRUSTED_ORIGINS`, `PILOT_ALLOWED_HOSTNAMES`).
 
-Set `PAPERCLIP_ALLOWED_HOSTNAMES` explicitly only when you need additional hostnames beyond the public URL host (for example Tailscale/LAN aliases or multiple private hostnames).
+Set `PILOT_ALLOWED_HOSTNAMES` explicitly only when you need additional hostnames beyond the public URL host (for example Tailscale/LAN aliases or multiple private hostnames).
 
 ## Claude + Codex Local Adapters in Docker
 
@@ -143,29 +143,29 @@ The image pre-installs:
 If you want local adapter runs inside the container, pass API keys when starting the container:
 
 ```sh
-docker run --name paperclip \
+docker run --name pilot \
   -p 3100:3100 \
   -e HOST=0.0.0.0 \
-  -e PAPERCLIP_HOME=/paperclip \
+  -e PILOT_HOME=/paperclip \
   -e OPENAI_API_KEY=... \
   -e ANTHROPIC_API_KEY=... \
-  -v "$(pwd)/data/docker-paperclip:/paperclip" \
-  paperclip-local
+  -v "$(pwd)/data/docker-pilot:/paperclip" \
+  pilot-local
 ```
 
 Notes:
 
 - Without API keys, the app still runs normally.
-- Adapter environment checks in Paperclip will surface missing auth/CLI prerequisites.
+- Adapter environment checks in Pilot will surface missing auth/CLI prerequisites.
 
 ## Podman Quadlet (systemd)
 
-The `docker/quadlet/` directory contains unit files to run Paperclip + PostgreSQL as systemd services via Podman Quadlet.
+The `docker/quadlet/` directory contains unit files to run Pilot + PostgreSQL as systemd services via Podman Quadlet.
 
 | File | Purpose |
 |------|---------|
 | `docker/quadlet/paperclip.pod` | Pod definition — groups containers into a shared network namespace |
-| `docker/quadlet/paperclip.container` | Paperclip server — joins the pod, connects to Postgres at `127.0.0.1` |
+| `docker/quadlet/paperclip.container` | Pilot server — joins the pod, connects to Postgres at `127.0.0.1` |
 | `docker/quadlet/paperclip-db.container` | PostgreSQL 17 — joins the pod, health-checked |
 
 ### Setup
@@ -189,11 +189,11 @@ The `docker/quadlet/` directory contains unit files to run Paperclip + PostgreSQ
    ```sh
    cat > ~/.config/containers/systemd/paperclip.env <<EOL
    BETTER_AUTH_SECRET=$(openssl rand -hex 32)
-   PAPERCLIP_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32)
-   POSTGRES_USER=paperclip
-   POSTGRES_PASSWORD=paperclip
-   POSTGRES_DB=paperclip
-   DATABASE_URL=postgres://paperclip:paperclip@127.0.0.1:5432/paperclip
+   PILOT_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32)
+   POSTGRES_USER=pilot
+   POSTGRES_PASSWORD=pilot
+   POSTGRES_DB=pilot
+   DATABASE_URL=postgres://paperclip:pilot@127.0.0.1:5432/paperclip
    # OPENAI_API_KEY=sk-...
    # ANTHROPIC_API_KEY=sk-...
    EOL
@@ -204,25 +204,25 @@ The `docker/quadlet/` directory contains unit files to run Paperclip + PostgreSQ
    ```sh
    mkdir -p ~/.local/share/paperclip
    systemctl --user daemon-reload
-   systemctl --user start paperclip-pod
+   systemctl --user start pilot-pod
    ```
 
 ### Quadlet management
 
 ```sh
-journalctl --user -u paperclip -f        # App logs
-journalctl --user -u paperclip-db -f     # DB logs
-systemctl --user status paperclip-pod    # Pod status
-systemctl --user restart paperclip-pod   # Restart all
-systemctl --user stop paperclip-pod      # Stop all
+journalctl --user -u pilot -f        # App logs
+journalctl --user -u pilot-db -f     # DB logs
+systemctl --user status pilot-pod    # Pod status
+systemctl --user restart pilot-pod   # Restart all
+systemctl --user stop pilot-pod      # Stop all
 ```
 
 ### Quadlet notes
 
-- **First boot**: Unlike Docker Compose's `condition: service_healthy`, Quadlet's `After=` only waits for the DB unit to *start*, not for PostgreSQL to be ready. On a cold first boot you may see one or two restart attempts in `journalctl --user -u paperclip` while PostgreSQL initialises — this is expected and resolves automatically via `Restart=on-failure`.
-- Containers in a pod share `localhost`, so Paperclip reaches Postgres at `127.0.0.1:5432`.
-- PostgreSQL data persists in the `paperclip-pgdata` named volume.
-- Paperclip data persists at `~/.local/share/paperclip`.
+- **First boot**: Unlike Docker Compose's `condition: service_healthy`, Quadlet's `After=` only waits for the DB unit to *start*, not for PostgreSQL to be ready. On a cold first boot you may see one or two restart attempts in `journalctl --user -u pilot` while PostgreSQL initialises — this is expected and resolves automatically via `Restart=on-failure`.
+- Containers in a pod share `localhost`, so Pilot reaches Postgres at `127.0.0.1:5432`.
+- PostgreSQL data persists in the `pilot-pgdata` named volume.
+- Pilot data persists at `~/.local/share/paperclip`.
 - For rootful quadlet deployment, remove `%h` prefixes and use absolute paths.
 
 ## Onboard Smoke Test (Ubuntu + npm only)
@@ -244,9 +244,9 @@ Open: `http://localhost:3131` (default smoke host port)
 Useful overrides:
 
 ```sh
-HOST_PORT=3200 PAPERCLIPAI_VERSION=latest ./scripts/docker-onboard-smoke.sh
-PAPERCLIP_DEPLOYMENT_MODE=authenticated PAPERCLIP_DEPLOYMENT_EXPOSURE=private ./scripts/docker-onboard-smoke.sh
-SMOKE_DETACH=true SMOKE_METADATA_FILE=/tmp/paperclip-smoke.env PAPERCLIPAI_VERSION=latest ./scripts/docker-onboard-smoke.sh
+HOST_PORT=3200 PILOTAI_VERSION=latest ./scripts/docker-onboard-smoke.sh
+PILOT_DEPLOYMENT_MODE=authenticated PILOT_DEPLOYMENT_EXPOSURE=private ./scripts/docker-onboard-smoke.sh
+SMOKE_DETACH=true SMOKE_METADATA_FILE=/tmp/paperclip-smoke.env PILOTAI_VERSION=latest ./scripts/docker-onboard-smoke.sh
 ```
 
 Notes:
@@ -254,9 +254,9 @@ Notes:
 - Persistent data is mounted at `./data/docker-onboard-smoke` by default.
 - Container runtime user id defaults to your local `id -u` so the mounted data dir stays writable while avoiding root runtime.
 - Smoke script defaults to `authenticated/private` mode so `HOST=0.0.0.0` can be exposed to the host.
-- Smoke script defaults host port to `3131` to avoid conflicts with local Paperclip on `3100`.
-- Smoke script also defaults `PAPERCLIP_PUBLIC_URL` to `http://localhost:<HOST_PORT>` so bootstrap invite URLs and auth callbacks use the reachable host port instead of the container's internal `3100`.
-- In authenticated mode, the smoke script defaults `SMOKE_AUTO_BOOTSTRAP=true` and drives the real bootstrap path automatically: it signs up a real user, runs `paperclipai auth bootstrap-ceo` inside the container to mint a real bootstrap invite, accepts that invite over HTTP, and verifies board session access.
+- Smoke script defaults host port to `3131` to avoid conflicts with local Pilot on `3100`.
+- Smoke script also defaults `PILOT_PUBLIC_URL` to `http://localhost:<HOST_PORT>` so bootstrap invite URLs and auth callbacks use the reachable host port instead of the container's internal `3100`.
+- In authenticated mode, the smoke script defaults `SMOKE_AUTO_BOOTSTRAP=true` and drives the real bootstrap path automatically: it signs up a real user, runs `pilotai auth bootstrap-ceo` inside the container to mint a real bootstrap invite, accepts that invite over HTTP, and verifies board session access.
 - Run the script in the foreground to watch the onboarding flow; stop with `Ctrl+C` after validation.
 - Set `SMOKE_DETACH=true` to leave the container running for automation and optionally write shell-ready metadata to `SMOKE_METADATA_FILE`.
 - The image definition is in `docker/Dockerfile.onboard-smoke`.
@@ -264,4 +264,4 @@ Notes:
 ## General Notes
 
 - The `docker-entrypoint.sh` adjusts the container `node` user UID/GID at startup to match the values passed via `USER_UID`/`USER_GID`, avoiding permission issues on bind-mounted volumes.
-- Paperclip data persists via Docker volumes/bind mounts (compose) or at `~/.local/share/paperclip` (quadlet).
+- Pilot data persists via Docker volumes/bind mounts (compose) or at `~/.local/share/paperclip` (quadlet).

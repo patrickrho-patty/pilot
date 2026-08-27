@@ -12,7 +12,7 @@ import { shellQuote } from "./ssh.js";
 // base64 transport, mirroring the callback-bridge queue client) and emits
 // incremental `onLog` chunks through the existing run-log pipeline.
 
-const SANDBOX_EXEC_CHANNEL_ENV = "PAPERCLIP_SANDBOX_EXEC_CHANNEL";
+const SANDBOX_EXEC_CHANNEL_ENV = "PILOT_SANDBOX_EXEC_CHANNEL";
 const SANDBOX_EXEC_CHANNEL_BRIDGE = "bridge";
 
 const DEFAULT_TAIL_POLL_INTERVAL_MS = 250;

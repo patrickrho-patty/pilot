@@ -2,7 +2,7 @@ import { createHash, randomInt } from "node:crypto";
 
 const ULID_ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
 
-// Namespace names are capped at 63 chars (RFC 1123). The default "paperclip-"
+// Namespace names are capped at 63 chars (RFC 1123). The default "pilot-"
 // prefix leaves 53 for the slug, which fits a full 36-char UUID untruncated.
 const MAX_SLUG_LENGTH = 53;
 
@@ -50,7 +50,7 @@ export interface LabelsInput {
   adapterType: string;
 }
 
-export function paperclipLabels(input: LabelsInput): Record<string, string> {
+export function pilotLabels(input: LabelsInput): Record<string, string> {
   return {
     "paperclip.io/run-id": input.runId,
     "paperclip.io/agent-id": input.agentId,

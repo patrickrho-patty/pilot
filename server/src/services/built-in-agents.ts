@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readPaperclipSkillSyncPreference, writePaperclipSkillSyncPreference } from "@paperclipai/adapter-utils/server-utils";
+import { readPilotSkillSyncPreference, writePilotSkillSyncPreference } from "@paperclipai/adapter-utils/server-utils";
 import { and, desc, eq, ne } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
 import { agents, builtInManagedResources, companies, issueThreadInteractions, issues, routines, routineTriggers } from "@paperclipai/db";
@@ -1060,12 +1060,12 @@ export function builtInAgentService(db: Db) {
   }
 
   async function syncBundledSkillToAgent(agent: Agent, skill: CompanySkill) {
-    const desired = readPaperclipSkillSyncPreference(agent.adapterConfig as Record<string, unknown>).desiredSkillEntries;
+    const desired = readPilotSkillSyncPreference(agent.adapterConfig as Record<string, unknown>).desiredSkillEntries;
     const nextDesired = [
       ...desired.filter((entry) => entry.key !== skill.key),
       { key: skill.key, versionId: skill.currentVersionId ?? null },
     ];
-    const adapterConfig = writePaperclipSkillSyncPreference(agent.adapterConfig as Record<string, unknown>, nextDesired);
+    const adapterConfig = writePilotSkillSyncPreference(agent.adapterConfig as Record<string, unknown>, nextDesired);
     const updated = await agentSvc.update(agent.id, { adapterConfig }, {
       allowBuiltInAgentMetadata: true,
       recordRevision: { source: "built-in-bundle:skill-sync" },

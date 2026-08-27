@@ -621,6 +621,13 @@ export {
 } from "./constants.js";
 
 export {
+  MANAGED_MODE_SENTINEL_LEGACY,
+  MANAGED_MODE_SENTINEL_PILOT,
+  MANAGED_MODE_SENTINELS,
+  isManagedModeValue,
+} from "./constants.js";
+
+export {
   generateSummarySlotSchema,
   summarySlotKeySchema,
   summarySlotQuerySchema,
@@ -1437,7 +1444,7 @@ export type {
   PluginApiRouteDeclaration,
   PluginObjectReferenceRefreshPolicy,
   PluginObjectReferenceProviderDeclaration,
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   PluginRecord,
   PluginDatabaseNamespaceRecord,
   PluginMigrationRecord,
@@ -1597,7 +1604,7 @@ export {
   DEFAULT_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS,
   MIN_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS,
   MAX_ISSUE_GRAPH_LIVENESS_AUTO_RECOVERY_LOOKBACK_HOURS,
-  PAPERCLIP_CLOUD_MANAGED_BY,
+  PILOT_CLOUD_MANAGED_BY,
 } from "./types/instance.js";
 
 export type {
@@ -2359,7 +2366,7 @@ export {
 } from "./routine-variables.js";
 
 export {
-  paperclipConfigSchema,
+  pilotConfigSchema,
   configMetaSchema,
   llmConfigSchema,
   databaseBackupConfigSchema,
@@ -2374,12 +2381,12 @@ export {
   secretsLocalEncryptedConfigSchema,
   telemetryConfigSchema,
   updatesConfigSchema,
-  mergePaperclipConfig,
-  findPaperclipConfigKeyWarnings,
+  mergePilotConfig,
+  findPilotConfigKeyWarnings,
   type ConfigKeyWarning,
   type TelemetryConfig,
   type UpdatesConfig,
-  type PaperclipConfig,
+  type PilotConfig,
   type LlmConfig,
   type DatabaseBackupConfig,
   type DatabaseConfig,
@@ -2541,7 +2548,7 @@ export {
   isRuntimeExposureHmrPort,
   isAllowedRuntimeExposurePort,
   deriveViteHmrPort,
-  derivePaperclipViteHmrPort,
+  derivePilotViteHmrPort,
   buildRuntimeExposureUrl,
   buildRuntimeExposureHealthUrl,
 } from "./runtime-exposure/ports.js";
@@ -2550,6 +2557,7 @@ export {
   RUNTIME_EXPOSURE_BIND_HOST,
   commandSelectsBindMode,
   forceLoopbackBindInCommand,
-  isPaperclipDevRunnerCommand,
+  isPilotDevRunnerCommand,
   rewriteUrlHostToLoopback,
 } from "./runtime-exposure/loopback-bind.js";
+export { applyLegacyPaperclipEnvAliases } from "./env-alias.js";

@@ -19,7 +19,7 @@ async function createSkillDir(root: string, name: string) {
 }
 
 describe("claude local skill sync", () => {
-  const paperclipKey = "paperclipai/paperclip/paperclip";
+  const pilotKey = "paperclipai/paperclip/paperclip";
   const createAgentKey = "paperclipai/paperclip/paperclip-create-agent";
   const cleanupDirs = new Set<string>();
 
@@ -39,7 +39,7 @@ describe("claude local skill sync", () => {
     expect(snapshot.mode).toBe("ephemeral");
     expect(snapshot.supported).toBe(true);
     expect(snapshot.desiredSkills).toEqual([]);
-    expect(snapshot.entries.find((entry) => entry.key === paperclipKey)?.state).toBe("available");
+    expect(snapshot.entries.find((entry) => entry.key === pilotKey)?.state).toBe("available");
   });
 
   it("respects an explicit desired skill list without mutating a persistent home", async () => {
@@ -49,13 +49,13 @@ describe("claude local skill sync", () => {
       adapterType: "claude_local",
       config: {
         paperclipSkillSync: {
-          desiredSkills: [paperclipKey],
+          desiredSkills: [pilotKey],
         },
       },
-    }, [paperclipKey]);
+    }, [pilotKey]);
 
-    expect(snapshot.desiredSkills).toContain(paperclipKey);
-    expect(snapshot.entries.find((entry) => entry.key === paperclipKey)?.state).toBe("configured");
+    expect(snapshot.desiredSkills).toContain(pilotKey);
+    expect(snapshot.entries.find((entry) => entry.key === pilotKey)?.state).toBe("configured");
     expect(snapshot.entries.find((entry) => entry.key === createAgentKey)?.state).toBe("available");
   });
 
@@ -72,9 +72,9 @@ describe("claude local skill sync", () => {
     });
 
     expect(snapshot.warnings).toEqual([]);
-    expect(snapshot.desiredSkills).toContain(paperclipKey);
+    expect(snapshot.desiredSkills).toContain(pilotKey);
     expect(snapshot.desiredSkills).not.toContain("paperclip");
-    expect(snapshot.entries.find((entry) => entry.key === paperclipKey)?.state).toBe("configured");
+    expect(snapshot.entries.find((entry) => entry.key === pilotKey)?.state).toBe("configured");
     expect(snapshot.entries.find((entry) => entry.key === "paperclip")).toBeUndefined();
   });
 

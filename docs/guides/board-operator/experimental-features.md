@@ -1,17 +1,17 @@
 ---
 title: Experimental Features
-summary: What Paperclip experimental features mean for board operators
+summary: What Pilot experimental features mean for board operators
 ---
 
 Experimental features are opt-in and are provided without compatibility guarantees. They may break, change, or be removed at any time. Use them at your own risk.
 
 ## What "experimental" means
 
-When a feature is marked experimental, Paperclip is still evaluating the product shape and implementation details.
+When a feature is marked experimental, Pilot is still evaluating the product shape and implementation details.
 
 - The feature is not part of the stable operator contract yet.
 - UI, API, CLI, behavior, and stored configuration may change as the feature evolves.
-- Paperclip does not promise compatibility, rollback, migration, or long-term support for experimental features.
+- Pilot does not promise compatibility, rollback, migration, or long-term support for experimental features.
 
 If you need stable behavior for an important workflow, do not rely on an experimental feature.
 
@@ -22,7 +22,7 @@ Board operators enable or disable experiments from **Instance Settings > Experim
 The CLI exposes the same surface:
 
 ```sh
-pnpm paperclipai instance settings:experimental
+pnpm pilotai instance settings:experimental
 npx paperclipai instance settings:experimental:update --payload-json '{...}'
 ```
 

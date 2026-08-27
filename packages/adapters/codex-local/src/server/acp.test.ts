@@ -65,8 +65,8 @@ type FakeRuntimeTurn = {
 
 const tempRoots: string[] = [];
 const originalNodeVersion = process.version;
-const originalPaperclipHome = process.env.PAPERCLIP_HOME;
-const originalPaperclipInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
+const originalPilotHome = process.env.PILOT_HOME;
+const originalPilotInstanceId = process.env.PILOT_INSTANCE_ID;
 const originalCodexHome = process.env.CODEX_HOME;
 const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
 
@@ -94,7 +94,7 @@ function subscriptionAuthJson(accountId: string, lastRefresh: string, marker: st
 }
 
 // Enumerate the host staged-home temp dirs `stageCodexHomeForSync` created for a
-// given runId (`paperclip-codex-home-sync-<runId>-<random>` under os.tmpdir()).
+// given runId (`pilot-codex-home-sync-<runId>-<random>` under os.tmpdir()).
 // A unique per-test runId scopes the match to this run's staging dirs only, so
 // the assertion is not disturbed by other tests/processes sharing the tmp dir.
 async function listCodexHomeSyncDirs(runId: string): Promise<string[]> {
@@ -113,10 +113,10 @@ function setNodeVersion(version: string): void {
 
 afterEach(async () => {
   setNodeVersion(originalNodeVersion);
-  if (originalPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
-  else process.env.PAPERCLIP_HOME = originalPaperclipHome;
-  if (originalPaperclipInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-  else process.env.PAPERCLIP_INSTANCE_ID = originalPaperclipInstanceId;
+  if (originalPilotHome === undefined) delete process.env.PILOT_HOME;
+  else process.env.PILOT_HOME = originalPilotHome;
+  if (originalPilotInstanceId === undefined) delete process.env.PILOT_INSTANCE_ID;
+  else process.env.PILOT_INSTANCE_ID = originalPilotInstanceId;
   if (originalCodexHome === undefined) delete process.env.CODEX_HOME;
   else process.env.CODEX_HOME = originalCodexHome;
   if (originalOpenAiApiKey === undefined) delete process.env.OPENAI_API_KEY;
@@ -215,8 +215,8 @@ class FakeRuntime {
 async function makeTempRoot(prefix: string) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), prefix));
   tempRoots.push(root);
-  process.env.PAPERCLIP_HOME = path.join(root, "paperclip-home");
-  process.env.PAPERCLIP_INSTANCE_ID = "test";
+  process.env.PILOT_HOME = path.join(root, "paperclip-home");
+  process.env.PILOT_INSTANCE_ID = "test";
   return root;
 }
 

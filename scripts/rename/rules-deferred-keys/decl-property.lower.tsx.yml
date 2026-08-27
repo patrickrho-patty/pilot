@@ -1,0 +1,23 @@
+id: decl-property-lower-tsx
+language: TSX
+# TIER 2 — type/interface DECLARATIONS (type_identifier) and object/interface
+# KEYS incl. shorthand (property_identifier) containing 'paperclip' -> 'pilot'.
+# Companion to identifier rules: declarations/keys are distinct AST kinds.
+severity: info
+rule:
+  all:
+    - pattern: $ID
+    - any:
+        - kind: type_identifier
+        - kind: property_identifier
+        - kind: shorthand_property_identifier_pattern
+constraints:
+  ID:
+    regex: paperclip
+transform:
+  NEW:
+    replace:
+      source: $ID
+      replace: paperclip
+      by: pilot
+fix: $NEW

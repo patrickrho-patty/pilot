@@ -452,7 +452,7 @@ function resolveRoutineVariableValues(
 
   for (const variable of variables) {
     // Workspace-derived automatic values are authoritative for variables that
-    // Paperclip manages from execution context, so callers cannot override them.
+    // Pilot manages from execution context, so callers cannot override them.
     const candidate = automaticVariables[variable.name] !== undefined
       ? automaticVariables[variable.name]
       : provided[variable.name] !== undefined
@@ -1259,7 +1259,7 @@ export function routineService(
     routine: typeof routines.$inferSelect,
     activation?: WorktreeRunExecutionActivationState,
   ) {
-    if (!isTruthyRuntimeEnvValue(runtimeEnv.PAPERCLIP_IN_WORKTREE)) return { eligible: true };
+    if (!isTruthyRuntimeEnvValue(runtimeEnv.PILOT_IN_WORKTREE)) return { eligible: true };
 
     const resolvedActivation = activation ?? await resolveWorktreeRunExecutionActivationState({
       getExperimental: instanceSettings.getExperimental,
@@ -1599,7 +1599,7 @@ export function routineService(
           name: input.name,
           provider: input.provider,
           status: "active",
-          managedMode: "paperclip_managed",
+          managedMode: "pilot_managed",
           externalRef: prepared.externalRef,
           providerMetadata: null,
           latestVersion: 1,
@@ -2173,7 +2173,7 @@ export function routineService(
       const env = input.env === undefined || input.env === null
         ? null
         : await secretsSvc.normalizeEnvBindingsForPersistence(companyId, input.env, {
-            strictMode: process.env.PAPERCLIP_SECRETS_STRICT_MODE === "true",
+            strictMode: process.env.PILOT_SECRETS_STRICT_MODE === "true",
             fieldPath: "env",
           });
       const variables = syncRoutineVariablesWithTemplate(
@@ -2243,7 +2243,7 @@ export function routineService(
         : patch.env === null
           ? null
           : await secretsSvc.normalizeEnvBindingsForPersistence(existing.companyId, patch.env, {
-              strictMode: process.env.PAPERCLIP_SECRETS_STRICT_MODE === "true",
+              strictMode: process.env.PILOT_SECRETS_STRICT_MODE === "true",
               fieldPath: "env",
             });
       const requestedStatus = patch.status ?? existing.status;
@@ -2438,7 +2438,7 @@ export function routineService(
         const created = await createWebhookSecret(routine.companyId, routine.id, actor);
         secretId = created.secret.id;
         secretMaterial = {
-          webhookUrl: `${process.env.PAPERCLIP_API_URL}/api/routine-triggers/public/${publicId}/fire`,
+          webhookUrl: `${process.env.PILOT_API_URL}/api/routine-triggers/public/${publicId}/fire`,
           webhookSecret: created.secretValue,
         };
       }
@@ -2621,7 +2621,7 @@ export function routineService(
       return {
         trigger: trigger as RoutineTrigger,
         secretMaterial: {
-          webhookUrl: `${process.env.PAPERCLIP_API_URL}/api/routine-triggers/public/${existing.publicId}/fire`,
+          webhookUrl: `${process.env.PILOT_API_URL}/api/routine-triggers/public/${existing.publicId}/fire`,
           webhookSecret: secretValue,
         },
         revision,
@@ -2701,7 +2701,7 @@ export function routineService(
             secretId: created.secret.id,
             secretMaterial: {
               triggerId: trigger.id,
-              webhookUrl: `${process.env.PAPERCLIP_API_URL}/api/routine-triggers/public/${publicId}/fire`,
+              webhookUrl: `${process.env.PILOT_API_URL}/api/routine-triggers/public/${publicId}/fire`,
               webhookSecret: created.secretValue,
             },
           });
@@ -2891,7 +2891,7 @@ export function routineService(
         const secretValue = await resolveTriggerSecret(trigger, routine.companyId);
         const rawBody = input.rawBody ?? Buffer.from(JSON.stringify(input.payload ?? {}));
         // Accept X-Hub-Signature-256 (GitHub/Sentry) or fall back to the
-        // generic X-Paperclip-Signature header so operators can use github_hmac
+        // generic X-Pilot-Signature header so operators can use github_hmac
         // mode with either header convention.
         const providedSignature = (input.hubSignatureHeader ?? input.signatureHeader)?.trim() ?? "";
         if (!providedSignature) throw unauthorized();
@@ -3047,7 +3047,7 @@ export function routineService(
     },
 
     tickScheduledTriggers: async (now: Date = new Date()) => {
-      const worktreeActivation = isTruthyRuntimeEnvValue(runtimeEnv.PAPERCLIP_IN_WORKTREE)
+      const worktreeActivation = isTruthyRuntimeEnvValue(runtimeEnv.PILOT_IN_WORKTREE)
         ? await resolveWorktreeRunExecutionActivationState({
           getExperimental: instanceSettings.getExperimental,
           runtimeEnv,

@@ -376,14 +376,14 @@ const INSTALL_APPROVAL_FALLBACK_MESSAGES = [
 const SECRET_VALUE_REDACTION = "[redacted]";
 
 function shouldRequestInstallApproval(error: unknown, opts: TeamInstallOptions): error is ApiRequestError {
-  if (!(opts.requestApprovalOnForbidden || isPaperclipTaskRun())) return false;
+  if (!(opts.requestApprovalOnForbidden || isPilotTaskRun())) return false;
   if (!(error instanceof ApiRequestError) || error.status !== 403) return false;
   const message = error.message.toLowerCase();
   return INSTALL_APPROVAL_FALLBACK_MESSAGES.some((expected) => message.includes(expected));
 }
 
-function isPaperclipTaskRun(): boolean {
-  return Boolean(process.env.PAPERCLIP_TASK_ID?.trim());
+function isPilotTaskRun(): boolean {
+  return Boolean(process.env.PILOT_TASK_ID?.trim());
 }
 
 async function requestInstallApproval(
@@ -453,7 +453,7 @@ function redactInstallSecretValues(options: CatalogTeamInstallOptions): CatalogT
 }
 
 function resolveApprovalIssueIds(opts: TeamInstallOptions): string[] | undefined {
-  const issueId = opts.approvalIssueId?.trim() || process.env.PAPERCLIP_TASK_ID?.trim();
+  const issueId = opts.approvalIssueId?.trim() || process.env.PILOT_TASK_ID?.trim();
   if (!issueId) return undefined;
   return isUuidLike(issueId) ? [issueId] : undefined;
 }

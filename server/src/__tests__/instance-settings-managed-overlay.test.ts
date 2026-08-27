@@ -18,7 +18,7 @@ const MANAGED_RAW = JSON.stringify({
 });
 
 function managedEnv(raw: string | undefined = MANAGED_RAW) {
-  return { PAPERCLIP_MANAGED_CONFIG: raw };
+  return { PILOT_MANAGED_CONFIG: raw };
 }
 
 /**
@@ -87,7 +87,7 @@ describe("instanceSettingsService managed overlay", () => {
   it("fails closed at construction on a malformed managed config", () => {
     const { db } = stubDb(settingsRow({}));
     expect(() => instanceSettingsService(db, { runtimeEnv: managedEnv("{bad") })).toThrow(
-      /PAPERCLIP_MANAGED_CONFIG is not valid JSON/,
+      /PILOT_MANAGED_CONFIG is not valid JSON/,
     );
   });
 

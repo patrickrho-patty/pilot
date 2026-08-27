@@ -4,7 +4,7 @@ import { formatDatabaseBackupResult, runDatabaseBackup } from "./backup-lib.js";
 import {
   expandHomePrefix,
   resolveDefaultBackupDir,
-  resolvePaperclipConfigPathForInstance,
+  resolvePilotConfigPathForInstance,
 } from "@paperclipai/shared/home-paths";
 
 type PartialConfig = {
@@ -65,7 +65,7 @@ function resolveRetentionDays(config: PartialConfig | null): number {
 }
 
 async function main() {
-  const configPath = resolvePaperclipConfigPathForInstance();
+  const configPath = resolvePilotConfigPathForInstance();
   const config = readConfig(configPath);
   const connectionString = resolveConnectionString(config);
   const backupDir = resolveBackupDir(config);

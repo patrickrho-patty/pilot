@@ -36,9 +36,9 @@ import {
 import {
   isForbiddenConfigEnvKey,
   parseObject,
-  resolvePaperclipInstanceRootForAdapter,
-  readPaperclipSkillSyncPreference,
-  writePaperclipSkillSyncPreference,
+  resolvePilotInstanceRootForAdapter,
+  readPilotSkillSyncPreference,
+  writePilotSkillSyncPreference,
 } from "@paperclipai/adapter-utils/server-utils";
 import { trackAgentCreated } from "@paperclipai/shared/telemetry";
 import { validate } from "../middleware/validate.js";
@@ -219,8 +219,8 @@ function readLiveRunsQueryInt(value: unknown, max: number, fallback = 0) {
 function readRunIssueId(context: Record<string, unknown> | null) {
   const directIssueId = context?.issueId;
   if (typeof directIssueId === "string" && isUuidLike(directIssueId)) return directIssueId;
-  const paperclipIssue = readObject(context?.paperclipIssue);
-  const nestedIssueId = paperclipIssue?.id;
+  const pilotIssue = readObject(context?.paperclipIssue);
+  const nestedIssueId = pilotIssue?.id;
   return typeof nestedIssueId === "string" && isUuidLike(nestedIssueId) ? nestedIssueId : null;
 }
 
@@ -481,7 +481,7 @@ export function agentRoutes(
   const companySkills = companySkillService(db);
   const workspaceOperations = workspaceOperationService(db);
   const instanceSettings = instanceSettingsService(db);
-  const strictSecretsMode = process.env.PAPERCLIP_SECRETS_STRICT_MODE === "true";
+  const strictSecretsMode = process.env.PILOT_SECRETS_STRICT_MODE === "true";
 
   // The company-scoped adapter login-session service. It runs the device-login
   // flow in a fresh trusted sandbox and holds the one-time prompt in memory. The
@@ -605,7 +605,7 @@ export function agentRoutes(
    * Resolve the execution target the adapter should run its test probes against.
    *
    * - No environmentId / local environment → returns a local target so the
-   *   adapter probes the Paperclip host (legacy behavior).
+   *   adapter probes the Pilot host (legacy behavior).
    * - SSH environment → builds an SSH execution target from the environment
    *   config so the adapter probes the remote box. No lease is required:
    *   the SSH spec is fully derived from the saved environment config.
@@ -1836,9 +1836,9 @@ export function agentRoutes(
   }
 
   function codexLocalAgentHome(companyId: string, agentId: string): string {
-    const instanceRoot = resolvePaperclipInstanceRootForAdapter({
-      homeDir: asNonEmptyString(process.env.PAPERCLIP_HOME) ?? undefined,
-      instanceId: asNonEmptyString(process.env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+    const instanceRoot = resolvePilotInstanceRootForAdapter({
+      homeDir: asNonEmptyString(process.env.PILOT_HOME) ?? undefined,
+      instanceId: asNonEmptyString(process.env.PILOT_INSTANCE_ID) ?? undefined,
       env: process.env,
     });
     return path.resolve(instanceRoot, "companies", companyId, "agents", agentId, "codex-home");
@@ -2173,7 +2173,7 @@ export function agentRoutes(
       materializeMissing?: boolean;
     } = {},
   ) {
-    const preference = readPaperclipSkillSyncPreference(config);
+    const preference = readPilotSkillSyncPreference(config);
     const betaSkillsEnabled = (await instanceSettings.getExperimental()).enableBetaSkills === true;
     const runtimeSkillEntries = await companySkills.listRuntimeSkillEntries(companyId, {
       materializeMissing: options.materializeMissing
@@ -2223,7 +2223,7 @@ export function agentRoutes(
       (entry, index, entries) => entries.findIndex((candidate) => candidate.key === entry.key) === index,
     );
 
-    const currentPreference = readPaperclipSkillSyncPreference(adapterConfig);
+    const currentPreference = readPilotSkillSyncPreference(adapterConfig);
     const { resolved: resolvedCurrentSkillEntries, unresolved: unresolvedCurrentSkillKeys } =
       currentPreference.desiredSkillEntries.length > 0
         ? await companySkills.resolveRequestedSkillEntries(
@@ -2256,7 +2256,7 @@ export function agentRoutes(
     });
 
     return {
-      adapterConfig: writePaperclipSkillSyncPreference(adapterConfig, desiredSkillEntries),
+      adapterConfig: writePilotSkillSyncPreference(adapterConfig, desiredSkillEntries),
       desiredSkills,
       desiredSkillEntries,
       runtimeSkillEntries,
@@ -2703,7 +2703,7 @@ export function agentRoutes(
 
     const adapter = findActiveServerAdapter(agent.adapterType);
     if (!adapter?.listSkills) {
-      const preference = readPaperclipSkillSyncPreference(
+      const preference = readPilotSkillSyncPreference(
         agent.adapterConfig as Record<string, unknown>,
       );
       const desiredSkillEntries = preference.desiredSkillEntries.filter(
@@ -3004,7 +3004,7 @@ export function agentRoutes(
     const worktreeActivation = await resolveWorktreeRunExecutionActivationState({
       getExperimental: () => instanceSettingsService(db).getExperimental(),
     });
-    const isWorktreeRuntime = isTruthyRuntimeEnvValue(process.env.PAPERCLIP_IN_WORKTREE);
+    const isWorktreeRuntime = isTruthyRuntimeEnvValue(process.env.PILOT_IN_WORKTREE);
     const eligibleRows = !isWorktreeRuntime
       ? rows
       : worktreeActivation.armed
@@ -4591,7 +4591,7 @@ export function agentRoutes(
   /**
    * Assesses the setup-token confidential transport. The product
    * owner set a non-negotiable requirement: do not force TLS. Many users run
-   * Paperclip over plain HTTP on a home server or a Tailscale tailnet. So the
+   * Pilot over plain HTTP on a home server or a Tailscale tailnet. So the
    * route does not block a non-confidential transport. It returns a non-blocking
    * advisory instead, and the route attaches it to the confidential response.
    * The client shows a visible disclaimer and lets the login proceed. The

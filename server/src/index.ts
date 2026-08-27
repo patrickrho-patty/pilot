@@ -3,6 +3,7 @@
 // OTEL_EXPORTER_OTLP_ENDPOINT is set). startServer() awaits
 // instrumentationReady before opening DB connections or constructing the
 // HTTP server, so trace coverage does not depend on incidental timing.
+import { applyLegacyPaperclipEnvAliases } from "@paperclipai/shared";
 import { instrumentationReady, shutdownInstrumentation } from "./instrumentation.js";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:http";
@@ -150,16 +151,23 @@ export async function startServer(): Promise<StartedServer> {
   // connection or the HTTP server exists — see instrumentation.ts.
   await instrumentationReady;
   ensureDecisionSigningSecret();
+  // Brand-rename alias window: map any legacy PAPERCLIP_* env onto unset
+  // PILOT_* before any config read, so existing deployments (k8s secrets,
+  // user shells, CI) keep working through the rename.
+  const legacyEnvMapped = applyLegacyPaperclipEnvAliases();
+  if (legacyEnvMapped.length > 0) {
+    console.warn(`[pilot] ${legacyEnvMapped.length} PAPERCLIP_* env var(s) mapped to PILOT_* (legacy alias window)`);
+  }
   let config = loadConfig();
   initTelemetry({ enabled: config.telemetryEnabled });
-  if (process.env.PAPERCLIP_SECRETS_PROVIDER === undefined) {
-    process.env.PAPERCLIP_SECRETS_PROVIDER = config.secretsProvider;
+  if (process.env.PILOT_SECRETS_PROVIDER === undefined) {
+    process.env.PILOT_SECRETS_PROVIDER = config.secretsProvider;
   }
-  if (process.env.PAPERCLIP_SECRETS_STRICT_MODE === undefined) {
-    process.env.PAPERCLIP_SECRETS_STRICT_MODE = config.secretsStrictMode ? "true" : "false";
+  if (process.env.PILOT_SECRETS_STRICT_MODE === undefined) {
+    process.env.PILOT_SECRETS_STRICT_MODE = config.secretsStrictMode ? "true" : "false";
   }
-  if (process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE === undefined) {
-    process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE = config.secretsMasterKeyFilePath;
+  if (process.env.PILOT_SECRETS_MASTER_KEY_FILE === undefined) {
+    process.env.PILOT_SECRETS_MASTER_KEY_FILE = config.secretsMasterKeyFilePath;
   }
   
   type MigrationSummary =
@@ -176,8 +184,8 @@ export async function startServer(): Promise<StartedServer> {
   }
   
   async function promptApplyMigrations(migrations: string[]): Promise<boolean> {
-    if (process.env.PAPERCLIP_MIGRATION_AUTO_APPLY === "true") return true;
-    if (process.env.PAPERCLIP_MIGRATION_PROMPT === "never") return false;
+    if (process.env.PILOT_MIGRATION_AUTO_APPLY === "true") return true;
+    if (process.env.PILOT_MIGRATION_PROMPT === "never") return false;
     if (!stdin.isTTY || !stdout.isTTY) return true;
   
     const prompt = createInterface({ input: stdin, output: stdout });
@@ -357,7 +365,7 @@ export async function startServer(): Promise<StartedServer> {
     try {
       // embedded-postgres registers async-exit-hook handlers as an import side
       // effect. Those handlers stop PostgreSQL immediately on SIGINT/SIGTERM,
-      // racing Paperclip's later heartbeat snapshot query. Paperclip explicitly
+      // racing Pilot's later heartbeat snapshot query. Pilot explicitly
       // stops the managed cluster in its own ordered shutdown path instead.
       const mod = await loadWithoutCoordinatedShutdownSignalHooks(
         () => import(moduleName),
@@ -374,7 +382,7 @@ export async function startServer(): Promise<StartedServer> {
     const configuredPort = config.embeddedPostgresPort;
     let port = configuredPort;
     const logBuffer = createEmbeddedPostgresLogBuffer(120);
-    const verboseEmbeddedPostgresLogs = process.env.PAPERCLIP_EMBEDDED_POSTGRES_VERBOSE === "true";
+    const verboseEmbeddedPostgresLogs = process.env.PILOT_EMBEDDED_POSTGRES_VERBOSE === "true";
     const appendEmbeddedPostgresLog = (message: unknown) => {
       logBuffer.append(message);
       if (!verboseEmbeddedPostgresLogs) {
@@ -684,11 +692,11 @@ export async function startServer(): Promise<StartedServer> {
   const backupSettingsSvc = instanceSettingsService(db);
   const databaseBackupMaxAgeHours = Math.max(
     1,
-    Number(process.env.PAPERCLIP_DB_BACKUP_MAX_AGE_HOURS) ||
+    Number(process.env.PILOT_DB_BACKUP_MAX_AGE_HOURS) ||
       Math.max(26, Math.ceil((config.databaseBackupIntervalMinutes / 60) * 2)),
   );
   const databaseBackupAlertFile =
-    process.env.PAPERCLIP_DB_BACKUP_ALERT_FILE ||
+    process.env.PILOT_DB_BACKUP_ALERT_FILE ||
     resolve(config.databaseBackupDir, "..", "health", "db-backup-to-s3.failure");
   const databaseBackupAlertFiles = [
     databaseBackupAlertFile,
@@ -821,7 +829,7 @@ export async function startServer(): Promise<StartedServer> {
     bindHost: runtimeListenHost,
     port: listenPort,
   });
-  const configuredApiUrl = process.env.PAPERCLIP_API_URL?.trim() || runtimeApiUrl;
+  const configuredApiUrl = process.env.PILOT_API_URL?.trim() || runtimeApiUrl;
   const runtimeApiCandidates = buildRuntimeApiCandidateUrls({
     preferredApiUrl: configuredApiUrl,
     authPublicBaseUrl: config.authPublicBaseUrl ?? null,
@@ -829,11 +837,11 @@ export async function startServer(): Promise<StartedServer> {
     bindHost: runtimeListenHost,
     port: listenPort,
   });
-  process.env.PAPERCLIP_LISTEN_HOST = runtimeListenHost;
-  process.env.PAPERCLIP_LISTEN_PORT = String(listenPort);
-  process.env.PAPERCLIP_RUNTIME_API_URL = runtimeApiUrl;
-  process.env.PAPERCLIP_RUNTIME_API_CANDIDATES_JSON = JSON.stringify(runtimeApiCandidates);
-  process.env.PAPERCLIP_API_URL = configuredApiUrl;
+  process.env.PILOT_LISTEN_HOST = runtimeListenHost;
+  process.env.PILOT_LISTEN_PORT = String(listenPort);
+  process.env.PILOT_RUNTIME_API_URL = runtimeApiUrl;
+  process.env.PILOT_RUNTIME_API_CANDIDATES_JSON = JSON.stringify(runtimeApiCandidates);
+  process.env.PILOT_API_URL = configuredApiUrl;
   
   setupEnvironmentCustomImageTerminalWebSocketServer(server, db as any, {
     pluginWorkerManager,
@@ -841,7 +849,7 @@ export async function startServer(): Promise<StartedServer> {
   setupLiveEventsWebSocketServer(server, db as any, {
     deploymentMode: config.deploymentMode,
     resolveSessionFromHeaders,
-    // Cloud-proxied browsers carry trusted x-paperclip-cloud-* headers instead
+    // Cloud-proxied browsers carry trusted x-pilot-cloud-* headers instead
     // of a local Better Auth session; without this lane every live-events
     // upgrade behind the Cloud front door 403s forever. The resolver is
     // self-gating: it returns null unless PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN
@@ -1199,8 +1207,8 @@ export async function startServer(): Promise<StartedServer> {
     const tools = toolAccessService(db as any, {
       deploymentMode: config.deploymentMode,
       deploymentExposure: config.deploymentExposure,
-      trustedLocalStdioRuntimeHost: process.env.PAPERCLIP_TRUSTED_MCP_RUNTIME_HOST
-        ?? process.env.PAPERCLIP_TOOL_RUNTIME_TRUSTED_HOST
+      trustedLocalStdioRuntimeHost: process.env.PILOT_TRUSTED_MCP_RUNTIME_HOST
+        ?? process.env.PILOT_TOOL_RUNTIME_TRUSTED_HOST
         ?? null,
     });
     const worktreeRunExecutionActivation = await resolveWorktreeRunExecutionActivationState({
@@ -1604,7 +1612,7 @@ export async function startServer(): Promise<StartedServer> {
       void systemdNotify(["--ready", `--status=Listening on ${config.host}:${listenPort}`]).then((notified) => {
         if (notified) logger.info("Notified systemd that Paperclip is ready");
       });
-      if (process.env.PAPERCLIP_OPEN_ON_LISTEN === "true") {
+      if (process.env.PILOT_OPEN_ON_LISTEN === "true") {
         const openHost = config.host === "0.0.0.0" || config.host === "::" ? "127.0.0.1" : config.host;
         const url = `http://${openHost}:${listenPort}`;
         void import("open")

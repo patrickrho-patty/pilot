@@ -38,7 +38,7 @@ test("origin selection prioritizes work products then comment mentions", () => {
       assigneeAgentId: "agent-1",
       updatedAt: "2026-07-12T12:00:00Z",
       mentions: [{ field: "comment" }],
-      workProducts: [{ type: "pull_request", url: "http://github.com/paperclipai/paperclip/pull/9507?source=paperclip#review" }],
+      workProducts: [{ type: "pull_request", url: "http://github.com/paperclipai/paperclip/pull/9507?source=pilot#review" }],
     },
   ];
   assert.equal(chooseOriginatingIssue(issues, "https://github.com/paperclipai/paperclip/pull/9507").issueId, "origin");
@@ -46,7 +46,7 @@ test("origin selection prioritizes work products then comment mentions", () => {
 
 function discoveryFixture() {
   let extractPath = "";
-  const paperclipGet = async (path) => {
+  const pilotGet = async (path) => {
     if (path.includes("search/extract")) {
       extractPath = path;
       return {
@@ -88,7 +88,7 @@ function discoveryFixture() {
       updatedAt: "2026-07-13T00:00:00Z",
     };
   };
-  return { paperclipGet, ghJson, extractPath: () => extractPath };
+  return { pilotGet, ghJson, extractPath: () => extractPath };
 }
 
 test("candidate discovery deduplicates mentions, drops closed PRs, and excludes community authors by default", async () => {
@@ -99,7 +99,7 @@ test("candidate discovery deduplicates mentions, drops closed PRs, and excludes 
     api_key: "test-key",
     company_id: "company-1",
     now: "2026-07-20T00:00:00Z",
-    paperclip_get: fixture.paperclipGet,
+    pilot_get: fixture.pilotGet,
     gh_json: fixture.ghJson,
   });
   assert.deepEqual(result.candidates.map((candidate) => candidate.number), [1]);
@@ -120,8 +120,8 @@ test("candidate discovery deduplicates mentions, drops closed PRs, and excludes 
 
 test("capped match sets are recorded instead of aborting discovery", async () => {
   const fixture = discoveryFixture();
-  const paperclipGet = async (path) => {
-    const page = await fixture.paperclipGet(path);
+  const pilotGet = async (path) => {
+    const page = await fixture.pilotGet(path);
     if (!path.includes("search/extract")) return page;
     return { ...page, results: page.results.map((issue) => ({ ...issue, matchesTruncated: true })) };
   };
@@ -131,7 +131,7 @@ test("capped match sets are recorded instead of aborting discovery", async () =>
     api_key: "test-key",
     company_id: "company-1",
     now: "2026-07-20T00:00:00Z",
-    paperclip_get: paperclipGet,
+    pilot_get: pilotGet,
     gh_json: fixture.ghJson,
   });
   assert.deepEqual(result.candidates.map((candidate) => candidate.number), [1]);
@@ -148,7 +148,7 @@ test("--include-community disables the author filter", async () => {
     company_id: "company-1",
     include_community: true,
     now: "2026-07-20T00:00:00Z",
-    paperclip_get: fixture.paperclipGet,
+    pilot_get: fixture.pilotGet,
     gh_json: fixture.ghJson,
   });
   assert.deepEqual(result.candidates.map((candidate) => candidate.number), [1, 4]);
@@ -164,7 +164,7 @@ test("open PRs with no activity inside the window are dropped as stale", async (
     api_key: "test-key",
     company_id: "company-1",
     now: "2026-09-01T00:00:00Z",
-    paperclip_get: fixture.paperclipGet,
+    pilot_get: fixture.pilotGet,
     gh_json: fixture.ghJson,
   });
   assert.deepEqual(result.candidates, []);
@@ -188,8 +188,8 @@ test("summarizes PR bodies into a one-line purpose", () => {
     "Fixes the flaky retry loop so wakes stop duplicating.",
   );
   assert.equal(
-    summarizePullRequestBody("> - Paperclip is the control plane.\n> - Blocker edges gate work."),
-    "Paperclip is the control plane. Blocker edges gate work.",
+    summarizePullRequestBody("> - Pilot is the control plane.\n> - Blocker edges gate work."),
+    "Pilot is the control plane. Blocker edges gate work.",
   );
   assert.equal(summarizePullRequestBody(""), null);
   assert.equal(summarizePullRequestBody(null), null);
@@ -263,7 +263,7 @@ test("renders scope, purpose, confidence groups, and immutable guardrail", () =>
     summary: { ready: 1, needsGardening: 0, reportOnly: 0 },
     pullRequests: [entry],
   });
-  assert.match(report, /Scope: PRs authored by `cryppadotta` \(this Paperclip instance\) referenced by issues active in the last 14 day\(s\)/);
+  assert.match(report, /Scope: PRs authored by `cryppadotta` \(this Pilot instance\) referenced by issues active in the last 14 day\(s\)/);
   assert.match(report, /- Purpose: Fixes the retry loop\./);
   assert.match(report, /- Author: `cryppadotta`/);
   assert.match(report, /## High Confidence/);

@@ -41,19 +41,19 @@ import type { Routine, RoutineTrigger, RoutineVariable } from "./routine.js";
  * A JSON Schema object used for plugin config schemas and tool parameter schemas.
  * Plugins provide these as plain JSON Schema compatible objects.
  *
- * The Paperclip extension keywords below are recognised by the Paperclip UI
+ * The Pilot extension keywords below are recognised by the Pilot UI
  * but are otherwise ignored by standard JSON Schema validators.
  */
 export type JsonSchema = {
   /**
-   * When true, the Paperclip config UI hides this property behind an
+   * When true, the Pilot config UI hides this property behind an
    * "Advanced options" disclosure. Defaults to false (always visible).
    */
   "x-paperclip-advanced"?: boolean;
   /**
    * Optional sub-section heading used to group advanced properties inside
    * the disclosure (e.g. "SSH access", "VM resources"). Ignored when
-   * `x-paperclip-advanced` is not true.
+   * `x-pilot-advanced` is not true.
    */
   "x-paperclip-group"?: string;
   [key: string]: unknown;
@@ -67,7 +67,7 @@ export type {
 } from "../constants.js";
 
 // ---------------------------------------------------------------------------
-// Manifest sub-types — nested declarations within PaperclipPluginManifestV1
+// Manifest sub-types — nested declarations within PilotPluginManifestV1
 // ---------------------------------------------------------------------------
 
 /**
@@ -223,7 +223,7 @@ export interface PluginEnvironmentDriverDeclaration {
   /** Kind of template reference returned by the provider's capture hook. */
   templateRefKind?: "snapshot" | "image" | "provider_template" | "unknown" | (string & {});
   /**
-   * How Paperclip should apply a captured template ref back into this provider's
+   * How Pilot should apply a captured template ref back into this provider's
    * runtime config. Omit to use the standard key for `templateRefKind`.
    */
   templateConfigBinding?: PluginEnvironmentTemplateConfigBinding;
@@ -257,7 +257,7 @@ export interface PluginEnvironmentDriverDeclaration {
 }
 
 /**
- * Declares a normal Paperclip agent that a plugin can provision and later
+ * Declares a normal Pilot agent that a plugin can provision and later
  * resolve by stable key within each company.
  */
 export interface PluginManagedAgentDeclaration {
@@ -283,7 +283,7 @@ export interface PluginManagedAgentDeclaration {
   adapterPreference?: Array<AgentAdapterType | string>;
   /** Suggested adapter configuration. */
   adapterConfig?: Record<string, unknown>;
-  /** Suggested Paperclip runtime configuration. */
+  /** Suggested Pilot runtime configuration. */
   runtimeConfig?: Record<string, unknown>;
   /** Suggested permissions object. Normalized by the host on create/reset. */
   permissions?: Record<string, unknown>;
@@ -322,7 +322,7 @@ export interface PluginLocalFolderDeclaration {
 }
 
 /**
- * Declares a normal Paperclip project that a plugin can provision and later
+ * Declares a normal Pilot project that a plugin can provision and later
  * resolve by stable key within each company.
  */
 export interface PluginManagedProjectDeclaration {
@@ -560,7 +560,7 @@ export interface PluginLauncherDeclaration {
 }
 
 /**
- * Lower-bound semver requirement for the Paperclip host.
+ * Lower-bound semver requirement for the Pilot host.
  *
  * The host should reject installation when its running version is lower than
  * the declared minimum.
@@ -649,7 +649,7 @@ export interface PluginObjectReferenceProviderDeclaration {
  * The manifest shape every plugin package must export.
  * See PLUGIN_SPEC.md §10.1 for the normative definition.
  */
-export interface PaperclipPluginManifestV1 {
+export interface PilotPluginManifestV1 {
   /** Globally unique plugin identifier (e.g. `"acme.linear-sync"`). Must be lowercase alphanumeric with dots, hyphens, or underscores. */
   id: string;
   /** Plugin API version. Must be `1` for the current spec. */
@@ -740,7 +740,7 @@ export interface PluginRecord {
   /** Plugin categories from the manifest. */
   categories: PluginCategory[];
   /** Full manifest snapshot persisted at install/upgrade time. */
-  manifestJson: PaperclipPluginManifestV1;
+  manifestJson: PilotPluginManifestV1;
   /** Current lifecycle status. */
   status: PluginStatus;
   /** Deterministic load order (null if not yet assigned). */

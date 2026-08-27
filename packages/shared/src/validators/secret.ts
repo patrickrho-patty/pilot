@@ -1,3 +1,4 @@
+import { isManagedModeValue } from "../constants.js";
 import { z } from "zod";
 import {
   SECRET_BINDING_TARGET_TYPES,
@@ -55,7 +56,7 @@ export const createSecretSchema = z.object({
   providerMetadata: z.record(z.string(), z.unknown()).optional().nullable(),
   providerVersionRef: z.string().optional().nullable(),
 }).superRefine((value, ctx) => {
-  if ((value.managedMode ?? "paperclip_managed") === "external_reference") {
+  if ((value.managedMode ?? "") === "external_reference" && isManagedModeValue(value.managedMode)) {
     if (!value.externalRef?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

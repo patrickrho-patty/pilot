@@ -31,7 +31,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", () => ({
   resolveAdapterExecutionTargetTimeoutSec: (_target: unknown, timeoutSec: number) => timeoutSec,
   runAdapterExecutionTargetProcess: runProcessMock,
   runAdapterExecutionTargetShellCommand: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
-  startAdapterExecutionTargetPaperclipBridge: async () => null,
+  startAdapterExecutionTargetPilotBridge: async () => null,
 }));
 
 import { execute } from "./execute.js";

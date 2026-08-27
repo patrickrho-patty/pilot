@@ -167,7 +167,7 @@ export type PluginBridgeContextValue = {
  * resolve the current plugin without ambient mutable globals.
  *
  * Because plugin bundles share the host's React instance (via the bridge
- * registry on `globalThis.__paperclipPluginBridge__`), context propagation
+ * registry on `globalThis.__pilotPluginBridge__`), context propagation
  * works correctly across the host/plugin boundary.
  */
 export const PluginBridgeContext =
@@ -293,7 +293,7 @@ function isLegacyInstanceSettingsPath(pathname: string): boolean {
 }
 
 /**
- * Resolve a plugin-provided Paperclip path to the active company scope.
+ * Resolve a plugin-provided Pilot path to the active company scope.
  *
  * This intentionally handles plugin page roots such as `/wiki`, which cannot
  * be listed in the host router's static board-route table ahead of time.

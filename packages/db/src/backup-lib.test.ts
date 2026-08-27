@@ -461,8 +461,8 @@ describeEmbeddedPostgres("runDatabaseBackup", () => {
       const backupDir = createTempDir("paperclip-db-copy-fk-backup-");
       const sourceSql = postgres(sourceConnectionString, { max: 1, onnotice: () => {} });
       const restoreSql = postgres(restoreConnectionString, { max: 1, onnotice: () => {} });
-      const originalPgDumpPath = process.env.PAPERCLIP_PG_DUMP_PATH;
-      process.env.PAPERCLIP_PG_DUMP_PATH = "/bin/false";
+      const originalPgDumpPath = process.env.PILOT_PG_DUMP_PATH;
+      process.env.PILOT_PG_DUMP_PATH = "/bin/false";
 
       try {
         await sourceSql.unsafe(`
@@ -512,9 +512,9 @@ describeEmbeddedPostgres("runDatabaseBackup", () => {
         expect(rows).toEqual([{ note: "child emitted before parent", name: "parent" }]);
       } finally {
         if (originalPgDumpPath === undefined) {
-          delete process.env.PAPERCLIP_PG_DUMP_PATH;
+          delete process.env.PILOT_PG_DUMP_PATH;
         } else {
-          process.env.PAPERCLIP_PG_DUMP_PATH = originalPgDumpPath;
+          process.env.PILOT_PG_DUMP_PATH = originalPgDumpPath;
         }
         await sourceSql.end();
         await restoreSql.end();

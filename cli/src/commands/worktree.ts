@@ -67,11 +67,11 @@ import {
   prepareEmbeddedPostgresNativeRuntime,
 } from "@paperclipai/db";
 import type { Command } from "commander";
-import { ensureAgentJwtSecret, loadPaperclipEnvFile, mergePaperclipEnvEntries, readPaperclipEnvEntries, resolvePaperclipEnvFile } from "../config/env.js";
+import { ensureAgentJwtSecret, loadPilotEnvFile, mergePilotEnvEntries, readPilotEnvEntries, resolvePilotEnvFile } from "../config/env.js";
 import { expandHomePrefix } from "../config/home.js";
-import type { PaperclipConfig } from "../config/schema.js";
+import type { PilotConfig } from "../config/schema.js";
 import { readConfig, resolveConfigPath, writeConfig } from "../config/store.js";
-import { printPaperclipCliBanner } from "../utils/banner.js";
+import { printPilotCliBanner } from "../utils/banner.js";
 import { resolveRuntimeLikePath } from "../utils/path-resolver.js";
 import {
   buildWorktreeConfig,
@@ -276,7 +276,7 @@ function nonEmpty(value: string | null | undefined): string | null {
 }
 
 function isCurrentSourceConfigPath(sourceConfigPath: string): boolean {
-  const currentConfigPath = process.env.PAPERCLIP_CONFIG;
+  const currentConfigPath = process.env.PILOT_CONFIG;
   if (!currentConfigPath || currentConfigPath.trim().length === 0) {
     return false;
   }
@@ -314,11 +314,11 @@ function resolveWorktreeMakeName(name: string): string {
 }
 
 function resolveWorktreeHome(explicit?: string): string {
-  return explicit ?? process.env.PAPERCLIP_WORKTREES_DIR ?? DEFAULT_WORKTREE_HOME;
+  return explicit ?? process.env.PILOT_WORKTREES_DIR ?? DEFAULT_WORKTREE_HOME;
 }
 
 function resolveWorktreeStartPoint(explicit?: string): string | undefined {
-  return explicit ?? nonEmpty(process.env.PAPERCLIP_WORKTREE_START_POINT) ?? undefined;
+  return explicit ?? nonEmpty(process.env.PILOT_WORKTREE_START_POINT) ?? undefined;
 }
 
 type ConfiguredStorage = {
@@ -397,7 +397,7 @@ function buildS3ObjectKey(prefix: string, objectKey: string): string {
 
 const dynamicImport = new Function("specifier", "return import(specifier);") as (specifier: string) => Promise<any>;
 
-function createConfiguredStorageFromPaperclipConfig(config: PaperclipConfig): ConfiguredStorage {
+function createConfiguredStorageFromPilotConfig(config: PilotConfig): ConfiguredStorage {
   if (config.storage.provider === "local_disk") {
     const baseDir = expandHomePrefix(config.storage.localDisk.baseDir);
     return {
@@ -466,7 +466,7 @@ function openConfiguredStorage(configPath: string): ConfiguredStorage {
   if (!config) {
     throw new Error(`Config not found at ${configPath}.`);
   }
-  return createConfiguredStorageFromPaperclipConfig(config);
+  return createConfiguredStorageFromPilotConfig(config);
 }
 
 async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
@@ -959,9 +959,9 @@ export function resolveWorktreeReseedTargetPaths(input: {
   configPath: string;
   rootPath: string;
 }): WorktreeLocalPaths {
-  const envEntries = readPaperclipEnvEntries(resolvePaperclipEnvFile(input.configPath));
-  const homeDir = nonEmpty(envEntries.PAPERCLIP_HOME);
-  const instanceId = nonEmpty(envEntries.PAPERCLIP_INSTANCE_ID);
+  const envEntries = readPilotEnvEntries(resolvePilotEnvFile(input.configPath));
+  const homeDir = nonEmpty(envEntries.PILOT_HOME);
+  const instanceId = nonEmpty(envEntries.PILOT_INSTANCE_ID);
 
   if (!homeDir || !instanceId) {
     throw new Error(
@@ -1075,7 +1075,7 @@ async function ensureRepairTargetWorktree(input: {
   };
 }
 
-function resolveSourceConnectionString(config: PaperclipConfig, envEntries: Record<string, string>, portOverride?: number): string {
+function resolveSourceConnectionString(config: PilotConfig, envEntries: Record<string, string>, portOverride?: number): string {
   if (config.database.mode === "postgres") {
     const connectionString = nonEmpty(envEntries.DATABASE_URL) ?? nonEmpty(config.database.connectionString);
     if (!connectionString) {
@@ -1092,7 +1092,7 @@ function resolveSourceConnectionString(config: PaperclipConfig, envEntries: Reco
 
 export function copySeededSecretsKey(input: {
   sourceConfigPath: string;
-  sourceConfig: PaperclipConfig;
+  sourceConfig: PilotConfig;
   sourceEnvEntries: Record<string, string>;
   targetKeyFilePath: string;
 }): void {
@@ -1104,8 +1104,8 @@ export function copySeededSecretsKey(input: {
 
   const allowProcessEnvFallback = isCurrentSourceConfigPath(input.sourceConfigPath);
   const sourceInlineMasterKey =
-    nonEmpty(input.sourceEnvEntries.PAPERCLIP_SECRETS_MASTER_KEY) ??
-    (allowProcessEnvFallback ? nonEmpty(process.env.PAPERCLIP_SECRETS_MASTER_KEY) : null);
+    nonEmpty(input.sourceEnvEntries.PILOT_SECRETS_MASTER_KEY) ??
+    (allowProcessEnvFallback ? nonEmpty(process.env.PILOT_SECRETS_MASTER_KEY) : null);
   if (sourceInlineMasterKey) {
     writeFileSync(input.targetKeyFilePath, sourceInlineMasterKey, {
       encoding: "utf8",
@@ -1120,8 +1120,8 @@ export function copySeededSecretsKey(input: {
   }
 
   const sourceKeyFileOverride =
-    nonEmpty(input.sourceEnvEntries.PAPERCLIP_SECRETS_MASTER_KEY_FILE) ??
-    (allowProcessEnvFallback ? nonEmpty(process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE) : null);
+    nonEmpty(input.sourceEnvEntries.PILOT_SECRETS_MASTER_KEY_FILE) ??
+    (allowProcessEnvFallback ? nonEmpty(process.env.PILOT_SECRETS_MASTER_KEY_FILE) : null);
   const sourceConfiguredKeyPath = sourceKeyFileOverride ?? input.sourceConfig.secrets.localEncrypted.keyFilePath;
   const sourceKeyFilePath = resolveRuntimeLikePath(sourceConfiguredKeyPath, input.sourceConfigPath);
 
@@ -1457,7 +1457,7 @@ type WorktreeSeedValidationExpectation = {
 };
 
 export function requiresWorktreeSeedCredentialAccount(
-  deploymentMode: PaperclipConfig["server"]["deploymentMode"],
+  deploymentMode: PilotConfig["server"]["deploymentMode"],
 ): boolean {
   return deploymentMode === "authenticated";
 }
@@ -1494,7 +1494,7 @@ export function resolveWorktreeSeedMigrationRevision(
 /**
  * Markerless worktrees predate the versioned seed manifest. Adopt one only
  * after proving that its configured database already has a compatible
- * migration journal and the core Paperclip tables. The physical PG_VERSION
+ * migration journal and the core Pilot tables. The physical PG_VERSION
  * check prevents this read-only probe from initializing a missing embedded
  * database and then mistaking that empty cluster for legacy evidence.
  */
@@ -1504,7 +1504,7 @@ export async function inspectLegacyWorktreeDatabase(
   const config = readConfig(configPath);
   if (!config) return null;
 
-  const envEntries = readPaperclipEnvEntries(resolvePaperclipEnvFile(configPath));
+  const envEntries = readPilotEnvEntries(resolvePilotEnvFile(configPath));
   let embeddedHandle: EmbeddedPostgresHandle | null = null;
   let db: ReturnType<typeof createDb> | null = null;
   try {
@@ -1539,7 +1539,7 @@ export async function inspectLegacyWorktreeDatabase(
 async function inspectVerifiedSeedDatabase(
   connectionString: string,
   options: {
-    deploymentMode: PaperclipConfig["server"]["deploymentMode"];
+    deploymentMode: PilotConfig["server"]["deploymentMode"];
     expected?: WorktreeSeedValidationExpectation;
     migrationRequirement?: "sourcePrefix" | "upToDate";
     requiredCompanyId?: string;
@@ -1679,8 +1679,8 @@ async function inspectVerifiedSeedDatabase(
 
 async function seedWorktreeDatabase(input: {
   sourceConfigPath: string;
-  sourceConfig: PaperclipConfig;
-  targetConfig: PaperclipConfig;
+  sourceConfig: PilotConfig;
+  targetConfig: PilotConfig;
   targetPaths: WorktreeLocalPaths;
   instanceId: string;
   seedMode: WorktreeSeedMode;
@@ -1689,8 +1689,8 @@ async function seedWorktreeDatabase(input: {
   onPhase?: (phase: WorktreeSeedPhase, status: "started" | "succeeded", message?: string) => void;
 }): Promise<SeedWorktreeDatabaseResult> {
   const seedPlan = resolveWorktreeSeedPlan(input.seedMode);
-  const sourceEnvFile = resolvePaperclipEnvFile(input.sourceConfigPath);
-  const sourceEnvEntries = readPaperclipEnvEntries(sourceEnvFile);
+  const sourceEnvFile = resolvePilotEnvFile(input.sourceConfigPath);
+  const sourceEnvEntries = readPilotEnvEntries(sourceEnvFile);
   let sourceHandle: EmbeddedPostgresHandle | null = null;
   let targetHandle: EmbeddedPostgresHandle | null = null;
 
@@ -1879,8 +1879,8 @@ type LegacyWorktreeSeedPendingMarker = {
 };
 
 function resolveSeedInstanceId(configPath: string): string {
-  const envEntries = readPaperclipEnvEntries(resolvePaperclipEnvFile(configPath));
-  return nonEmpty(envEntries.PAPERCLIP_INSTANCE_ID)
+  const envEntries = readPilotEnvEntries(resolvePilotEnvFile(configPath));
+  return nonEmpty(envEntries.PILOT_INSTANCE_ID)
     ?? sanitizeWorktreeInstanceId(path.basename(path.dirname(path.resolve(configPath))));
 }
 
@@ -2164,8 +2164,8 @@ function startWorktreeSeedAttempt(configPath: string, now = new Date()): Worktre
 async function runVerifiedWorktreeSeed(input: {
   configPath: string;
   sourceConfigPath: string;
-  sourceConfig: PaperclipConfig;
-  targetConfig: PaperclipConfig;
+  sourceConfig: PilotConfig;
+  targetConfig: PilotConfig;
   targetPaths: WorktreeLocalPaths;
   instanceId: string;
   seedMode: WorktreeSeedMode;
@@ -2279,7 +2279,7 @@ export async function ensureWorktreeSeeded(
       })
     : null;
   const registeredBaseWorkspaceCwd = opts.registeredBaseWorkspaceCwd
-    ?? nonEmpty(process.env.PAPERCLIP_WORKSPACE_BASE_CWD)
+    ?? nonEmpty(process.env.PILOT_WORKSPACE_BASE_CWD)
     ?? null;
   if (!initialManifest && !legacyPending && !hasExplicitSource && !registeredBaseWorkspaceCwd) {
     if (existsSync(markers.lock)) {
@@ -2289,11 +2289,11 @@ export async function ensureWorktreeSeeded(
     return { seeded: false, reason: "legacy_unmarked" };
   }
   const registeredProjectWorkspaceId = opts.registeredProjectWorkspaceId
-    ?? nonEmpty(process.env.PAPERCLIP_PROJECT_WORKSPACE_ID)
+    ?? nonEmpty(process.env.PILOT_PROJECT_WORKSPACE_ID)
     ?? null;
   const expectedCompanyId = opts.expectedCompanyId
-    ?? nonEmpty(process.env.PAPERCLIP_SEED_EXPECTED_COMPANY_ID)
-    ?? nonEmpty(process.env.PAPERCLIP_COMPANY_ID)
+    ?? nonEmpty(process.env.PILOT_SEED_EXPECTED_COMPANY_ID)
+    ?? nonEmpty(process.env.PILOT_COMPANY_ID)
     ?? undefined;
   if (!explicitSourceConfigPath && registeredBaseWorkspaceCwd && (!registeredProjectWorkspaceId || !expectedCompanyId)) {
     throw new Error(
@@ -2526,19 +2526,19 @@ async function runWorktreeInit(opts: WorktreeInitOptions): Promise<void> {
     targetInstanceId: instanceId,
     seedMode,
   });
-  const sourceEnvEntries = readPaperclipEnvEntries(resolvePaperclipEnvFile(sourceConfigPath));
+  const sourceEnvEntries = readPilotEnvEntries(resolvePilotEnvFile(sourceConfigPath));
   const existingAgentJwtSecret =
-    nonEmpty(sourceEnvEntries.PAPERCLIP_AGENT_JWT_SECRET) ??
-    nonEmpty(process.env.PAPERCLIP_AGENT_JWT_SECRET);
-  mergePaperclipEnvEntries(
+    nonEmpty(sourceEnvEntries.PILOT_AGENT_JWT_SECRET) ??
+    nonEmpty(process.env.PILOT_AGENT_JWT_SECRET);
+  mergePilotEnvEntries(
     {
       ...buildWorktreeEnvEntries(paths, branding),
-      ...(existingAgentJwtSecret ? { PAPERCLIP_AGENT_JWT_SECRET: existingAgentJwtSecret } : {}),
+      ...(existingAgentJwtSecret ? { PILOT_AGENT_JWT_SECRET: existingAgentJwtSecret } : {}),
     },
     paths.envPath,
   );
   ensureAgentJwtSecret(paths.configPath);
-  loadPaperclipEnvFile(paths.configPath);
+  loadPilotEnvFile(paths.configPath);
   const copiedGitHooks = copyGitHooksToWorktreeGitDir(cwd);
 
   let seedSummary: string | null = null;
@@ -2618,13 +2618,13 @@ async function runWorktreeInit(opts: WorktreeInitOptions): Promise<void> {
 }
 
 export async function worktreeInitCommand(opts: WorktreeInitOptions): Promise<void> {
-  printPaperclipCliBanner();
+  printPilotCliBanner();
   p.intro(pc.bgCyan(pc.black(" paperclipai worktree init ")));
   await runWorktreeInit(opts);
 }
 
 export async function worktreeEnsureSeededCommand(opts: WorktreeEnsureSeededOptions): Promise<void> {
-  printPaperclipCliBanner();
+  printPilotCliBanner();
   p.intro(pc.bgCyan(pc.black(" paperclipai worktree ensure-seeded ")));
 
   const spinner = p.spinner();
@@ -2660,7 +2660,7 @@ export async function worktreeEnsureSeededCommand(opts: WorktreeEnsureSeededOpti
 }
 
 export async function worktreeMakeCommand(nameArg: string, opts: WorktreeMakeOptions): Promise<void> {
-  printPaperclipCliBanner();
+  printPilotCliBanner();
   p.intro(pc.bgCyan(pc.black(" paperclipai worktree:make ")));
 
   const name = resolveWorktreeMakeName(nameArg);
@@ -2893,7 +2893,7 @@ function worktreePathHasUncommittedChanges(worktreePath: string): boolean {
 }
 
 export async function worktreeCleanupCommand(nameArg: string, opts: WorktreeCleanupOptions): Promise<void> {
-  printPaperclipCliBanner();
+  printPilotCliBanner();
   p.intro(pc.bgCyan(pc.black(" paperclipai worktree:cleanup ")));
 
   const name = resolveWorktreeMakeName(nameArg);
@@ -3030,13 +3030,13 @@ export async function worktreeCleanupCommand(nameArg: string, opts: WorktreeClea
 
 export async function worktreeEnvCommand(opts: WorktreeEnvOptions): Promise<void> {
   const configPath = resolveConfigPath(opts.config);
-  const envPath = resolvePaperclipEnvFile(configPath);
-  const envEntries = readPaperclipEnvEntries(envPath);
+  const envPath = resolvePilotEnvFile(configPath);
+  const envEntries = readPilotEnvEntries(envPath);
   const out = {
-    PAPERCLIP_CONFIG: configPath,
-    ...(envEntries.PAPERCLIP_HOME ? { PAPERCLIP_HOME: envEntries.PAPERCLIP_HOME } : {}),
-    ...(envEntries.PAPERCLIP_INSTANCE_ID ? { PAPERCLIP_INSTANCE_ID: envEntries.PAPERCLIP_INSTANCE_ID } : {}),
-    ...(envEntries.PAPERCLIP_CONTEXT ? { PAPERCLIP_CONTEXT: envEntries.PAPERCLIP_CONTEXT } : {}),
+    PILOT_CONFIG: configPath,
+    ...(envEntries.PILOT_HOME ? { PILOT_HOME: envEntries.PILOT_HOME } : {}),
+    ...(envEntries.PILOT_INSTANCE_ID ? { PILOT_INSTANCE_ID: envEntries.PILOT_INSTANCE_ID } : {}),
+    ...(envEntries.PILOT_CONTEXT ? { PILOT_CONTEXT: envEntries.PILOT_CONTEXT } : {}),
     ...envEntries,
   };
 
@@ -3107,7 +3107,7 @@ async function openConfiguredDb(configPath: string): Promise<OpenDbHandle> {
   if (!config) {
     throw new Error(`Config not found at ${configPath}.`);
   }
-  const envEntries = readPaperclipEnvEntries(resolvePaperclipEnvFile(configPath));
+  const envEntries = readPilotEnvEntries(resolvePilotEnvFile(configPath));
   let embeddedHandle: EmbeddedPostgresHandle | null = null;
 
   try {
@@ -3296,7 +3296,7 @@ function renderMergePlan(plan: Awaited<ReturnType<typeof collectMergePlan>>["pla
   return lines.join("\n");
 }
 
-function resolveRunningEmbeddedPostgresPid(config: PaperclipConfig): number | null {
+function resolveRunningEmbeddedPostgresPid(config: PilotConfig): number | null {
   if (config.database.mode !== "embedded-postgres") {
     return null;
   }
@@ -4245,7 +4245,7 @@ export async function worktreeMergeHistoryCommand(sourceArg: string | undefined,
 }
 
 async function backupWorktreeReseedTarget(input: {
-  targetConfig: PaperclipConfig;
+  targetConfig: PilotConfig;
   targetPaths: WorktreeLocalPaths;
 }): Promise<string> {
   if (input.targetConfig.database.mode !== "embedded-postgres") {
@@ -4351,7 +4351,7 @@ async function runWorktreeReseed(opts: WorktreeReseedOptions): Promise<void> {
       instanceId: targetPaths.instanceId,
       seedMode,
       preserveLiveWork: opts.preserveLiveWork,
-      expectedCompanyId: nonEmpty(process.env.PAPERCLIP_SEED_EXPECTED_COMPANY_ID) ?? undefined,
+      expectedCompanyId: nonEmpty(process.env.PILOT_SEED_EXPECTED_COMPANY_ID) ?? undefined,
       seedDatabase: seedWorktreeDatabase,
     });
     spinner.stop(`Reseeded ${targetEndpoint.label} (${seedMode}).`);
@@ -4381,13 +4381,13 @@ async function runWorktreeReseed(opts: WorktreeReseedOptions): Promise<void> {
 }
 
 export async function worktreeReseedCommand(opts: WorktreeReseedOptions): Promise<void> {
-  printPaperclipCliBanner();
+  printPilotCliBanner();
   p.intro(pc.bgCyan(pc.black(" paperclipai worktree reseed ")));
   await runWorktreeReseed(opts);
 }
 
 export async function worktreeRepairCommand(opts: WorktreeRepairOptions): Promise<void> {
-  printPaperclipCliBanner();
+  printPilotCliBanner();
   p.intro(pc.bgCyan(pc.black(" paperclipai worktree repair ")));
 
   const seedMode = opts.seedMode ?? "minimal";
@@ -4415,9 +4415,9 @@ export async function worktreeRepairCommand(opts: WorktreeRepairOptions): Promis
   }
 
   const targetConfig = existsSync(target.configPath) ? readConfig(target.configPath) : null;
-  const targetEnvEntries = readPaperclipEnvEntries(resolvePaperclipEnvFile(target.configPath));
+  const targetEnvEntries = readPilotEnvEntries(resolvePilotEnvFile(target.configPath));
   const targetHasWorktreeEnv = Boolean(
-    nonEmpty(targetEnvEntries.PAPERCLIP_HOME) && nonEmpty(targetEnvEntries.PAPERCLIP_INSTANCE_ID),
+    nonEmpty(targetEnvEntries.PILOT_HOME) && nonEmpty(targetEnvEntries.PILOT_INSTANCE_ID),
   );
 
   if (targetConfig && targetHasWorktreeEnv && opts.noSeed) {

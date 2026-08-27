@@ -87,14 +87,14 @@ test("release smoke workflow extends the container readiness budget for CI", () 
   const smokeWorkflow = readWorkflow("release-smoke.yml");
   const harness = readFileSync(path.join(repoRoot, "scripts/docker-onboard-smoke.sh"), "utf8");
 
-  // CI containers cold-install paperclipai and embedded postgres, so the
+  // CI containers cold-install pilotai and embedded postgres, so the
   // workflow must extend the harness's local-default readiness budget.
   assert.match(smokeWorkflow, /SMOKE_READY_TIMEOUT_SECONDS=\d+/);
   const ciBudget = Number(smokeWorkflow.match(/SMOKE_READY_TIMEOUT_SECONDS=(\d+)/)[1]);
   assert.ok(ciBudget >= 300, `CI readiness budget ${ciBudget}s should be at least 300s`);
 
   assert.match(harness, /SMOKE_READY_TIMEOUT_SECONDS="\$\{SMOKE_READY_TIMEOUT_SECONDS:-\d+\}"/);
-  assert.match(harness, /wait_for_http "\$PAPERCLIP_PUBLIC_URL\/api\/health" "\$SMOKE_READY_TIMEOUT_SECONDS" 1/);
+  assert.match(harness, /wait_for_http "\$PILOT_PUBLIC_URL\/api\/health" "\$SMOKE_READY_TIMEOUT_SECONDS" 1/);
 });
 
 test("release verify workflow covers the same split test surface as stable PR verification", () => {

@@ -1,0 +1,23 @@
+id: decl-property-upper-ts
+language: TypeScript
+# TIER 2 — type/interface DECLARATIONS (type_identifier) and object/interface
+# KEYS incl. shorthand (property_identifier) containing 'PAPERCLIP' -> 'PILOT'.
+# Companion to identifier rules: declarations/keys are distinct AST kinds.
+severity: info
+rule:
+  all:
+    - pattern: $ID
+    - any:
+        - kind: type_identifier
+        - kind: property_identifier
+        - kind: shorthand_property_identifier_pattern
+constraints:
+  ID:
+    regex: PAPERCLIP
+transform:
+  NEW:
+    replace:
+      source: $ID
+      replace: PAPERCLIP
+      by: PILOT
+fix: $NEW

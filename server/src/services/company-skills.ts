@@ -24,8 +24,8 @@ import {
   issueThreadInteractions,
   issueWorkProducts,
 } from "@paperclipai/db";
-import { readPaperclipSkillSyncPreference, writePaperclipSkillSyncPreference } from "@paperclipai/adapter-utils/server-utils";
-import type { PaperclipDesiredSkillEntry, PaperclipSkillEntry } from "@paperclipai/adapter-utils/server-utils";
+import { readPilotSkillSyncPreference, writePilotSkillSyncPreference } from "@paperclipai/adapter-utils/server-utils";
+import type { PilotDesiredSkillEntry, PilotSkillEntry } from "@paperclipai/adapter-utils/server-utils";
 import type {
   AgentDesiredSkillEntry,
   CatalogSkill,
@@ -100,7 +100,7 @@ import {
   splitFrontmatterBlock,
   stringifyFrontmatter,
 } from "@paperclipai/shared";
-import { resolvePaperclipInstanceRoot } from "../home-paths.js";
+import { resolvePilotInstanceRoot } from "../home-paths.js";
 import { conflict, forbidden, notFound, unprocessable } from "../errors.js";
 import { ghFetch, gitHubApiBase, resolveRawGitHubUrl } from "./github-fetch.js";
 import { agentService } from "./agents.js";
@@ -611,10 +611,10 @@ function readCanonicalSkillKey(frontmatter: Record<string, unknown>, metadata: R
     ?? asString(metadata?.paperclipSkillKey),
   );
   if (direct) return direct;
-  const paperclip = isPlainRecord(metadata?.paperclip) ? metadata?.paperclip as Record<string, unknown> : null;
+  const pilot = isPlainRecord(metadata?.paperclip) ? metadata?.paperclip as Record<string, unknown> : null;
   return normalizeSkillKey(
-    asString(paperclip?.skillKey)
-    ?? asString(paperclip?.key),
+    asString(pilot?.skillKey)
+    ?? asString(pilot?.key),
   );
 }
 
@@ -1266,16 +1266,16 @@ function stableJsonEqual(left: unknown, right: unknown) {
   return JSON.stringify(stableJsonComparable(left)) === JSON.stringify(stableJsonComparable(right));
 }
 
-function isPaperclipBundledSkillKey(key: string) {
+function isPilotBundledSkillKey(key: string) {
   return key.startsWith("paperclipai/paperclip/");
 }
 
-function paperclipBundledFolderCategory(key: string, metadata?: unknown) {
+function pilotBundledFolderCategory(key: string, metadata?: unknown) {
   const keyParts = key.split("/");
   if (keyParts[0] === "paperclipai" && keyParts[1] === "bundled" && keyParts[2]) {
     return keyParts[2];
   }
-  if (isPaperclipBundledSkillKey(key)) return "paperclip-core";
+  if (isPilotBundledSkillKey(key)) return "paperclip-core";
   if (isPlainRecord(metadata) && asString(metadata.sourceKind) === "paperclip_bundled") {
     return "paperclip-core";
   }
@@ -1290,7 +1290,7 @@ function bundledFolderLabel(category: string) {
     .join(" ");
 }
 
-function stripDerivedPaperclipBundledMetadata(key: string, metadata: unknown): unknown {
+function stripDerivedPilotBundledMetadata(key: string, metadata: unknown): unknown {
   if (metadata === null || metadata === undefined) return {};
   const comparable = stableJsonComparable(metadata);
   if (!isPlainRecord(comparable)) return comparable;
@@ -1304,9 +1304,9 @@ function stripDerivedPaperclipBundledMetadata(key: string, metadata: unknown): u
 
 function importedSkillMetadataEqual(existing: CompanySkill, values: ImportedSkillPersistValues) {
   const incomingMetadata = isPlainRecord(values.metadata) ? values.metadata : null;
-  if (isPaperclipBundledSkillKey(values.key) && asString(incomingMetadata?.sourceKind) === "paperclip_bundled") {
-    return JSON.stringify(stripDerivedPaperclipBundledMetadata(existing.key, existing.metadata))
-      === JSON.stringify(stripDerivedPaperclipBundledMetadata(values.key, values.metadata));
+  if (isPilotBundledSkillKey(values.key) && asString(incomingMetadata?.sourceKind) === "paperclip_bundled") {
+    return JSON.stringify(stripDerivedPilotBundledMetadata(existing.key, existing.metadata))
+      === JSON.stringify(stripDerivedPilotBundledMetadata(values.key, values.metadata));
   }
   return stableJsonEqual(existing.metadata ?? null, values.metadata);
 }
@@ -2160,7 +2160,7 @@ function resolveRequestedSkillKeysOrThrow(
   return Array.from(resolved);
 }
 
-function normalizeRequestedDesiredSkillSelection(value: string | AgentDesiredSkillEntry): PaperclipDesiredSkillEntry {
+function normalizeRequestedDesiredSkillSelection(value: string | AgentDesiredSkillEntry): PilotDesiredSkillEntry {
   if (typeof value === "string") {
     return { key: value.trim(), versionId: null };
   }
@@ -2196,7 +2196,7 @@ async function assertVersionMatchesSkill(
 
 export interface ResolvedRequestedSkillEntries {
   /** References that resolved to a company-library skill. */
-  resolved: PaperclipDesiredSkillEntry[];
+  resolved: PilotDesiredSkillEntry[];
   /**
    * References that could not be resolved to a company-library skill, returned
    * in first-seen order. Only populated when `tolerateUnknownReferences` is set;
@@ -2215,7 +2215,7 @@ async function resolveRequestedSkillEntriesOrThrow(
 ): Promise<ResolvedRequestedSkillEntries> {
   const missing = new Set<string>();
   const ambiguous = new Set<string>();
-  const resolved = new Map<string, PaperclipDesiredSkillEntry>();
+  const resolved = new Map<string, PilotDesiredSkillEntry>();
   const unresolved: string[] = [];
   const seenUnresolved = new Set<string>();
 
@@ -2275,7 +2275,7 @@ function resolveDesiredSkillKeys(
   skills: SkillReferenceTarget[],
   config: Record<string, unknown>,
 ) {
-  const preference = readPaperclipSkillSyncPreference(config);
+  const preference = readPilotSkillSyncPreference(config);
   return Array.from(new Set(
     preference.desiredSkills
       .map((reference) => resolveSkillReference(skills, reference).skill?.key ?? normalizeSkillKey(reference))
@@ -2287,8 +2287,8 @@ function resolveDesiredSkillEntries(
   skills: SkillReferenceTarget[],
   config: Record<string, unknown>,
 ) {
-  const preference = readPaperclipSkillSyncPreference(config);
-  const out = new Map<string, PaperclipDesiredSkillEntry>();
+  const preference = readPilotSkillSyncPreference(config);
+  const out = new Map<string, PilotDesiredSkillEntry>();
   for (const entry of preference.desiredSkillEntries) {
     const key = resolveSkillReference(skills, entry.key).skill?.key ?? normalizeSkillKey(entry.key);
     if (!key || out.has(key)) continue;
@@ -2352,18 +2352,18 @@ export async function findMissingLocalSkillIds(
 }
 
 function resolveManagedSkillsRoot(companyId: string) {
-  return path.resolve(resolvePaperclipInstanceRoot(), "skills", companyId);
+  return path.resolve(resolvePilotInstanceRoot(), "skills", companyId);
 }
 
 /**
- * A rename target must be a true Paperclip-managed local skill: a `local_path`
+ * A rename target must be a true Pilot-managed local skill: a `local_path`
  * skill whose `managed_local` source directory lives directly under the
  * company managed-skills root (e.g. `<managedRoot>/<slug>`). This deliberately
  * excludes catalog (`__catalog__/...`), runtime (`__runtime__/...`) and other
  * reserved subtrees, project-scanned skills, unmanaged `local_path` skills, and
  * all remote source types, which keep their own identity/update semantics.
  */
-function isPaperclipManagedRenameTarget(skill: CompanySkill): boolean {
+function isPilotManagedRenameTarget(skill: CompanySkill): boolean {
   if (skill.sourceType !== "local_path") return false;
   if (getSkillMeta(skill).sourceKind !== "managed_local") return false;
   const skillDir = normalizeSkillDirectory(skill);
@@ -2974,8 +2974,8 @@ export function companySkillService(db: Db) {
   }
 
   async function ensureBundledSkillReleases(companyId: string, bundledSkills: CompanySkill[]) {
-    const paperclipSkill = bundledSkills.find((skill) => skill.key === "paperclipai/paperclip/paperclip");
-    if (!paperclipSkill) return;
+    const pilotSkill = bundledSkills.find((skill) => skill.key === "paperclipai/paperclip/paperclip");
+    if (!pilotSkill) return;
     for (const release of await readBundledSkillReleaseRegistry()) {
       const fileInventory = serializeVersionFileInventory(
         await collectVersionFileInventoryFromDirectory(release.releaseDir),
@@ -2985,7 +2985,7 @@ export function companySkillService(db: Db) {
         .from(companySkillVersions)
         .where(and(
           eq(companySkillVersions.companyId, companyId),
-          eq(companySkillVersions.companySkillId, paperclipSkill.id),
+          eq(companySkillVersions.companySkillId, pilotSkill.id),
           eq(companySkillVersions.releaseId, release.id),
         ))
         .then((rows) => rows[0] ?? null);
@@ -3008,17 +3008,17 @@ export function companySkillService(db: Db) {
       if (Number.isNaN(releasedAt.getTime())) {
         throw new Error(`Invalid bundled skill release date: ${release.releasedAt}`);
       }
-      await createVersion(companyId, paperclipSkill.id, { label: release.releaseName }, null, {
+      await createVersion(companyId, pilotSkill.id, { label: release.releaseName }, null, {
         fileInventory,
         release: { id: release.id, name: release.releaseName, releasedAt },
         updateCurrentVersion: false,
         skipInventoryRefresh: true,
-        skill: paperclipSkill,
+        skill: pilotSkill,
       });
     }
   }
 
-  async function reconcilePaperclipSkillFolders(companyId: string) {
+  async function reconcilePilotSkillFolders(companyId: string) {
     const shippedSkills = await db
       .select({
         id: companySkills.id,
@@ -3029,7 +3029,7 @@ export function companySkillService(db: Db) {
       .from(companySkills)
       .where(eq(companySkills.companyId, companyId))
       .then((rows) => rows.flatMap((skill) => {
-        const category = paperclipBundledFolderCategory(skill.key, skill.metadata);
+        const category = pilotBundledFolderCategory(skill.key, skill.metadata);
         return category ? [{ ...skill, category }] : [];
       }));
     const foldersByCategory = new Map<string, Awaited<ReturnType<typeof folderSvc.ensureBundledCategory>>>();
@@ -3076,7 +3076,7 @@ export function companySkillService(db: Db) {
 
     for (const skill of skills) {
       if (skill.sourceType !== "local_path") continue;
-      if (isPaperclipBundledSkillKey(skill.key) || asString(skill.metadata?.sourceKind) === "paperclip_bundled") continue;
+      if (isPilotBundledSkillKey(skill.key) || asString(skill.metadata?.sourceKind) === "paperclip_bundled") continue;
 
       if (!missingIds.has(skill.id)) {
         const metadata = getMissingSourceMarker(skill.metadata)
@@ -3143,7 +3143,7 @@ export function companySkillService(db: Db) {
       }
       const bundledSkills = await ensureBundledSkills(companyId);
       await ensureBundledSkillReleases(companyId, bundledSkills);
-      await reconcilePaperclipSkillFolders(companyId);
+      await reconcilePilotSkillFolders(companyId);
       await reconcileLocalPathSkillSources(companyId);
     })();
 
@@ -3841,7 +3841,7 @@ export function companySkillService(db: Db) {
         const updated = await tx
           .update(agentsTable)
           .set({
-            adapterConfig: writePaperclipSkillSyncPreference(adapterConfig, nextEntries),
+            adapterConfig: writePilotSkillSyncPreference(adapterConfig, nextEntries),
             updatedAt: new Date(),
           })
           .where(and(eq(agentsTable.companyId, companyId), eq(agentsTable.id, item.agentId)))
@@ -3989,7 +3989,7 @@ export function companySkillService(db: Db) {
     const skill = await getById(companyId, skillId);
     if (!skill) throw notFound("Skill not found");
 
-    if (!isPaperclipManagedRenameTarget(skill)) {
+    if (!isPilotManagedRenameTarget(skill)) {
       throw unprocessable(
         "Only Paperclip-managed skills can be renamed. Catalog, external, project-scanned, and unmanaged local skills are read-only.",
         { skillId: skill.id, sourceType: skill.sourceType, sourceKind: getSkillMeta(skill).sourceKind ?? null },
@@ -4102,7 +4102,7 @@ export function companySkillService(db: Db) {
           await tx
             .update(agentsTable)
             .set({
-              adapterConfig: writePaperclipSkillSyncPreference(adapterConfig, nextEntries),
+              adapterConfig: writePilotSkillSyncPreference(adapterConfig, nextEntries),
               updatedAt: new Date(),
             })
             .where(and(eq(agentsTable.companyId, companyId), eq(agentsTable.id, item.agentId)));
@@ -5074,7 +5074,7 @@ export function companySkillService(db: Db) {
 
         const existingBundledBySlug = acceptedSkills.find((skill) => (
           skill.slug === nextSkill.slug
-          && (isPaperclipBundledSkillKey(skill.key) || asString(skill.metadata?.sourceKind) === "paperclip_bundled")
+          && (isPilotBundledSkillKey(skill.key) || asString(skill.metadata?.sourceKind) === "paperclip_bundled")
         )) ?? null;
         if (existingBundledBySlug) {
           candidates.push({
@@ -5562,7 +5562,7 @@ export function companySkillService(db: Db) {
     }
     const markdown = await fs.readFile(path.join(originSnapshotLocator, catalogSkill.entrypoint), "utf8");
     const metadata = buildCatalogSkillMetadata(catalogSkill, existingByKey, originSnapshotLocator);
-    const bundledCategory = paperclipBundledFolderCategory(catalogSkill.key, metadata);
+    const bundledCategory = pilotBundledFolderCategory(catalogSkill.key, metadata);
     const bundledFolder = bundledCategory
       ? await folderSvc.ensureBundledCategory(companyId, bundledFolderLabel(bundledCategory))
       : null;
@@ -5791,10 +5791,10 @@ export function companySkillService(db: Db) {
   async function listRuntimeSkillEntries(
     companyId: string,
     options: RuntimeSkillEntryOptions = {},
-  ): Promise<PaperclipSkillEntry[]> {
+  ): Promise<PilotSkillEntry[]> {
     const skills = await listFull(companyId);
 
-    const out: PaperclipSkillEntry[] = [];
+    const out: PilotSkillEntry[] = [];
     for (const skill of skills) {
       const sourceResolution = await resolveRuntimeSkillSource(companyId, skill, options);
       if (!sourceResolution) continue;
@@ -5981,7 +5981,7 @@ export function companySkillService(db: Db) {
       };
       const parsed = parseFrontmatterMarkdown(skill.markdown);
       const storeMetadata = readSkillStoreMetadata(parsed.frontmatter, metadata);
-      const bundledCategory = paperclipBundledFolderCategory(skill.key, incomingMeta);
+      const bundledCategory = pilotBundledFolderCategory(skill.key, incomingMeta);
       const bundledFolder = bundledCategory
         ? await folderSvc.ensureBundledCategory(companyId, bundledFolderLabel(bundledCategory))
         : null;

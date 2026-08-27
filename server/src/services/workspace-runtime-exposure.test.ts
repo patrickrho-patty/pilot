@@ -33,20 +33,20 @@ const HANDLE = "handle-abcdef1234567890";
 // back in and restores the harness value afterwards.
 let previousHttpsMode: string | undefined;
 beforeEach(() => {
-  previousHttpsMode = process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS;
-  process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS = "auto";
+  previousHttpsMode = process.env.PILOT_MANAGED_RUNTIME_HTTPS;
+  process.env.PILOT_MANAGED_RUNTIME_HTTPS = "auto";
 });
 
 afterEach(async () => {
-  if (previousHttpsMode === undefined) delete process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS;
-  else process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS = previousHttpsMode;
+  if (previousHttpsMode === undefined) delete process.env.PILOT_MANAGED_RUNTIME_HTTPS;
+  else process.env.PILOT_MANAGED_RUNTIME_HTTPS = previousHttpsMode;
   // These tests spawn real loopback backends on dedicated-range ports; reap them
   // rather than leaving one squatting 42xxx/52xxx for every test in the file.
   await resetRuntimeServicesForTests({ terminateProcesses: true });
 });
 
 function serviceCommand() {
-  // Answers `/api/health` the way a real Paperclip dev runtime does: managed
+  // Answers `/api/health` the way a real Pilot dev runtime does: managed
   // publication requires semantic health, not just a 200 (PAP-17572).
   return `node -e 'const http=require("http");const p=Number(process.env.PORT);for(const q of [p,p+10000])http.createServer((rq,r)=>{if(rq.url==="/api/health"){r.setHeader("content-type","application/json");r.end(JSON.stringify({status:"ok"}));return}r.statusCode=200;r.end("ok")}).listen(q,"127.0.0.1");setInterval(()=>{},1000)'`;
 }
@@ -313,7 +313,7 @@ const DECLARED_EXPOSE = {
 } as const;
 
 /**
- * The pre-feature Paperclip App project template, verbatim: a hard-coded HTTP
+ * The pre-feature Pilot App project template, verbatim: a hard-coded HTTP
  * `urlTemplate`, a pinned port outside the broker's dedicated range, and no
  * exposure declaration at all.
  */

@@ -1,10 +1,10 @@
 ---
 name: Core Exec Team
-description: Default leadership and engineering team for bootstrapping a Paperclip company with a CEO, CTO, QA Engineer, starter project, and a recurring CEO heartbeat review task.
+description: Default leadership and engineering team for bootstrapping a Pilot company with a CEO, CTO, QA Engineer, starter project, and a recurring CEO heartbeat review task.
 schema: agentcompanies/v1
 slug: core-exec-team
 category: company-defaults
-key: paperclipai/bundled/company-defaults/core-exec-team
+key: pilotai/bundled/company-defaults/core-exec-team
 manager: agents/ceo/AGENTS.md
 includes:
   - agents/cto/AGENTS.md
@@ -21,15 +21,15 @@ tags:
   - engineering
   - qa
 requiredSkills:
-  - paperclipai/bundled/paperclip-operations/task-planning
-  - paperclipai/bundled/paperclip-operations/issue-triage
-  - paperclipai/bundled/software-development/github-pr-workflow
-  - paperclipai/bundled/quality/qa-acceptance
+  - pilotai/bundled/paperclip-operations/task-planning
+  - pilotai/bundled/paperclip-operations/issue-triage
+  - pilotai/bundled/software-development/github-pr-workflow
+  - pilotai/bundled/quality/qa-acceptance
 ---
 
 # Core Exec Team
 
-The Core Exec Team is the bundled default install for a new Paperclip company. It boots the smallest org that can take a board prompt, plan it, implement it, and verify it.
+The Core Exec Team is the bundled default install for a new Pilot company. It boots the smallest org that can take a board prompt, plan it, implement it, and verify it.
 
 ## Contents
 

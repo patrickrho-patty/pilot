@@ -11,7 +11,7 @@ const {
   restoreWorkspaceFromSshExecution,
   runSshCommand,
   syncDirectoryToSsh,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
 } = vi.hoisted(() => ({
   runChildProcess: vi.fn(async () => ({
     exitCode: 0,
@@ -45,11 +45,11 @@ const {
     exitCode: 0,
   })),
   syncDirectoryToSsh: vi.fn(async () => undefined),
-  startAdapterExecutionTargetPaperclipBridge: vi.fn(async () => ({
+  startAdapterExecutionTargetPilotBridge: vi.fn(async () => ({
     env: {
-      PAPERCLIP_API_URL: "http://127.0.0.1:4310",
-      PAPERCLIP_API_KEY: "bridge-token",
-      PAPERCLIP_API_BRIDGE_MODE: "queue_v1",
+      PILOT_API_URL: "http://127.0.0.1:4310",
+      PILOT_API_KEY: "bridge-token",
+      PILOT_API_BRIDGE_MODE: "queue_v1",
     },
     stop: async () => {},
   })),
@@ -86,7 +86,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", async () => {
   );
   return {
     ...actual,
-    startAdapterExecutionTargetPaperclipBridge,
+    startAdapterExecutionTargetPilotBridge,
   };
 });
 
@@ -195,8 +195,8 @@ describe("pi remote execution", () => {
     expect(call?.[2]).toContain("--session");
     expect(call?.[2]).toContain("--skill");
     expect(call?.[2]).toContain(`${managedRemoteWorkspace}/.paperclip-runtime/pi/skills`);
-    expect(call?.[3].env.PAPERCLIP_WORKSPACE_CWD).toBe(managedRemoteWorkspace);
-    expect(JSON.parse(call?.[3].env.PAPERCLIP_WORKSPACES_JSON ?? "[]")).toEqual([
+    expect(call?.[3].env.PILOT_WORKSPACE_CWD).toBe(managedRemoteWorkspace);
+    expect(JSON.parse(call?.[3].env.PILOT_WORKSPACES_JSON ?? "[]")).toEqual([
       {
         workspaceId: "workspace-1",
         cwd: managedRemoteWorkspace,
@@ -209,10 +209,10 @@ describe("pi remote execution", () => {
         repoRef: "feature/other",
       },
     ]);
-    expect(call?.[3].env.PAPERCLIP_API_URL).toBe("http://127.0.0.1:4310");
-    expect(call?.[3].env.PAPERCLIP_API_BRIDGE_MODE).toBe("queue_v1");
+    expect(call?.[3].env.PILOT_API_URL).toBe("http://127.0.0.1:4310");
+    expect(call?.[3].env.PILOT_API_BRIDGE_MODE).toBe("queue_v1");
     expect(call?.[3].remoteExecution?.remoteCwd).toBe(managedRemoteWorkspace);
-    expect(startAdapterExecutionTargetPaperclipBridge).toHaveBeenCalledTimes(1);
+    expect(startAdapterExecutionTargetPilotBridge).toHaveBeenCalledTimes(1);
     expect(restoreWorkspaceFromSshExecution).toHaveBeenCalledTimes(1);
   });
 
@@ -251,7 +251,7 @@ describe("pi remote execution", () => {
         command: "pi",
         model: "tensorix/deepseek/deepseek-chat-v3.1",
         env: {
-          PAPERCLIP_PI_PROVIDERS: JSON.stringify(providers),
+          PILOT_PI_PROVIDERS: JSON.stringify(providers),
           ANTHROPIC_API_KEY: "sk-bf-REALVK",
         },
       },

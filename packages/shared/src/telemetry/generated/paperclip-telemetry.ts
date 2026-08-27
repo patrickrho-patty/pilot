@@ -1,50 +1,50 @@
 // GENERATED — DO NOT EDIT.
 
-export interface PaperclipAgentCreatedDimensions {
+export interface PilotAgentCreatedDimensions {
 agent_id: string
 agent_role: ("ceo" | "cto" | "cmo" | "cfo" | "security" | "engineer" | "designer" | "pm" | "qa" | "devops" | "researcher" | "general" | "other")
 }
 
-export interface PaperclipAgentFirstHeartbeatDimensions {
+export interface PilotAgentFirstHeartbeatDimensions {
 agent_id: string
 agent_role: ("ceo" | "cto" | "cmo" | "cfo" | "security" | "engineer" | "designer" | "pm" | "qa" | "devops" | "researcher" | "general" | "other")
 }
 
-export interface PaperclipAgentTaskCompletedDimensions {
+export interface PilotAgentTaskCompletedDimensions {
 adapter_type: ("process" | "http" | "acpx_local" | "claude_local" | "codex_local" | "cursor_cloud" | "gemini_local" | "hermes_gateway" | "hermes_local" | "opencode_local" | "pi_local" | "cursor" | "openclaw_gateway" | "grok_local" | "kimi_local" | "other")
 agent_id: string
 agent_role: ("ceo" | "cto" | "cmo" | "cfo" | "security" | "engineer" | "designer" | "pm" | "qa" | "devops" | "researcher" | "general" | "other")
 model?: string
 }
 
-export interface PaperclipCompanyImportedDimensions {
+export interface PilotCompanyImportedDimensions {
 source_type: ("local_path" | "github" | "url" | "catalog" | "skills_sh" | "unknown")
 source_ref?: string
 source_ref_hashed?: boolean
 }
 
-export interface PaperclipErrorHandlerCrashDimensions {
+export interface PilotErrorHandlerCrashDimensions {
 error_code: string
 }
 
-export interface PaperclipGoalCreatedDimensions {
+export interface PilotGoalCreatedDimensions {
 goal_level: ("company" | "team" | "agent" | "task" | "other")
 }
 
-export interface PaperclipInstallCompletedDimensions {
+export interface PilotInstallCompletedDimensions {
 adapter_type: ("process" | "http" | "acpx_local" | "claude_local" | "codex_local" | "cursor_cloud" | "gemini_local" | "hermes_gateway" | "hermes_local" | "opencode_local" | "pi_local" | "cursor" | "openclaw_gateway" | "grok_local" | "kimi_local" | "other")
 }
 
-export interface PaperclipInstallStartedDimensions {
+export interface PilotInstallStartedDimensions {
 
 }
 
-export interface PaperclipInteractionCreatedDimensions {
+export interface PilotInteractionCreatedDimensions {
 interaction_kind: ("suggest_tasks" | "ask_user_questions" | "request_confirmation" | "request_checkbox_confirmation" | "request_item_verdicts" | "other")
 used_deprecated_resolver_policy_alias: boolean
 }
 
-export interface PaperclipInteractionResolvedDimensions {
+export interface PilotInteractionResolvedDimensions {
 interaction_kind: ("suggest_tasks" | "ask_user_questions" | "request_confirmation" | "request_checkbox_confirmation" | "request_item_verdicts" | "other")
 status: ("accepted" | "rejected" | "answered" | "cancelled" | "expired" | "failed" | "other")
 resolution_reason?: ("accepted" | "rejected" | "stale_target" | "superseded_by_comment" | "superseded_by_newer_request" | "expired" | "cancelled" | "other")
@@ -67,25 +67,25 @@ source_run_id?: string
 legacy_inherited_restriction: boolean
 }
 
-export interface PaperclipProjectCreatedDimensions {
+export interface PilotProjectCreatedDimensions {
 
 }
 
-export interface PaperclipRoutineCreatedDimensions {
+export interface PilotRoutineCreatedDimensions {
 
 }
 
-export interface PaperclipRoutineRunDimensions {
+export interface PilotRoutineRunDimensions {
 source: ("schedule" | "manual" | "api" | "webhook" | "other")
 status: ("received" | "coalesced" | "skipped" | "issue_created" | "completed" | "failed" | "other")
 }
 
-export interface PaperclipSkillImportedDimensions {
+export interface PilotSkillImportedDimensions {
 source_type: ("local_path" | "github" | "url" | "catalog" | "skills_sh" | "unknown")
 skill_ref?: string
 }
 
-export type PaperclipEventName =
+export type PilotEventName =
   | "agent.created"
   | "agent.first_heartbeat"
   | "agent.task_completed"
@@ -102,23 +102,23 @@ export type PaperclipEventName =
   | "skill.imported";
 
 export interface EventDimensionsMap {
-  "agent.created": PaperclipAgentCreatedDimensions;
-  "agent.first_heartbeat": PaperclipAgentFirstHeartbeatDimensions;
-  "agent.task_completed": PaperclipAgentTaskCompletedDimensions;
-  "company.imported": PaperclipCompanyImportedDimensions;
-  "error.handler_crash": PaperclipErrorHandlerCrashDimensions;
-  "goal.created": PaperclipGoalCreatedDimensions;
-  "install.completed": PaperclipInstallCompletedDimensions;
-  "install.started": PaperclipInstallStartedDimensions;
-  "interaction.created": PaperclipInteractionCreatedDimensions;
-  "interaction.resolved": PaperclipInteractionResolvedDimensions;
-  "project.created": PaperclipProjectCreatedDimensions;
-  "routine.created": PaperclipRoutineCreatedDimensions;
-  "routine.run": PaperclipRoutineRunDimensions;
-  "skill.imported": PaperclipSkillImportedDimensions;
+  "agent.created": PilotAgentCreatedDimensions;
+  "agent.first_heartbeat": PilotAgentFirstHeartbeatDimensions;
+  "agent.task_completed": PilotAgentTaskCompletedDimensions;
+  "company.imported": PilotCompanyImportedDimensions;
+  "error.handler_crash": PilotErrorHandlerCrashDimensions;
+  "goal.created": PilotGoalCreatedDimensions;
+  "install.completed": PilotInstallCompletedDimensions;
+  "install.started": PilotInstallStartedDimensions;
+  "interaction.created": PilotInteractionCreatedDimensions;
+  "interaction.resolved": PilotInteractionResolvedDimensions;
+  "project.created": PilotProjectCreatedDimensions;
+  "routine.created": PilotRoutineCreatedDimensions;
+  "routine.run": PilotRoutineRunDimensions;
+  "skill.imported": PilotSkillImportedDimensions;
 }
 
-export const PAPERCLIP_EVENTS = {
+export const PILOT_EVENTS = {
   "agent.created": "agent.created",
   "agent.first_heartbeat": "agent.first_heartbeat",
   "agent.task_completed": "agent.task_completed",
@@ -135,7 +135,7 @@ export const PAPERCLIP_EVENTS = {
   "skill.imported": "skill.imported",
 } as const;
 
-export const PAPERCLIP_ENUM_DESCRIPTIONS = {
+export const PILOT_ENUM_DESCRIPTIONS = {
   "agent.created": {
     "agent_role": {
       "ceo": "Agent configured for company leadership and board coordination work.",
@@ -353,37 +353,37 @@ export const PAPERCLIP_ENUM_DESCRIPTIONS = {
 
 export const SCHEMA_VERSION = "1" as const;
 
-export interface PaperclipTelemetryEvent<K extends PaperclipEventName = PaperclipEventName> {
+export interface PilotTelemetryEvent<K extends PilotEventName = PilotEventName> {
 name: K
 occurredAt: string
 dimensions: EventDimensionsMap[K]
 }
 
-export type AnyPaperclipTelemetryEvent = {
-  [K in PaperclipEventName]: PaperclipTelemetryEvent<K>
-}[PaperclipEventName];
+export type AnyPilotTelemetryEvent = {
+  [K in PilotEventName]: PilotTelemetryEvent<K>
+}[PilotEventName];
 
-export interface PaperclipTelemetryBatch {
+export interface PilotTelemetryBatch {
 app: "paperclip"
 schemaVersion: typeof SCHEMA_VERSION
 installId: string
 version?: string
-events: AnyPaperclipTelemetryEvent[]
+events: AnyPilotTelemetryEvent[]
 }
 
-export function makeEvent<K extends PaperclipEventName>(
+export function makeEvent<K extends PilotEventName>(
   name: K,
   dimensions: EventDimensionsMap[K],
   occurredAt: string
-): PaperclipTelemetryEvent<K> {
+): PilotTelemetryEvent<K> {
   return { name, occurredAt, dimensions };
 }
 
 export function makeBatch(
   installId: string,
-  events: readonly AnyPaperclipTelemetryEvent[],
+  events: readonly AnyPilotTelemetryEvent[],
   version?: string
-): PaperclipTelemetryBatch {
+): PilotTelemetryBatch {
   return {
     app: "paperclip",
     schemaVersion: SCHEMA_VERSION,

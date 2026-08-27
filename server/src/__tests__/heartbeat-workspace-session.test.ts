@@ -41,7 +41,7 @@ import {
   stripWorkspaceRuntimeFromExecutionRunConfig,
   shouldResetTaskSessionForModelChange,
   stripConfiguredModelFromSessionParams,
-  stripPaperclipSessionMetadataFromSessionParams,
+  stripPilotSessionMetadataFromSessionParams,
   normalizeSessionParams,
   shouldResetTaskSessionForWake,
   scrubGitCredentialText,
@@ -2513,7 +2513,7 @@ describe("stripConfiguredModelFromSessionParams", () => {
 describe("stripPaperclipSessionMetadataFromSessionParams", () => {
   it("removes all internal Paperclip session metadata before adapter invocation", () => {
     expect(
-      stripPaperclipSessionMetadataFromSessionParams({
+      stripPilotSessionMetadataFromSessionParams({
         sessionId: "thread-1",
         cwd: "/tmp/project",
         __paperclipConfiguredModel: "gpt-5.4-mini",

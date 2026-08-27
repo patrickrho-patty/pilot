@@ -155,7 +155,7 @@ const GUEST_COMMAND =
     let db: Db;
     let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>>;
     let previousHttpsMode: string | undefined;
-    let previousPaperclipHome: string | undefined;
+    let previousPilotHome: string | undefined;
     let previousInstanceId: string | undefined;
     /**
      * An EMPTY workspace root, never the repo checkout.
@@ -165,42 +165,42 @@ const GUEST_COMMAND =
      * blow the test timeout and has nothing to do with what is under test.
      */
     let workspaceRoot: string;
-    let paperclipHome: string;
+    let pilotHome: string;
 
     beforeAll(async () => {
       tempDb = await startEmbeddedPostgresTestDatabase("pap17419-reservation-");
       db = createDb(tempDb.connectionString);
-      previousHttpsMode = process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS;
-      process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS = "auto";
+      previousHttpsMode = process.env.PILOT_MANAGED_RUNTIME_HTTPS;
+      process.env.PILOT_MANAGED_RUNTIME_HTTPS = "auto";
     }, 60_000);
 
     beforeEach(async () => {
       workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pap17419-workspace-"));
-      paperclipHome = await fs.mkdtemp(path.join(os.tmpdir(), "pap17419-home-"));
+      pilotHome = await fs.mkdtemp(path.join(os.tmpdir(), "pap17419-home-"));
       // Redirect the local-service registry into a throwaway instance. Without
       // this the suite would write runtime-service records into the real
-      // Paperclip instance on this host and could confuse a live server.
-      previousPaperclipHome = process.env.PAPERCLIP_HOME;
-      previousInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
-      process.env.PAPERCLIP_HOME = paperclipHome;
-      process.env.PAPERCLIP_INSTANCE_ID = `pap17419-${randomUUID()}`;
+      // Pilot instance on this host and could confuse a live server.
+      previousPilotHome = process.env.PILOT_HOME;
+      previousInstanceId = process.env.PILOT_INSTANCE_ID;
+      process.env.PILOT_HOME = pilotHome;
+      process.env.PILOT_INSTANCE_ID = `pap17419-${randomUUID()}`;
     });
 
     afterAll(async () => {
-      if (previousHttpsMode === undefined) delete process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS;
-      else process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS = previousHttpsMode;
+      if (previousHttpsMode === undefined) delete process.env.PILOT_MANAGED_RUNTIME_HTTPS;
+      else process.env.PILOT_MANAGED_RUNTIME_HTTPS = previousHttpsMode;
       await tempDb?.cleanup();
     });
 
     afterEach(async () => {
       // Terminate first, while the suite's fake broker is still installed.
       await resetRuntimeServicesForTests({ terminateProcesses: true });
-      if (previousPaperclipHome === undefined) delete process.env.PAPERCLIP_HOME;
-      else process.env.PAPERCLIP_HOME = previousPaperclipHome;
-      if (previousInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-      else process.env.PAPERCLIP_INSTANCE_ID = previousInstanceId;
+      if (previousPilotHome === undefined) delete process.env.PILOT_HOME;
+      else process.env.PILOT_HOME = previousPilotHome;
+      if (previousInstanceId === undefined) delete process.env.PILOT_INSTANCE_ID;
+      else process.env.PILOT_INSTANCE_ID = previousInstanceId;
       await fs.rm(workspaceRoot, { recursive: true, force: true });
-      await fs.rm(paperclipHome, { recursive: true, force: true });
+      await fs.rm(pilotHome, { recursive: true, force: true });
       await db.delete(workspaceRuntimeServices);
       await db.delete(executionWorkspaces);
       await db.delete(projectWorkspaces);

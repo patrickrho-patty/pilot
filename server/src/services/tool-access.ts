@@ -1417,8 +1417,8 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
 
   function trustedRuntimeHost() {
     return options.trustedLocalStdioRuntimeHost
-      ?? process.env.PAPERCLIP_TRUSTED_MCP_RUNTIME_HOST
-      ?? process.env.PAPERCLIP_TOOL_RUNTIME_TRUSTED_HOST
+      ?? process.env.PILOT_TRUSTED_MCP_RUNTIME_HOST
+      ?? process.env.PILOT_TOOL_RUNTIME_TRUSTED_HOST
       ?? null;
   }
 
@@ -1630,14 +1630,14 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
       throw forbidden("Agent run is not active");
     }
     const snapshot = asRecord(run.contextSnapshot);
-    const paperclipIssue = asRecord(snapshot.paperclipIssue);
+    const pilotIssue = asRecord(snapshot.paperclipIssue);
     return {
       run,
-      issueId: runSnapshotString(snapshot, "issueId") ?? runSnapshotString(paperclipIssue, "id"),
-      projectId: runSnapshotString(snapshot, "projectId") ?? runSnapshotString(paperclipIssue, "projectId"),
+      issueId: runSnapshotString(snapshot, "issueId") ?? runSnapshotString(pilotIssue, "id"),
+      projectId: runSnapshotString(snapshot, "projectId") ?? runSnapshotString(pilotIssue, "projectId"),
       routineId: runSnapshotString(snapshot, "routineId"),
       responsibleUserId: runSnapshotString(snapshot, "responsibleUserId", "responsible_user_id")
-        ?? runSnapshotString(paperclipIssue, "responsibleUserId", "responsible_user_id"),
+        ?? runSnapshotString(pilotIssue, "responsibleUserId", "responsible_user_id"),
     };
   }
 
@@ -1862,7 +1862,7 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
       ?? readConfigString(config, "tokenExchangeUrl")
       ?? readConfigString(config, "pagesTokenExchangeUrl");
     if (url) return url;
-    const pagesApiBase = process.env.PAPERCLIP_PAGES_API_URL?.trim();
+    const pagesApiBase = process.env.PILOT_PAGES_API_URL?.trim();
     if (isPages && pagesApiBase) return new URL("/v1/tokens/exchange", pagesApiBase.endsWith("/") ? pagesApiBase : `${pagesApiBase}/`).toString();
     throw unprocessable("Connection token exchange URL is not configured", { code: "exchange_url_missing" });
   }
@@ -3697,6 +3697,10 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
   }
 
   function oauthEnvName(provider: string, suffix: "CLIENT_ID" | "CLIENT_SECRET") {
+    return `PILOT_TOOL_OAUTH_${provider.replace(/[^a-z0-9]+/gi, "_").toUpperCase()}_${suffix}`;
+  }
+
+  function legacyOauthEnvName(provider: string, suffix: "CLIENT_ID" | "CLIENT_SECRET") {
     return `PAPERCLIP_TOOL_OAUTH_${provider.replace(/[^a-z0-9]+/gi, "_").toUpperCase()}_${suffix}`;
   }
 
@@ -3706,8 +3710,16 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
     return {
       clientIdEnv,
       clientSecretEnv,
-      clientId: process.env[clientIdEnv] ?? process.env.PAPERCLIP_TOOL_OAUTH_CLIENT_ID ?? null,
-      clientSecret: process.env[clientSecretEnv] ?? process.env.PAPERCLIP_TOOL_OAUTH_CLIENT_SECRET ?? null,
+      clientId:
+        process.env[clientIdEnv]
+        ?? process.env[legacyOauthEnvName(provider, "CLIENT_ID")]
+        ?? process.env.PILOT_TOOL_OAUTH_CLIENT_ID
+        ?? null,
+      clientSecret:
+        process.env[clientSecretEnv]
+        ?? process.env[legacyOauthEnvName(provider, "CLIENT_SECRET")]
+        ?? process.env.PILOT_TOOL_OAUTH_CLIENT_SECRET
+        ?? null,
     };
   }
 

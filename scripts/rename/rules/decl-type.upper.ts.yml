@@ -1,0 +1,21 @@
+id: decl-type-upper-ts
+language: TypeScript
+# TIER 2 — type/interface/class DECLARATIONS (type_identifier nodes) containing
+# 'PAPERCLIP' -> 'PILOT'. Property/shorthand KEYS are deliberately excluded: they
+# are wire-format contracts (JSONB keys, package.json fields, protocol params)
+# and move under rules-deferred-keys/ as designed tier-2.5 dual-reads.
+severity: info
+rule:
+  all:
+    - pattern: $ID
+    - kind: type_identifier
+constraints:
+  ID:
+    regex: PAPERCLIP
+transform:
+  NEW:
+    replace:
+      source: $ID
+      replace: PAPERCLIP
+      by: PILOT
+fix: $NEW

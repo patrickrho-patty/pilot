@@ -29,7 +29,7 @@ Either way: launch `claude` from inside that directory, type `/goal`, paste the 
 ## The /goal paste block
 
 ```
-Converge Paperclip's duplicated hand-rolled UI onto the shared
+Converge Pilot's duplicated hand-rolled UI onto the shared
 primitives, per the approved scope in doc/design/DECISION-SHEET.md
 items C2, C3, C5, C11. DESIGN.md is the source of truth; read
 doc/design/CHANGING-THE-UI.md and doc/design/RUN3-PROMPT.md first.

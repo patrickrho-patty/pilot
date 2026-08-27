@@ -255,12 +255,12 @@ describe("normalizeAgentDefaultsForJoin (hermes_gateway)", () => {
 describeEmbeddedPostgres("prepareAgentDefaultsPayloadForJoinPersistence (hermes_gateway)", () => {
   let stopDb: (() => Promise<void>) | null = null;
   let db!: ReturnType<typeof createDb>;
-  const previousKeyFile = process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE;
+  const previousKeyFile = process.env.PILOT_SECRETS_MASTER_KEY_FILE;
   const secretsTmpDir = path.join(os.tmpdir(), `paperclip-hermes-join-defaults-${randomUUID()}`);
 
   beforeAll(async () => {
     mkdirSync(secretsTmpDir, { recursive: true });
-    process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE = path.join(secretsTmpDir, "master.key");
+    process.env.PILOT_SECRETS_MASTER_KEY_FILE = path.join(secretsTmpDir, "master.key");
     const started = await startEmbeddedPostgresTestDatabase("hermes-join-defaults");
     stopDb = started.cleanup;
     db = createDb(started.connectionString);
@@ -278,9 +278,9 @@ describeEmbeddedPostgres("prepareAgentDefaultsPayloadForJoinPersistence (hermes_
   afterAll(async () => {
     await stopDb?.();
     if (previousKeyFile === undefined) {
-      delete process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE;
+      delete process.env.PILOT_SECRETS_MASTER_KEY_FILE;
     } else {
-      process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE = previousKeyFile;
+      process.env.PILOT_SECRETS_MASTER_KEY_FILE = previousKeyFile;
     }
     rmSync(secretsTmpDir, { recursive: true, force: true });
   });

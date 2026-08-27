@@ -937,7 +937,7 @@ describeEmbeddedPostgres("environmentService leases", () => {
       })
       .returning();
 
-    process.env.PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN = "test-server-token";
+    process.env.PILOT_CLOUD_TENANT_SERVER_TOKEN = "test-server-token";
     try {
       const adopted = await svc.ensureLocalEnvironment(companyId);
 
@@ -960,7 +960,7 @@ describeEmbeddedPostgres("environmentService leases", () => {
         .then((rows) => rows[0]);
       expect(reusedRow?.updatedAt.toISOString()).toBe(adoptedRow?.updatedAt.toISOString());
     } finally {
-      delete process.env.PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN;
+      delete process.env.PILOT_CLOUD_TENANT_SERVER_TOKEN;
     }
   });
 
@@ -1640,7 +1640,7 @@ describeEmbeddedPostgres("environmentService leases", () => {
     });
 
     // Partial unique index environments_company_managed_sandbox_idx rejects a
-    // second row matching driver='sandbox' AND managedByPaperclip=true for the
+    // second row matching driver='sandbox' AND managedByPilot=true for the
     // same company. This is the DB-level invariant that replaced the previous
     // application-side post-insert convergence loop.
     const secondInsert = db.insert(environments).values({
@@ -1664,7 +1664,7 @@ describeEmbeddedPostgres("environmentService leases", () => {
     }
     expect(raisedConstraint).toBe("environments_managed_sandbox_idx");
 
-    // Index does NOT cover tenant-created sandbox rows (no managedByPaperclip
+    // Index does NOT cover tenant-created sandbox rows (no managedByPilot
     // marker) — operators must be able to keep multiple tenant sandbox envs.
     await db.insert(environments).values({
       name: "Tenant Sandbox",

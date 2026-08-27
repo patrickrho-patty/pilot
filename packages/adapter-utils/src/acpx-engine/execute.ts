@@ -21,10 +21,10 @@ import {
   readAdapterExecutionTarget,
   resolveAdapterExecutionTargetTimeout,
   runAdapterExecutionTargetShellCommand,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
   startAdapterExecutionTargetProcessSessionBridge,
   type AdapterExecutionTarget,
-  type AdapterExecutionTargetPaperclipBridgeHandle,
+  type AdapterExecutionTargetPilotBridgeHandle,
   type AdapterExecutionTargetProcessSessionBridgeHandle,
   type AdapterExecutionTargetTimeoutResolution,
   type AdapterManagedRuntimeAsset,
@@ -32,32 +32,32 @@ import {
   type SandboxAdditionalSource,
 } from "@paperclipai/adapter-utils/execution-target";
 import {
-  DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
-  applyPaperclipWorkspaceEnv,
+  DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
+  applyPilotWorkspaceEnv,
   asNumber,
   asString,
   buildInvocationEnvForLogs,
-  buildPaperclipEnv,
+  buildPilotEnv,
   ensureAbsoluteDirectory,
   ensurePathInEnv,
-  ensurePaperclipSkillSymlink,
+  ensurePilotSkillSymlink,
   isForbiddenConfigEnvKey,
-  isPaperclipRuntimeEnvKey,
+  isPilotRuntimeEnvKey,
   joinPromptSections,
-  materializePaperclipSkillCopy,
+  materializePilotSkillCopy,
   parseObject,
-  readPaperclipRuntimeSkillEntries,
-  readPaperclipIssueWorkModeFromContext,
-  renderPaperclipWakePrompt,
+  readPilotRuntimeSkillEntries,
+  readPilotIssueWorkModeFromContext,
+  renderPilotWakePrompt,
   renderTemplate,
-  resolvePaperclipInstanceRootForAdapter,
-  selectPaperclipTaskMarkdown,
-  resolvePaperclipDesiredSkillNames,
+  resolvePilotInstanceRootForAdapter,
+  selectPilotTaskMarkdown,
+  resolvePilotDesiredSkillNames,
   removeMaintainerOnlySkillSymlinks,
   rewriteWorkspaceCwdEnvVarsForExecution,
-  shapePaperclipWorkspaceEnvForExecution,
-  stringifyPaperclipWakePayload,
-  type PaperclipSkillEntry,
+  shapePilotWorkspaceEnvForExecution,
+  stringifyPilotWakePayload,
+  type PilotSkillEntry,
 } from "@paperclipai/adapter-utils/server-utils";
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
 import {
@@ -137,7 +137,7 @@ import {
 } from "./startup-timing.js";
 
 const defaultModuleDir = path.dirname(fileURLToPath(import.meta.url));
-const PAPERCLIP_MANAGED_CODEX_SKILLS_MANIFEST = ".paperclip-managed-skills.json";
+const PILOT_MANAGED_CODEX_SKILLS_MANIFEST = ".paperclip-managed-skills.json";
 const BENIGN_NES_CLOSE_STDERR = /method: ['"]nes\/close['"].*-32601/;
 
 function routeChildStderr(state: ChildStderrState, chunk: string) {
@@ -167,7 +167,7 @@ function flushChildStderr(state: ChildStderrState) {
   state.pendingLiveLine = "";
 }
 
-type PaperclipAcpRuntimeOptions = AcpRuntimeOptions & {
+type PilotAcpRuntimeOptions = AcpRuntimeOptions & {
   onAgentSpawn?: (meta: AcpxAgentProcessIdentity) => Promise<void>;
   // Return the current-run parent-context token. It is the `task.run` token
   // during startup and after the turn, and the `agent.turn` token during the
@@ -176,13 +176,13 @@ type PaperclipAcpRuntimeOptions = AcpRuntimeOptions & {
   getRuntimeParentContext?: () => StartupSpanContext | undefined;
 };
 
-type AcpxRuntimeFactory = (options: PaperclipAcpRuntimeOptions) => AcpRuntime;
+type AcpxRuntimeFactory = (options: PilotAcpRuntimeOptions) => AcpRuntime;
 
 /**
  * A remote runner-backed session's staged runtime, kept warm across runs so a
  * compatible resume reuses it instead of re-shipping the workspace / re-seeding
  * the managed home (PR 3: "stage once per session"). Keyed by the session's
- * `sessionKey` (`paperclip:companyId:agentId:taskKey:fingerprint`) — the SAME
+ * `sessionKey` (`pilot:companyId:agentId:taskKey:fingerprint`) — the SAME
  * fingerprint scoping the warm handle uses — so one session can never read
  * another session's staged credentials: a different agent/task/config hashes to
  * a different key, misses this cache, and stages its own home.
@@ -401,7 +401,7 @@ interface AcpxPreparedRuntime {
   agentCommand: string | null;
   agentRegistry: AcpAgentRegistry;
   processSessionBridge: AdapterExecutionTargetProcessSessionBridgeHandle | null;
-  paperclipBridge: AdapterExecutionTargetPaperclipBridgeHandle | null;
+  paperclipBridge: AdapterExecutionTargetPilotBridgeHandle | null;
   // The workspace/runtime staged into a runner-backed remote sandbox (null for
   // local runs and the runner-less ACP→CLI fallback). PR 1 stages the workspace
   // + cwd only; the `assetDirs`/`runtimeRootDir`/`restoreWorkspace` it carries
@@ -434,7 +434,7 @@ interface AcpxPreparedRuntime {
   skillPromptInstructions: string;
   skillsIdentity: Record<string, unknown>;
   childStderrLogPath: string | null;
-  paperclipClaudeSettings: PaperclipClaudeSettingsResult | null;
+  paperclipClaudeSettings: PilotClaudeSettingsResult | null;
   mcpServers: NonNullable<AcpRuntimeOptions["mcpServers"]>;
   mcpIdentity: Array<{ name: string; url: string; connectionId: string }>;
   // Per-step round-trip / provider-duration readers sourced from the sandbox
@@ -485,7 +485,7 @@ export function buildSessionFingerprint(identity: SessionFingerprintIdentity): s
 
 /**
  * Build the session key from the fingerprint and the outer-key identity. The key
- * form is `paperclip:companyId:agentId:taskKey:fingerprint`.
+ * form is `pilot:companyId:agentId:taskKey:fingerprint`.
  */
 export function buildSessionKey(identity: SessionKeyIdentity, fingerprint: string): string {
   return `paperclip:${identity.companyId}:${identity.agentId}:${identity.taskKey}:${fingerprint}`;
@@ -590,21 +590,21 @@ async function referencedSourceContentSignature(localPath: string): Promise<stri
   return hash.digest("hex").slice(0, 16);
 }
 
-function defaultPaperclipInstanceDir(): string {
-  const home = process.env.PAPERCLIP_HOME?.trim() || path.join(os.homedir(), ".paperclip");
-  const instanceId = process.env.PAPERCLIP_INSTANCE_ID?.trim() || "default";
-  return resolvePaperclipInstanceRootForAdapter({
+function defaultPilotInstanceDir(): string {
+  const home = process.env.PILOT_HOME?.trim() || path.join(os.homedir(), ".paperclip");
+  const instanceId = process.env.PILOT_INSTANCE_ID?.trim() || "default";
+  return resolvePilotInstanceRootForAdapter({
     homeDir: home,
     instanceId,
   });
 }
 
 function defaultStateDir(companyId: string, agentId: string): string {
-  return path.join(defaultPaperclipInstanceDir(), "companies", companyId, "acp-engine", "agents", agentId);
+  return path.join(defaultPilotInstanceDir(), "companies", companyId, "acp-engine", "agents", agentId);
 }
 
 function resolveManagedCodexHomeDir(companyId: string): string {
-  return path.join(defaultPaperclipInstanceDir(), "companies", companyId, "codex-home");
+  return path.join(defaultPilotInstanceDir(), "companies", companyId, "codex-home");
 }
 
 // Walk up from startDir looking for `node_modules/.bin/<binName>`. This matches
@@ -854,7 +854,7 @@ async function hashPathContents(
 }
 
 async function buildSkillSetKey(input: {
-  skills: PaperclipSkillEntry[];
+  skills: PilotSkillEntry[];
   label: string;
 }): Promise<string> {
   const hash = createHash("sha256");
@@ -870,9 +870,9 @@ async function buildSkillSetKey(input: {
 async function resolveSelectedRuntimeSkills(
   config: Record<string, unknown>,
   moduleDir: string,
-): Promise<{ allSkills: PaperclipSkillEntry[]; selectedSkills: PaperclipSkillEntry[]; desiredSkillNames: string[] }> {
-  const allSkills = await readPaperclipRuntimeSkillEntries(config, moduleDir);
-  const desiredSkillNames = resolvePaperclipDesiredSkillNames(config, allSkills);
+): Promise<{ allSkills: PilotSkillEntry[]; selectedSkills: PilotSkillEntry[]; desiredSkillNames: string[] }> {
+  const allSkills = await readPilotRuntimeSkillEntries(config, moduleDir);
+  const desiredSkillNames = resolvePilotDesiredSkillNames(config, allSkills);
   const desiredSet = new Set(desiredSkillNames);
   return {
     allSkills,
@@ -900,7 +900,7 @@ async function prepareClaudeSkillRuntime(input: {
   for (const entry of selectedSkills) {
     const target = path.join(skillsHome, entry.runtimeName);
     try {
-      const result = await materializePaperclipSkillCopy(entry.source, target);
+      const result = await materializePilotSkillCopy(entry.source, target);
       if (result.skippedSymlinks.length > 0) {
         await input.onLog(
           "stdout",
@@ -941,7 +941,7 @@ async function prepareClaudeSkillRuntime(input: {
 }
 
 async function readManagedCodexSkillsManifest(skillsHome: string): Promise<Set<string>> {
-  const manifestPath = path.join(skillsHome, PAPERCLIP_MANAGED_CODEX_SKILLS_MANIFEST);
+  const manifestPath = path.join(skillsHome, PILOT_MANAGED_CODEX_SKILLS_MANIFEST);
   try {
     const raw = JSON.parse(await fs.readFile(manifestPath, "utf8")) as unknown;
     const parsed = parseObject(raw);
@@ -957,7 +957,7 @@ async function readManagedCodexSkillsManifest(skillsHome: string): Promise<Set<s
 async function writeManagedCodexSkillsManifest(skillsHome: string, skillNames: Iterable<string>): Promise<void> {
   const managedSkillNames = Array.from(new Set(skillNames)).sort();
   await fs.writeFile(
-    path.join(skillsHome, PAPERCLIP_MANAGED_CODEX_SKILLS_MANIFEST),
+    path.join(skillsHome, PILOT_MANAGED_CODEX_SKILLS_MANIFEST),
     `${JSON.stringify({ version: 1, managedSkillNames }, null, 2)}\n`,
     "utf8",
   );
@@ -972,8 +972,8 @@ async function removeSkillTarget(target: string): Promise<boolean> {
 
 async function reconcileManagedCodexSkills(input: {
   skillsHome: string;
-  allSkills: PaperclipSkillEntry[];
-  selectedSkills: PaperclipSkillEntry[];
+  allSkills: PilotSkillEntry[];
+  selectedSkills: PilotSkillEntry[];
   onLog: AdapterExecutionContext["onLog"];
 }): Promise<void> {
   const desired = new Set(input.selectedSkills.map((entry) => entry.runtimeName));
@@ -1073,7 +1073,7 @@ async function prepareCodexSkillRuntime(input: {
   for (const entry of selectedSkills) {
     const target = path.join(skillsHome, entry.runtimeName);
     try {
-      const result = await materializePaperclipSkillCopy(entry.source, target);
+      const result = await materializePilotSkillCopy(entry.source, target);
       if (result.skippedSymlinks.length > 0) {
         await input.onLog(
           "stdout",
@@ -1132,7 +1132,7 @@ async function prepareGeminiSkillRuntime(input: {
   for (const entry of selectedSkills) {
     const target = path.join(skillsHome, entry.runtimeName);
     try {
-      const result = await ensurePaperclipSkillSymlink(entry.source, target);
+      const result = await ensurePilotSkillSymlink(entry.source, target);
       if (result === "created" || result === "repaired") {
         await input.onLog(
           "stdout",
@@ -1141,7 +1141,7 @@ async function prepareGeminiSkillRuntime(input: {
       }
     } catch (err) {
       if (isErrnoException(err, "EPERM")) {
-        const result = await materializePaperclipSkillCopy(entry.source, target);
+        const result = await materializePilotSkillCopy(entry.source, target);
         await input.onLog(
           "stdout",
           `[paperclip] Copied ACPX Gemini skill "${entry.runtimeName}" into ${skillsHome} because symlinks are unavailable.${result.skippedSymlinks.length > 0 ? ` Skipped ${result.skippedSymlinks.length} nested symlink(s).` : ""}\n`,
@@ -1280,7 +1280,7 @@ function buildSessionParams(input: {
   };
 }
 
-interface PaperclipClaudeSettingsResult {
+interface PilotClaudeSettingsResult {
   filePath: string;
   allow: string[];
   additionalDirectories: string[];
@@ -1297,23 +1297,23 @@ function uniqueSorted(values: Array<string | null | undefined>): string[] {
 // `.claude/settings.local.json` we override the user's potentially-restrictive
 // `~/.claude/settings.json` (e.g. `defaultMode: "dontAsk"`, which silently
 // denies every non-allowlisted tool and never reaches `canUseTool`), and we
-// widen the SDK's Read sandbox to include the Paperclip state dirs the agent
+// widen the SDK's Read sandbox to include the Pilot state dirs the agent
 // needs to talk to its own control plane.
-async function writePaperclipClaudeSettings(input: {
+async function writePilotClaudeSettings(input: {
   cwd: string;
   stateDir: string;
   agentHome: string;
   companyId: string;
-}): Promise<PaperclipClaudeSettingsResult> {
+}): Promise<PilotClaudeSettingsResult> {
   const filePath = path.join(input.cwd, ".claude", "settings.local.json");
-  const instanceRoot = defaultPaperclipInstanceDir();
+  const instanceRoot = defaultPilotInstanceDir();
   const companyRoot = path.join(instanceRoot, "companies", input.companyId);
-  const paperclipAdditionalDirectories = uniqueSorted([
+  const pilotAdditionalDirectories = uniqueSorted([
     input.stateDir,
     input.agentHome,
     companyRoot,
   ]);
-  const paperclipAllow = uniqueSorted([
+  const pilotAllow = uniqueSorted([
     "Bash(curl:*)",
     "Bash(env:*)",
     "Bash(env)",
@@ -1341,10 +1341,10 @@ async function writePaperclipClaudeSettings(input: {
   const existingAdditionalDirectories = Array.isArray(existingPerms.additionalDirectories)
     ? (existingPerms.additionalDirectories as unknown[]).filter((value): value is string => typeof value === "string")
     : [];
-  const mergedAllow = uniqueSorted([...existingAllow, ...paperclipAllow]);
+  const mergedAllow = uniqueSorted([...existingAllow, ...pilotAllow]);
   const mergedAdditionalDirectories = uniqueSorted([
     ...existingAdditionalDirectories,
-    ...paperclipAdditionalDirectories,
+    ...pilotAdditionalDirectories,
   ]);
   const existingDefaultMode =
     typeof existingPerms.defaultMode === "string" ? (existingPerms.defaultMode as string) : "";
@@ -1596,7 +1596,7 @@ async function buildRuntime(input: {
     batch: STARTUP_BRIDGE_BATCH,
     criticalPath: false,
   };
-  const shapedWorkspaceEnv = shapePaperclipWorkspaceEnvForExecution({
+  const shapedWorkspaceEnv = shapePilotWorkspaceEnvForExecution({
     workspaceCwd: effectiveWorkspaceCwd,
     workspaceWorktreePath,
     executionTargetIsRemote,
@@ -1643,7 +1643,7 @@ async function buildRuntime(input: {
   await fs.mkdir(stateDir, { recursive: true });
 
   const envConfig = parseObject(config.env);
-  const env: Record<string, string> = { ...buildPaperclipEnv(agent), PAPERCLIP_RUN_ID: runId };
+  const env: Record<string, string> = { ...buildPilotEnv(agent), PILOT_RUN_ID: runId };
   const wakeTaskId =
     (typeof context.taskId === "string" && context.taskId.trim()) ||
     (typeof context.issueId === "string" && context.issueId.trim()) ||
@@ -1658,17 +1658,17 @@ async function buildRuntime(input: {
   const linkedIssueIds = Array.isArray(context.issueIds)
     ? context.issueIds.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
-  const wakePayloadJson = stringifyPaperclipWakePayload(context.paperclipWake);
-  const issueWorkMode = readPaperclipIssueWorkModeFromContext(context);
-  if (wakeTaskId) env.PAPERCLIP_TASK_ID = wakeTaskId;
-  if (issueWorkMode) env.PAPERCLIP_ISSUE_WORK_MODE = issueWorkMode;
-  if (wakeReason) env.PAPERCLIP_WAKE_REASON = wakeReason;
-  if (wakeCommentId) env.PAPERCLIP_WAKE_COMMENT_ID = wakeCommentId;
-  if (approvalId) env.PAPERCLIP_APPROVAL_ID = approvalId;
-  if (approvalStatus) env.PAPERCLIP_APPROVAL_STATUS = approvalStatus;
-  if (linkedIssueIds.length > 0) env.PAPERCLIP_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
-  if (wakePayloadJson) env.PAPERCLIP_WAKE_PAYLOAD_JSON = wakePayloadJson;
-  applyPaperclipWorkspaceEnv(env, {
+  const wakePayloadJson = stringifyPilotWakePayload(context.paperclipWake);
+  const issueWorkMode = readPilotIssueWorkModeFromContext(context);
+  if (wakeTaskId) env.PILOT_TASK_ID = wakeTaskId;
+  if (issueWorkMode) env.PILOT_ISSUE_WORK_MODE = issueWorkMode;
+  if (wakeReason) env.PILOT_WAKE_REASON = wakeReason;
+  if (wakeCommentId) env.PILOT_WAKE_COMMENT_ID = wakeCommentId;
+  if (approvalId) env.PILOT_APPROVAL_ID = approvalId;
+  if (approvalStatus) env.PILOT_APPROVAL_STATUS = approvalStatus;
+  if (linkedIssueIds.length > 0) env.PILOT_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
+  if (wakePayloadJson) env.PILOT_WAKE_PAYLOAD_JSON = wakePayloadJson;
+  applyPilotWorkspaceEnv(env, {
     workspaceCwd: shapedWorkspaceEnv.workspaceCwd,
     workspaceSource,
     workspaceStrategy,
@@ -1697,16 +1697,16 @@ async function buildRuntime(input: {
   for (const [key, value] of Object.entries(shapedEnvConfig)) {
     if (typeof value !== "string") continue;
     // Runtime PAPERCLIP_* always wins over config: skip a PAPERCLIP_* key that
-    // Paperclip has already assigned this run. PAPERCLIP_API_KEY is never
+    // Pilot has already assigned this run. PILOT_API_KEY is never
     // accepted from config — the harness-minted run token is the only source.
-    // A PAPERCLIP_* key Paperclip did NOT set is stable per-run config, so it
+    // A PILOT_* key Pilot did NOT set is stable per-run config, so it
     // applies and feeds the fingerprint hash below.
     if (isForbiddenConfigEnvKey(key)) continue;
-    if (isPaperclipRuntimeEnvKey(key) && key in env) continue;
+    if (isPilotRuntimeEnvKey(key) && key in env) continue;
     env[key] = value;
     resolvedAdapterEnv[key] = value;
   }
-  if (authToken) env.PAPERCLIP_API_KEY = authToken;
+  if (authToken) env.PILOT_API_KEY = authToken;
   // For the claude agent, set model via ANTHROPIC_MODEL at startup rather than
   // via session/set_config_option — the ACP server's set_config_option handler
   // validates the value against its internal available-models list and rejects
@@ -1735,7 +1735,7 @@ async function buildRuntime(input: {
   let skillPromptInstructions = "";
   let skillsIdentity: Record<string, unknown> = { mode: "unsupported" };
   const skillCommandNotes: string[] = [];
-  let paperclipClaudeSettings: PaperclipClaudeSettingsResult | null = null;
+  let pilotClaudeSettings: PilotClaudeSettingsResult | null = null;
   if (acpxAgent === "claude") {
     const preparedSkills = await prepareClaudeSkillRuntime({
       stateDir,
@@ -1746,16 +1746,16 @@ async function buildRuntime(input: {
     skillPromptInstructions = preparedSkills.promptInstructions;
     skillsIdentity = preparedSkills.identity;
     skillCommandNotes.push(...preparedSkills.commandNotes);
-    paperclipClaudeSettings = await writePaperclipClaudeSettings({
+    pilotClaudeSettings = await writePilotClaudeSettings({
       cwd,
       stateDir,
       agentHome,
       companyId: agent.companyId,
     });
     skillCommandNotes.push(
-      `Wrote Paperclip-managed Claude settings to ${paperclipClaudeSettings.filePath} (defaultMode=${paperclipClaudeSettings.defaultMode}${
-        paperclipClaudeSettings.overrodeDontAsk ? "; overrode user dontAsk" : ""
-      }, +${paperclipClaudeSettings.additionalDirectories.length} read root(s), +${paperclipClaudeSettings.allow.length} allow rule(s)).`,
+      `Wrote Paperclip-managed Claude settings to ${pilotClaudeSettings.filePath} (defaultMode=${pilotClaudeSettings.defaultMode}${
+        pilotClaudeSettings.overrodeDontAsk ? "; overrode user dontAsk" : ""
+      }, +${pilotClaudeSettings.additionalDirectories.length} read root(s), +${pilotClaudeSettings.allow.length} allow rule(s)).`,
     );
   } else if (acpxAgent === "codex") {
     // Step 2 — codex-home.seed: the codex managed-home + skills preparation.
@@ -1785,9 +1785,9 @@ async function buildRuntime(input: {
     skillsIdentity = preparedSkills.identity;
     skillCommandNotes.push(...preparedSkills.commandNotes);
   } else {
-    const desired = resolvePaperclipDesiredSkillNames(
+    const desired = resolvePilotDesiredSkillNames(
       config,
-      await readPaperclipRuntimeSkillEntries(config, input.engine.moduleDir),
+      await readPilotRuntimeSkillEntries(config, input.engine.moduleDir),
     );
     skillsIdentity = { mode: "custom_unsupported", desiredSkillNames: desired };
     if (desired.length > 0) {
@@ -1876,11 +1876,11 @@ async function buildRuntime(input: {
     additionalSourcesIdentity: additionalSourcesIdentity as unknown as Record<string, unknown>,
     skillsIdentity,
     skillPromptInstructions,
-    paperclipClaudeSettings: paperclipClaudeSettings
+    paperclipClaudeSettings: pilotClaudeSettings
       ? {
-          allow: paperclipClaudeSettings.allow,
-          additionalDirectories: paperclipClaudeSettings.additionalDirectories,
-          defaultMode: paperclipClaudeSettings.defaultMode,
+          allow: pilotClaudeSettings.allow,
+          additionalDirectories: pilotClaudeSettings.additionalDirectories,
+          defaultMode: pilotClaudeSettings.defaultMode,
         }
       : null,
     mcpServers: mcpIdentity,
@@ -2022,7 +2022,7 @@ async function buildRuntime(input: {
         }),
       measureStageStep: (run) => measureStartupStep(input.ctx, nowMs, "stage.sync", run, stepMetrics),
       publishStagedProjectHints: (stagedProjectDirs) => {
-        const shapedHints = shapePaperclipWorkspaceEnvForExecution({
+        const shapedHints = shapePilotWorkspaceEnvForExecution({
           workspaceCwd: effectiveWorkspaceCwd,
           workspaceWorktreePath,
           workspaceHints,
@@ -2031,7 +2031,7 @@ async function buildRuntime(input: {
           stagedProjectDirs,
         }).workspaceHints;
         if (shapedHints.length > 0) {
-          env.PAPERCLIP_WORKSPACES_JSON = JSON.stringify(shapedHints);
+          env.PILOT_WORKSPACES_JSON = JSON.stringify(shapedHints);
         }
       },
       onReuseLog: () =>
@@ -2040,13 +2040,13 @@ async function buildRuntime(input: {
           "[paperclip] Reusing the staged in-sandbox runtime for this resumed session (no workspace re-ship / managed-home re-seed).\n",
         ),
       startPaperclipBridge: (runtimeRootDir) =>
-        startAdapterExecutionTargetPaperclipBridge({
+        startAdapterExecutionTargetPilotBridge({
           runId,
           target: { ...remoteTarget, streamRunLogs: false },
           runtimeRootDir,
           adapterKey: input.engine.adapterType,
           timeoutSec,
-          hostApiToken: env.PAPERCLIP_API_KEY,
+          hostApiToken: env.PILOT_API_KEY,
           onLog: input.ctx.onLog,
           getRuntimeParentContext: input.getRuntimeParentContext,
           runtimeSpan: input.runtimeSpan,
@@ -2093,24 +2093,24 @@ async function buildRuntime(input: {
     sessionStagingLeaseRelease = sandboxSite.stagingLeaseRelease;
   }
   // Both bridge starts run under one try so a failure at EITHER — including the
-  // paperclip callback bridge — fires the same abandon-path cleanup. The
-  // paperclip bridge starts after the workspace + managed home were already
+  // pilot callback bridge — fires the same abandon-path cleanup. The
+  // pilot bridge starts after the workspace + managed home were already
   // staged and the per-session staging lease is already held, so leaving it
   // outside the catch would strand the lease (and the staged temp) on a
   // start failure and deadlock the next run of this session.
-  let paperclipBridge: AdapterExecutionTargetPaperclipBridgeHandle | null = null;
+  let pilotBridge: AdapterExecutionTargetPilotBridgeHandle | null = null;
   let processSessionBridge: AdapterExecutionTargetProcessSessionBridgeHandle | null = null;
   let runtimeEnv: Record<string, string> = {};
   const startTransportStart = nowMs();
   try {
     if (useRemoteProcessSession && sandboxSite) {
       // The sandbox run site brings up both host-side bridges concurrently, keeps
-      // the one paperclip-env → process-session-launch dependency at a single
+      // the one pilot-env → process-session-launch dependency at a single
       // sequencing point, settles both starts, and returns the started handles
       // plus the finalized launch env. On a partial failure it stops nothing and
       // rethrows; the catch below stops whichever bridge the site started.
       const transport = await sandboxSite.startTransport({ sessionKey } as unknown as AcpRunContext);
-      paperclipBridge = transport.controlBridge;
+      pilotBridge = transport.controlBridge;
       processSessionBridge = transport.agentBridge;
       runtimeEnv = transport.launchEnv;
       await emitRunPhaseTiming(input.ctx, "start_transport", nowMs() - startTransportStart, "ok");
@@ -2126,7 +2126,7 @@ async function buildRuntime(input: {
     // bridge leaks (mirrors the settlement `stopTransport` step). The site sets its
     // started bridges before it rethrows, so read them from the site here (the
     // local handles stay null when `startTransport` throws before it returns).
-    const startedControl = sandboxSite?.controlBridge ?? paperclipBridge;
+    const startedControl = sandboxSite?.controlBridge ?? pilotBridge;
     const startedAgent = sandboxSite?.agentBridge ?? processSessionBridge;
     await Promise.allSettled([startedControl?.stop(), startedAgent?.stop()]);
     // The staged home / copy-back teardown must run even if a bridge fails to
@@ -2196,7 +2196,7 @@ async function buildRuntime(input: {
     agentCommand,
     agentRegistry,
     processSessionBridge,
-    paperclipBridge,
+    paperclipBridge: pilotBridge,
     stagedRuntime,
     remoteManagedHomeTeardown,
     remoteStagingDispose,
@@ -2209,7 +2209,7 @@ async function buildRuntime(input: {
       commandNotes: skillCommandNotes,
     },
     childStderrLogPath,
-    paperclipClaudeSettings,
+    paperclipClaudeSettings: pilotClaudeSettings,
     mcpServers,
     mcpIdentity,
     stepMetrics,
@@ -2272,7 +2272,7 @@ async function applySessionConfigOptions(input: {
 
 /**
  * Build the process-session launch env: the host env overlaid with the run's
- * `env` (so the merged paperclip bridge vars win) and a guaranteed `PATH`,
+ * `env` (so the merged pilot bridge vars win) and a guaranteed `PATH`,
  * narrowed to string values. Shared by the remote concurrent bring-up and the
  * local / runner-less lane so both resolve the runtime env identically.
  */
@@ -2330,20 +2330,20 @@ interface RuntimeSettlementPlan {
   readonly cancelTurnReason: string | null;
 }
 
-function renderPaperclipEnvNote(env: Record<string, string>): string {
-  const paperclipKeys = Object.keys(env)
+function renderPilotEnvNote(env: Record<string, string>): string {
+  const pilotKeys = Object.keys(env)
     .filter((key) => key.startsWith("PAPERCLIP_"))
     .sort();
-  if (paperclipKeys.length === 0) return "";
+  if (pilotKeys.length === 0) return "";
   return [
     "Paperclip runtime note:",
-    `The following PAPERCLIP_* environment variables are available in this run: ${paperclipKeys.join(", ")}`,
+    `The following PAPERCLIP_* environment variables are available in this run: ${pilotKeys.join(", ")}`,
     "Do not assume these variables are missing without checking your shell environment.",
   ].join("\n");
 }
 
 function renderApiAccessNote(env: Record<string, string>): string {
-  if (!env.PAPERCLIP_API_URL || !env.PAPERCLIP_API_KEY) return "";
+  if (!env.PILOT_API_URL || !env.PILOT_API_KEY) return "";
   const lines = [
     "Paperclip API access note:",
     "Use terminal commands with curl to make Paperclip API requests.",
@@ -2352,7 +2352,7 @@ function renderApiAccessNote(env: Record<string, string>): string {
     "GET example:",
     `  curl -s -H "Authorization: Bearer $PAPERCLIP_API_KEY" "$PAPERCLIP_API_BASE/api/agents/me"`,
   ];
-  if (env.PAPERCLIP_TASK_ID) {
+  if (env.PILOT_TASK_ID) {
     lines.push(
       "Scoped issue comment example:",
       `  curl -s -X POST -H "Authorization: Bearer $PAPERCLIP_API_KEY" -H "Content-Type: application/json" -H "X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID" -d '{"body":"Status update from agent."}' "$PAPERCLIP_API_BASE/api/issues/$PAPERCLIP_TASK_ID/comments"`,
@@ -2369,7 +2369,7 @@ async function buildPrompt(ctx: AdapterExecutionContext, resumedSession: boolean
   commandNotes: string[];
 }> {
   const { agent, runId, config, context, onLog } = ctx;
-  const promptTemplate = asString(config.promptTemplate, DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE);
+  const promptTemplate = asString(config.promptTemplate, DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE);
   const instructionsFilePath = asString(config.instructionsFilePath, "").trim();
   const instructionsDir = instructionsFilePath ? `${path.dirname(instructionsFilePath)}/` : "";
   let instructionsPrefix = "";
@@ -2409,8 +2409,8 @@ async function buildPrompt(ctx: AdapterExecutionContext, resumedSession: boolean
     !resumedSession && bootstrapPromptTemplate.trim().length > 0
       ? renderTemplate(bootstrapPromptTemplate, templateData).trim()
       : "";
-  const taskContextNote = selectPaperclipTaskMarkdown(context, { resumedSession });
-  const wakePrompt = renderPaperclipWakePrompt(context.paperclipWake, {
+  const taskContextNote = selectPilotTaskMarkdown(context, { resumedSession });
+  const wakePrompt = renderPilotWakePrompt(context.paperclipWake, {
     resumedSession,
     // The task-context markdown is the authoritative brief on this lane; keep
     // the wake prompt's description copy out so the prompt carries it once.
@@ -2420,7 +2420,7 @@ async function buildPrompt(ctx: AdapterExecutionContext, resumedSession: boolean
   const promptInstructionsPrefix = shouldUseResumeDeltaPrompt ? "" : instructionsPrefix;
   const renderedPrompt = shouldUseResumeDeltaPrompt ? "" : renderTemplate(promptTemplate, templateData);
   const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();
-  const paperclipEnvNote = renderPaperclipEnvNote(env);
+  const pilotEnvNote = renderPilotEnvNote(env);
   const apiAccessNote = renderApiAccessNote(env);
   const prompt = joinPromptSections([
     promptInstructionsPrefix,
@@ -2428,7 +2428,7 @@ async function buildPrompt(ctx: AdapterExecutionContext, resumedSession: boolean
     wakePrompt,
     sessionHandoffNote,
     taskContextNote,
-    paperclipEnvNote,
+    pilotEnvNote,
     apiAccessNote,
     renderedPrompt,
   ]);
@@ -2443,7 +2443,7 @@ async function buildPrompt(ctx: AdapterExecutionContext, resumedSession: boolean
       wakePromptChars: wakePrompt.length,
       sessionHandoffChars: sessionHandoffNote.length,
       taskContextChars: taskContextNote.length,
-      runtimeNoteChars: paperclipEnvNote.length + apiAccessNote.length,
+      runtimeNoteChars: pilotEnvNote.length + apiAccessNote.length,
       heartbeatPromptChars: renderedPrompt.length,
     },
   };
@@ -2454,7 +2454,7 @@ async function emitAcpxLog(ctx: AdapterExecutionContext, payload: Record<string,
 }
 
 /**
- * Build the short run summary that Paperclip may auto-post as an issue comment
+ * Build the short run summary that Pilot may auto-post as an issue comment
  * when the agent leaves no comment of its own.
  *
  * Prefer the last non-empty *output* segment after a tool call. Intermediate
@@ -3524,7 +3524,7 @@ export function createAcpxEngineExecutor(deps: AcpxEngineExecutorOptions = {}) {
         processIdentitySink.current = ctx.onSpawn;
         flushChildStderr(childStderrState);
         childStderrState.logPath = prepared.childStderrLogPath;
-        const runtimeOptions: PaperclipAcpRuntimeOptions = {
+        const runtimeOptions: PilotAcpRuntimeOptions = {
           cwd: prepared.cwd,
           // Host-only spawn cwd for the relay proxy on the remote process-session
           // lane; `undefined` elsewhere so acpx falls back to `cwd` (byte-identical).

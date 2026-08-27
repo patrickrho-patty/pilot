@@ -14,14 +14,14 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { resolvePaperclipHomeDir } from "../home-paths.js";
+import { resolvePilotHomeDir } from "../home-paths.js";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface AdapterPluginRecord {
-  /** npm package name (e.g., "droid-paperclip-adapter") */
+  /** npm package name (e.g., "droid-pilot-adapter") */
   packageName: string;
   /** Absolute local filesystem path (for locally linked adapters) */
   localPath?: string;
@@ -44,11 +44,11 @@ interface AdapterSettings {
 // ---------------------------------------------------------------------------
 
 function adapterPluginPaths() {
-  const paperclipDir = resolvePaperclipHomeDir();
+  const pilotDir = resolvePilotHomeDir();
   return {
-    adapterPluginsDir: path.join(paperclipDir, "adapter-plugins"),
-    adapterPluginsStorePath: path.join(paperclipDir, "adapter-plugins.json"),
-    adapterSettingsPath: path.join(paperclipDir, "adapter-settings.json"),
+    adapterPluginsDir: path.join(pilotDir, "adapter-plugins"),
+    adapterPluginsStorePath: path.join(pilotDir, "adapter-plugins.json"),
+    adapterSettingsPath: path.join(pilotDir, "adapter-settings.json"),
   };
 }
 

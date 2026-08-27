@@ -1,10 +1,10 @@
 # Identicon Prototyper
 
-Use this reference when generating or reviewing deterministic Paperclip capsule identicons/profile pills. Prototype source paths, when the Paperclip content repository is available:
+Use this reference when generating or reviewing deterministic Pilot capsule identicons/profile pills. Prototype source paths, when the Pilot content repository is available:
 
-- `paperclip-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/README.md`
-- `paperclip-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/src/identicon.ts`
-- `paperclip-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/src/App.tsx`
+- `pilot-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/README.md`
+- `pilot-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/src/identicon.ts`
+- `pilot-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/src/App.tsx`
 
 These are individual agent marks. They do not replace product UI status capsules or the canonical hero capsule bank.
 
@@ -20,7 +20,7 @@ Additional options such as color space, color scheme, motion, and manual angle a
 
 Default app state:
 
-- Seed: `paperclip capsule bank`
+- Seed: `pilot capsule bank`
 - Variant: `gradient-smooth`
 - Size control: `48` in the UI; renderer often uses `512` for the primary preview and `256` for samples.
 - Density: `56`

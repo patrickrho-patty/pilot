@@ -6,8 +6,8 @@ import type {
 } from "@paperclipai/adapter-utils";
 import {
   buildRuntimeMountedSkillSnapshot,
-  readPaperclipRuntimeSkillEntries,
-  resolvePaperclipDesiredSkillNames,
+  readPilotRuntimeSkillEntries,
+  resolvePilotDesiredSkillNames,
 } from "@paperclipai/adapter-utils/server-utils";
 
 const __moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -15,8 +15,8 @@ const __moduleDir = path.dirname(fileURLToPath(import.meta.url));
 async function buildCodexSkillSnapshot(
   config: Record<string, unknown>,
 ): Promise<AdapterSkillSnapshot> {
-  const availableEntries = await readPaperclipRuntimeSkillEntries(config, __moduleDir);
-  const desiredSkills = resolvePaperclipDesiredSkillNames(config, availableEntries);
+  const availableEntries = await readPilotRuntimeSkillEntries(config, __moduleDir);
+  const desiredSkills = resolvePilotDesiredSkillNames(config, availableEntries);
   return buildRuntimeMountedSkillSnapshot({
     adapterType: "codex_local",
     availableEntries,
@@ -40,5 +40,5 @@ export function resolveCodexDesiredSkillNames(
   config: Record<string, unknown>,
   availableEntries: Array<{ key: string; required?: boolean }>,
 ) {
-  return resolvePaperclipDesiredSkillNames(config, availableEntries);
+  return resolvePilotDesiredSkillNames(config, availableEntries);
 }

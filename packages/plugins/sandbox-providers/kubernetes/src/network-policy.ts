@@ -38,11 +38,11 @@ const PRIVATE_AND_LINK_LOCAL_EXCEPT_CIDRS = [
 ];
 
 // Design note: the deny-all baseline blocks all ingress to agent pods.
-// Paperclip-server does NOT push to agent pods — the agent shim makes
-// outbound calls to paperclip-server via the egress allow-list (port 3100).
+// Pilot-server does NOT push to agent pods — the agent shim makes
+// outbound calls to pilot-server via the egress allow-list (port 3100).
 // This pull/callback model means no ingress rule is needed. If a future
 // feature requires server→agent push (e.g. forced shutdown, live exec),
-// add a targeted ingress rule here scoped to the paperclip-server pod
+// add a targeted ingress rule here scoped to the pilot-server pod
 // selector.
 export function buildNetworkPolicyManifests(input: BuildNetworkPolicyInput): Record<string, unknown>[] {
   const denyAll = {

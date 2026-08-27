@@ -98,7 +98,7 @@ test("bundled package staging installs only dependencies included in the tarball
 });
 
 test("bundled package staging rebuilds npm dependencies and applies the acpx patch", (t) => {
-  const fixtureDir = mkdtempSync(join(tmpdir(), "paperclip-bundled-stage-"));
+  const fixtureDir = mkdtempSync(join(tmpdir(), "pilot-bundled-stage-"));
   const sourceDir = join(fixtureDir, "source");
   const destinationDir = join(fixtureDir, "destination");
   const binDir = join(fixtureDir, "bin");

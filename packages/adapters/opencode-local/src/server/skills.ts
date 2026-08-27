@@ -8,10 +8,10 @@ import type {
 } from "@paperclipai/adapter-utils";
 import {
   buildPersistentSkillSnapshot,
-  ensurePaperclipSkillSymlink,
-  readPaperclipRuntimeSkillEntries,
+  ensurePilotSkillSymlink,
+  readPilotRuntimeSkillEntries,
   readInstalledSkillTargets,
-  resolvePaperclipDesiredSkillNames,
+  resolvePilotDesiredSkillNames,
 } from "@paperclipai/adapter-utils/server-utils";
 
 const __moduleDir = path.dirname(fileURLToPath(import.meta.url));
@@ -31,8 +31,8 @@ function resolveOpenCodeSkillsHome(config: Record<string, unknown>) {
 }
 
 async function buildOpenCodeSkillSnapshot(config: Record<string, unknown>): Promise<AdapterSkillSnapshot> {
-  const availableEntries = await readPaperclipRuntimeSkillEntries(config, __moduleDir);
-  const desiredSkills = resolvePaperclipDesiredSkillNames(config, availableEntries);
+  const availableEntries = await readPilotRuntimeSkillEntries(config, __moduleDir);
+  const desiredSkills = resolvePilotDesiredSkillNames(config, availableEntries);
   const skillsHome = resolveOpenCodeSkillsHome(config);
   const installed = await readInstalledSkillTargets(skillsHome);
   return buildPersistentSkillSnapshot({
@@ -60,7 +60,7 @@ export async function syncOpenCodeSkills(
   ctx: AdapterSkillContext,
   desiredSkills: string[],
 ): Promise<AdapterSkillSnapshot> {
-  const availableEntries = await readPaperclipRuntimeSkillEntries(ctx.config, __moduleDir);
+  const availableEntries = await readPilotRuntimeSkillEntries(ctx.config, __moduleDir);
   const desiredSet = new Set(desiredSkills);
   const skillsHome = resolveOpenCodeSkillsHome(ctx.config);
   await fs.mkdir(skillsHome, { recursive: true });
@@ -70,7 +70,7 @@ export async function syncOpenCodeSkills(
   for (const available of availableEntries) {
     if (!desiredSet.has(available.key)) continue;
     const target = path.join(skillsHome, available.runtimeName);
-    await ensurePaperclipSkillSymlink(available.source, target);
+    await ensurePilotSkillSymlink(available.source, target);
   }
 
   for (const [name, installedEntry] of installed.entries()) {
@@ -88,5 +88,5 @@ export function resolveOpenCodeDesiredSkillNames(
   config: Record<string, unknown>,
   availableEntries: Array<{ key: string }>,
 ) {
-  return resolvePaperclipDesiredSkillNames(config, availableEntries);
+  return resolvePilotDesiredSkillNames(config, availableEntries);
 }

@@ -66,8 +66,8 @@ describeEmbeddedPostgres("heartbeat local environment lifecycle", () => {
   let previousAgentJwtSecret: string | undefined;
 
   beforeAll(async () => {
-    previousAgentJwtSecret = process.env.PAPERCLIP_AGENT_JWT_SECRET;
-    process.env.PAPERCLIP_AGENT_JWT_SECRET = "heartbeat-local-environment-test-secret";
+    previousAgentJwtSecret = process.env.PILOT_AGENT_JWT_SECRET;
+    process.env.PILOT_AGENT_JWT_SECRET = "heartbeat-local-environment-test-secret";
     tempDb = await startEmbeddedPostgresTestDatabase("heartbeat-local-environment-");
     db = createDb(tempDb.connectionString);
   }, 20_000);
@@ -92,9 +92,9 @@ describeEmbeddedPostgres("heartbeat local environment lifecycle", () => {
   afterAll(async () => {
     await tempDb?.cleanup();
     if (previousAgentJwtSecret === undefined) {
-      delete process.env.PAPERCLIP_AGENT_JWT_SECRET;
+      delete process.env.PILOT_AGENT_JWT_SECRET;
     } else {
-      process.env.PAPERCLIP_AGENT_JWT_SECRET = previousAgentJwtSecret;
+      process.env.PILOT_AGENT_JWT_SECRET = previousAgentJwtSecret;
     }
   });
 
@@ -185,11 +185,11 @@ describeEmbeddedPostgres("heartbeat local environment lifecycle", () => {
           [
             "const fs = require('node:fs');",
             `fs.writeFileSync(${JSON.stringify(envPath)}, JSON.stringify({`,
-            "agentId: process.env.PAPERCLIP_AGENT_ID ?? null,",
-            "companyId: process.env.PAPERCLIP_COMPANY_ID ?? null,",
-            "apiUrl: process.env.PAPERCLIP_API_URL ?? null,",
-            "runId: process.env.PAPERCLIP_RUN_ID ?? null,",
-            "apiKeyPresent: Boolean(process.env.PAPERCLIP_API_KEY),",
+            "agentId: process.env.PILOT_AGENT_ID ?? process.env.PAPERCLIP_AGENT_ID ?? null,",
+            "companyId: process.env.PILOT_COMPANY_ID ?? process.env.PAPERCLIP_COMPANY_ID ?? null,",
+            "apiUrl: process.env.PILOT_API_URL ?? process.env.PAPERCLIP_API_URL ?? null,",
+            "runId: process.env.PILOT_RUN_ID ?? process.env.PAPERCLIP_RUN_ID ?? null,",
+            "apiKeyPresent: Boolean(process.env.PILOT_API_KEY ?? process.env.PAPERCLIP_API_KEY),",
             "}));",
           ].join(" "),
         ],

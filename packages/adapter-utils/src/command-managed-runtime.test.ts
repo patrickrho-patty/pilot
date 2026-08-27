@@ -177,7 +177,7 @@ describe("command managed runtime", () => {
           (args[0] === "-c" || args[0] === "-lc") &&
           typeof args[1] === "string"
         ) {
-          env.PAPERCLIP_TEST_STDIN = input.stdin;
+          env.PILOT_TEST_STDIN = input.stdin;
           args[1] = `printf '%s' \"$PAPERCLIP_TEST_STDIN\" | (${args[1]})`;
         }
         try {

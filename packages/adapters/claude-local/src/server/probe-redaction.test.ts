@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AdapterExecutionTarget } from "@paperclipai/adapter-utils/execution-target";
 
 // The managed-config step runs inside `prepareSandboxClaudeProbeRuntime`. The
-// step resolves the Paperclip instance root first. This mock makes that resolve
+// step resolves the Pilot instance root first. This mock makes that resolve
 // throw, so the managed-config materialization fails with a controllable error
 // that carries a secret marker.
 const { resolveInstanceRoot } = vi.hoisted(() => {
@@ -26,10 +26,10 @@ vi.mock("@paperclipai/adapter-utils/server-utils", async () => {
   );
   return {
     ...actual,
-    resolvePaperclipInstanceRootForAdapter: (...args: unknown[]) => {
+    resolvePilotInstanceRootForAdapter: (...args: unknown[]) => {
       if (resolveInstanceRoot.throwError) throw resolveInstanceRoot.throwError;
       return (
-        actual.resolvePaperclipInstanceRootForAdapter as (...a: unknown[]) => string
+        actual.resolvePilotInstanceRootForAdapter as (...a: unknown[]) => string
       )(...args);
     },
   };

@@ -4,28 +4,28 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { generateReadme } from "../services/company-export-readme.js";
 
-// The Paperclip CLI is unsafe when an operator or an agent runs it through
-// `pnpm paperclipai <sub> <arg>` with a content-bearing argument. `pnpm` treats
-// `paperclipai` as a `package.json` script. It appends the argument to a
+// The Pilot CLI is unsafe when an operator or an agent runs it through
+// `pnpm pilotai <sub> <arg>` with a content-bearing argument. `pnpm` treats
+// `pilotai` as a `package.json` script. It appends the argument to a
 // double-quoted `/bin/sh` command string, so the shell reads the argument first
 // and runs command substitution (a backtick pair or `$( )`) and variable
-// expansion (`$NAME`) before the CLI starts. `npx paperclipai` runs the CLI
+// expansion (`$NAME`) before the CLI starts. `npx pilotai` runs the CLI
 // binary directly. It passes the argument as an inert argv value and does not
-// run a shell over the value. `npx paperclipai` is the safe form.
+// run a shell over the value. `npx pilotai` is the safe form.
 //
-// `pnpm exec paperclipai` is not a safe substitute. The root workspace does not
-// depend on the `paperclipai` package, so `pnpm` never links its binary into
-// `node_modules/.bin`. The command fails with `Command "paperclipai" not found`,
+// `pnpm exec pilotai` is not a safe substitute. The root workspace does not
+// depend on the `pilotai` package, so `pnpm` never links its binary into
+// `node_modules/.bin`. The command fails with `Command "pilotai" not found`,
 // even after a build. The guard bans it from the guidance surfaces.
 //
-// This guard is fail-closed against an exact allowlist. A `pnpm paperclipai`
+// This guard is fail-closed against an exact allowlist. A `pnpm pilotai`
 // line is allowed only when its full command string matches an exact entry in
 // `PNPM_ALLOWLIST`. Each allowlist entry is a fully literal local lifecycle or
 // setup command. A fully literal command carries no substitutable value: no
 // placeholder, no example value the reader replaces, no interpolation, no path,
 // no ref, no id, and no name. It holds the subcommand and, at most, flags that
-// take no value. Every other `pnpm paperclipai` line is an offender and must use
-// `npx paperclipai` (or the direct-exec form for local source).
+// take no value. Every other `pnpm pilotai` line is an offender and must use
+// `npx pilotai` (or the direct-exec form for local source).
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "../../..");
@@ -49,7 +49,7 @@ function extractOfflineSubsection(cli: string): string {
 
 // ── The exact allowlist ───────────────────────────────────────────────────
 //
-// Each entry is a fully literal command string. A `pnpm paperclipai` line is
+// Each entry is a fully literal command string. A `pnpm pilotai` line is
 // allowed only when its extracted command string equals one of these entries.
 // Add a new entry only for a command that carries no substitutable value.
 
@@ -92,14 +92,14 @@ const PNPM_ALLOWLIST = new Set<string>([
 
 // ── Documentation phrases ─────────────────────────────────────────────────
 //
-// A policy or warning sentence names `pnpm paperclipai` on purpose to tell the
+// A policy or warning sentence names `pnpm pilotai` on purpose to tell the
 // reader not to use it, or to describe the abstract command form. These phrases
 // are not runnable commands, so they are exempt. The set is narrow and exact: a
 // mixed safe/unsafe example does not match, because its command string carries a
 // real subcommand and arguments.
 
 const DOC_PHRASES = new Set<string>([
-  // A bare mention such as `` `pnpm paperclipai` `` inside prose.
+  // A bare mention such as `` `pnpm pilotai` `` inside prose.
   "pnpm paperclipai",
   // The abstract command form the policy section discusses.
   "pnpm paperclipai <command> <args>",
@@ -107,13 +107,13 @@ const DOC_PHRASES = new Set<string>([
 
 // ── Command extraction ────────────────────────────────────────────────────
 //
-// Extract the full logical command that a reader runs from a `pnpm paperclipai`
+// Extract the full logical command that a reader runs from a `pnpm pilotai`
 // occurrence. The guard compares the whole runnable command against the
 // allowlist, never a prefix. A quote, a backtick, or a parenthesis is a shell
 // metacharacter, not a safe extraction boundary. The guard must not truncate
 // the command at one of them and then match the shorter prefix. If it did, a
-// line such as `pnpm paperclipai run "$(cat secret)"` would truncate to the
-// allowlisted `pnpm paperclipai run` and pass, while the copied command still
+// line such as `pnpm pilotai run "$(cat secret)"` would truncate to the
+// allowlisted `pnpm pilotai run` and pass, while the copied command still
 // runs the shell substitution.
 //
 // The guard trusts a string span only inside a proven literal context. The
@@ -134,7 +134,7 @@ const DOC_PHRASES = new Set<string>([
 //    after optional whitespace) follows the close delimiter. A bare comma is not
 //    enough. An array element or a call argument also ends at a comma, and a
 //    later `join` or a call concatenates it with an untrusted tail. The shape
-//    `["pnpm paperclipai run", tail].join("")` extracts the allowlisted prefix
+//    `["pnpm pilotai run", tail].join("")` extracts the allowlisted prefix
 //    but the runtime value carries the tail. The guard trusts only the direct
 //    `command:` property, so it fails closed on every other comma-terminated span.
 //  - Any other file type: never trust a span, and fail closed.
@@ -149,7 +149,7 @@ const DOC_PHRASES = new Set<string>([
 // a parenthesis here is a shell metacharacter, so it stays in the extracted
 // command. The command then fails the allowlist match and the guard reports it.
 // This is the key rule: a quote or a backtick that follows the command is never
-// a truncation boundary, so a line such as `pnpm paperclipai run "$(cat secret)"`
+// a truncation boundary, so a line such as `pnpm pilotai run "$(cat secret)"`
 // keeps its dangerous suffix and the guard rejects it.
 //
 // The guard never infers a safe enclosing span from an arbitrary unmatched
@@ -286,10 +286,10 @@ function extractCommand(relPath: string, text: string, at: number): string {
   return normalizeCommand(raw);
 }
 
-// A `pnpm paperclipai` occurrence is an offender when it is wrapped in a
+// A `pnpm pilotai` occurrence is an offender when it is wrapped in a
 // command-substitution span, or when its full command string is neither an
 // allowlist entry nor a documentation phrase. The command-substitution check
-// catches `$(pnpm paperclipai ...)`, which normalizes the dangerous habit of
+// catches `$(pnpm pilotai ...)`, which normalizes the dangerous habit of
 // running the CLI inside a shell substitution even when the inner command is
 // literal.
 
@@ -383,7 +383,7 @@ function listGuidanceFiles(): string[] {
 // A shell reads a backslash at the end of a line as a line join. So one
 // command can spread its content-bearing arguments across many physical
 // lines. The scan must see the whole command, not one physical line. If it
-// checks each physical line alone, a `pnpm paperclipai` command whose unsafe
+// checks each physical line alone, a `pnpm pilotai` command whose unsafe
 // argument sits on a later line passes undetected.
 //
 // `toLogicalLines` joins each backslash-continued physical line to the next
@@ -438,7 +438,7 @@ function scanForOffenders(): string[] {
   return offenders;
 }
 
-// A line that recommends the broken `pnpm exec paperclipai` form. A warning line
+// A line that recommends the broken `pnpm exec pilotai` form. A warning line
 // names the broken form on purpose to tell the reader not to use it. Skip such a
 // line, so the note itself does not trip the ban.
 function recommendsBrokenExecForm(line: string): boolean {
@@ -487,7 +487,7 @@ describe("paperclipai CLI invocation safety", () => {
   //
   // Each case fails before this change and passes after it. Before, the guard
   // recognized only a limited flag set and skipped any line that mentioned
-  // `npx paperclipai`. So it missed `--config`, `--data-dir`, `--instance`,
+  // `npx pilotai`. So it missed `--config`, `--data-dir`, `--instance`,
   // `--bind`, a context-profile value, and worktree path/ref/id/name options,
   // and a mixed safe/unsafe line hid behind its `npx` mention.
 
@@ -550,12 +550,12 @@ describe("paperclipai CLI invocation safety", () => {
   //
   // Each case below extracts the full command that includes the suffix, so each
   // reports exactly one offender. On the round-4 code each accepted case
-  // extracted only `pnpm paperclipai run` (or `... doctor`) and reported zero
+  // extracted only `pnpm pilotai run` (or `... doctor`) and reported zero
   // offenders. The comment on each case marks that fail-open delta.
 
   it("fails closed on a leading unmatched double quote before the marker", () => {
     // Round-4: the leading `"` opened a span; the tail `"` closed it; the guard
-    // extracted `pnpm paperclipai run` and reported zero offenders (fail open).
+    // extracted `pnpm pilotai run` and reported zero offenders (fail open).
     const line = 'some prose with one " quote then pnpm paperclipai run "$(dangerous)"';
     expect(scanText("doc/E.md", line)).toHaveLength(1);
     // The same shape with a doctor prefix and a `$VAR` suffix.
@@ -565,7 +565,7 @@ describe("paperclipai CLI invocation safety", () => {
 
   it("fails closed on a leading unmatched backtick and on mixed delimiters", () => {
     // Round-4: the leading backtick opened a span; the tail backtick closed it;
-    // the guard extracted `pnpm paperclipai run` and reported zero offenders.
+    // the guard extracted `pnpm pilotai run` and reported zero offenders.
     const backtick = "a stray ` tick then pnpm paperclipai run `hostname`";
     expect(scanText("doc/E.md", backtick)).toHaveLength(1);
     // Mixed: a leading unmatched backtick, then a double-quoted `$( )` suffix.
@@ -755,8 +755,8 @@ describe("paperclipai CLI invocation safety", () => {
   // The server startup banner, the UI bootstrap fallback, and the board skill
   // emit the onboard, bootstrap, and board-setup hints. These three surfaces
   // reach readers on the published install, who have no monorepo checkout. The
-  // `pnpm paperclipai` script resolves only inside a checkout, so each surface
-  // must pin the `npx paperclipai` form. The client connection-error hint also
+  // `pnpm pilotai` script resolves only inside a checkout, so each surface
+  // must pin the `npx pilotai` form. The client connection-error hint also
   // reaches a reader who may run an installed package, so it keeps `npx`. The
   // env-lab cleanup hint runs from a source checkout and must work from any
   // subdirectory, so it uses the module-resolved direct-exec form (see below).
@@ -786,9 +786,9 @@ describe("paperclipai CLI invocation safety", () => {
     expect(source).toContain("fileURLToPath(import.meta.url)");
     expect(source).toContain('path.join(cliRoot, "src", "index.ts")');
     expect(source).toContain("env-lab down");
-    // The bare `pnpm paperclipai` script form is unsafe. Do not restore it.
+    // The bare `pnpm pilotai` script form is unsafe. Do not restore it.
     expect(source).not.toContain("pnpm paperclipai env-lab");
-    // `pnpm exec paperclipai` does not resolve the CLI binary. Do not use it.
+    // `pnpm exec pilotai` does not resolve the CLI binary. Do not use it.
     expect(source).not.toContain("pnpm exec paperclipai env-lab");
     // The CWD-relative form breaks from a checkout subdirectory. Do not restore it.
     expect(source).not.toContain(
@@ -827,9 +827,9 @@ describe("paperclipai CLI invocation safety", () => {
     // The offline subsection must exist and must name the cache-only safe form.
     expect(subsection).toContain("### Offline and air-gapped use");
     expect(subsection).toContain("npx --offline paperclipai");
-    // The offline subsection must not present `pnpm paperclipai` or
-    // `pnpm exec paperclipai` as a safe or offline form. Only a warning line
-    // may name `pnpm paperclipai`, and it must tell the reader not to use it.
+    // The offline subsection must not present `pnpm pilotai` or
+    // `pnpm exec pilotai` as a safe or offline form. Only a warning line
+    // may name `pnpm pilotai`, and it must tell the reader not to use it.
     for (const line of subsection.split("\n")) {
       expect(line).not.toContain("pnpm exec paperclipai");
       if (line.includes("pnpm paperclipai")) {

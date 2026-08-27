@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLocalAgentJwt, verifyLocalAgentJwt } from "../agent-auth-jwt.js";
 
 describe("agent local JWT", () => {
-  const secretEnv = "PAPERCLIP_AGENT_JWT_SECRET";
+  const secretEnv = "PILOT_AGENT_JWT_SECRET";
   const betterAuthSecretEnv = "BETTER_AUTH_SECRET";
-  const ttlEnv = "PAPERCLIP_AGENT_JWT_TTL_SECONDS";
-  const issuerEnv = "PAPERCLIP_AGENT_JWT_ISSUER";
-  const audienceEnv = "PAPERCLIP_AGENT_JWT_AUDIENCE";
-  const disableLegacyFallbackEnv = "PAPERCLIP_AGENT_JWT_DISABLE_LEGACY_FALLBACK";
-  const instanceIdEnv = "PAPERCLIP_INSTANCE_ID";
+  const ttlEnv = "PILOT_AGENT_JWT_TTL_SECONDS";
+  const issuerEnv = "PILOT_AGENT_JWT_ISSUER";
+  const audienceEnv = "PILOT_AGENT_JWT_AUDIENCE";
+  const disableLegacyFallbackEnv = "PILOT_AGENT_JWT_DISABLE_LEGACY_FALLBACK";
+  const instanceIdEnv = "PILOT_INSTANCE_ID";
 
   const originalEnv = {
     secret: process.env[secretEnv],

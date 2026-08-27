@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { PaperclipConfig } from "../config/schema.js";
+import type { PilotConfig } from "../config/schema.js";
 import type { CheckResult } from "./index.js";
 import { resolveRuntimeLikePath } from "./path-resolver.js";
 
@@ -11,7 +11,7 @@ function isInsideOsTmpDir(targetPath: string): boolean {
   return resolved === tmpRoot || resolved.startsWith(`${tmpRoot}${path.sep}`);
 }
 
-export async function databaseCheck(config: PaperclipConfig, configPath?: string): Promise<CheckResult> {
+export async function databaseCheck(config: PilotConfig, configPath?: string): Promise<CheckResult> {
   if (config.database.mode === "postgres") {
     if (!config.database.connectionString) {
       return {
@@ -53,7 +53,7 @@ export async function databaseCheck(config: PaperclipConfig, configPath?: string
     // ephemeral/CI instances that don't set PAPERCLIP_IN_WORKTREE are not flagged.)
     // Check BEFORE creating the dir so we don't bootstrap the very temp location
     // we're warning about.
-    if (isInsideOsTmpDir(dataDir) && process.env.PAPERCLIP_IN_WORKTREE === "true") {
+    if (isInsideOsTmpDir(dataDir) && process.env.PILOT_IN_WORKTREE === "true") {
       return {
         name: "Database",
         status: "warn",

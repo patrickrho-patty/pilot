@@ -447,7 +447,7 @@ function resolveAttachmentResponseContentType(input: {
   return inferVideoContentTypeFromFilename(input.originalFilename) ?? storedContentType;
 }
 
-function requiresPaperclipAttachmentMetadata(input: {
+function requiresPilotAttachmentMetadata(input: {
   type?: unknown;
   provider?: unknown;
 }, fallback?: {
@@ -2969,10 +2969,10 @@ export function issueRoutes(
       ? run.contextSnapshot as Record<string, unknown>
       : null;
     if (!context || !readNonEmptyString(context.executionWorkspaceId)) return null;
-    const paperclipIssue = context.paperclipIssue && typeof context.paperclipIssue === "object"
+    const pilotIssue = context.paperclipIssue && typeof context.paperclipIssue === "object"
       ? context.paperclipIssue as Record<string, unknown>
       : null;
-    return readNonEmptyString(context.issueId) ?? readNonEmptyString(paperclipIssue?.id);
+    return readNonEmptyString(context.issueId) ?? readNonEmptyString(pilotIssue?.id);
   }
 
   async function resolveAgentTrustForIssue(
@@ -3451,7 +3451,7 @@ export function issueRoutes(
     };
   }
 
-  async function canonicalizePaperclipArtifactMetadata(input: {
+  async function canonicalizePilotArtifactMetadata(input: {
     issue: { id: string; companyId: string };
     metadata: Record<string, unknown> | null | undefined;
   }) {
@@ -4873,12 +4873,12 @@ export function issueRoutes(
     if (!run) return null;
 
     const context = readObject(run.contextSnapshot);
-    const paperclipWake = readObject(context.paperclipWake);
-    const recovery = readObject(paperclipWake.recovery);
+    const pilotWake = readObject(context.paperclipWake);
+    const recovery = readObject(pilotWake.recovery);
     const wakeReason = typeof context.wakeReason === "string"
       ? context.wakeReason
-      : typeof paperclipWake.reason === "string"
-        ? paperclipWake.reason
+      : typeof pilotWake.reason === "string"
+        ? pilotWake.reason
         : null;
     if (wakeReason !== "source_scoped_recovery_action") return null;
 
@@ -7863,8 +7863,8 @@ export function issueRoutes(
     const createdByRunId = await resolveWorkProductCreatedByRunId(req, res, issue.companyId, req.body, "create");
     if (createdByRunId === undefined) return;
     createInput.createdByRunId = createdByRunId;
-    if (requiresPaperclipAttachmentMetadata(createInput)) {
-      createInput.metadata = await canonicalizePaperclipArtifactMetadata({
+    if (requiresPilotAttachmentMetadata(createInput)) {
+      createInput.metadata = await canonicalizePilotArtifactMetadata({
         issue,
         metadata: req.body.metadata ?? null,
       });
@@ -8154,13 +8154,13 @@ export function issueRoutes(
     const createdByRunId = await resolveWorkProductCreatedByRunId(req, res, existing.companyId, req.body, "update");
     if (createdByRunId === undefined && Object.prototype.hasOwnProperty.call(req.body, "createdByRunId")) return;
     if (createdByRunId !== undefined) patch.createdByRunId = createdByRunId;
-    if (requiresPaperclipAttachmentMetadata(patch, existing)) {
+    if (requiresPilotAttachmentMetadata(patch, existing)) {
       if (patch.metadata !== undefined) {
-        patch.metadata = await canonicalizePaperclipArtifactMetadata({
+        patch.metadata = await canonicalizePilotArtifactMetadata({
           issue,
           metadata: patch.metadata ?? null,
         });
-      } else if (!requiresPaperclipAttachmentMetadata(existing)) {
+      } else if (!requiresPilotAttachmentMetadata(existing)) {
         res.status(422).json({ error: "Attachment-backed artifact metadata is required" });
         return;
       }

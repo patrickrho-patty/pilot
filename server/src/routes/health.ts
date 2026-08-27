@@ -49,7 +49,7 @@ function matchesSharedToken(expectedToken: string | undefined | null, providedTo
 }
 
 function hasDevServerStatusToken(providedToken: string | undefined) {
-  return matchesSharedToken(process.env.PAPERCLIP_DEV_SERVER_STATUS_TOKEN, providedToken);
+  return matchesSharedToken(process.env.PILOT_DEV_SERVER_STATUS_TOKEN, providedToken);
 }
 
 /**

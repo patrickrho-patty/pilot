@@ -31,8 +31,8 @@ const SEEDED_AGENT_ROLE = "ceo";
 const FALLBACK_SEEDED_AGENT_ADAPTER_TYPE = "claude_local";
 
 function seededAgentAdapterType() {
-  return process.env.PAPERCLIP_ONBOARDING_SEED_ADAPTER_TYPE?.trim()
-    || process.env.PAPERCLIP_TEAMS_CATALOG_DEFAULT_ADAPTER_TYPE?.trim()
+  return process.env.PILOT_ONBOARDING_SEED_ADAPTER_TYPE?.trim()
+    || process.env.PILOT_TEAMS_CATALOG_DEFAULT_ADAPTER_TYPE?.trim()
     || FALLBACK_SEEDED_AGENT_ADAPTER_TYPE;
 }
 
@@ -239,7 +239,7 @@ export function onboardingSeedService(db: Db) {
     //
     //    No-first-task contract (PAP-67 r17.4): on the Cloud walk this branch
     //    never runs. The seed Cloud sends is mission-only — `agent` and
-    //    `firstTask` are unpopulated by the signup wizard and a paperclip-cloud
+    //    `firstTask` are unpopulated by the signup wizard and a pilot-cloud
     //    `node:test` in `src/onboarding/` pins that — so `firstTaskTitle` is
     //    null here and the first task stays owned by the tenant's own
     //    server-owned onboarding path (`POST /issues` with

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# End-to-end proof of the paperclipai managed install lifecycle on a CLEAN machine.
+# End-to-end proof of the pilotai managed install lifecycle on a CLEAN machine.
 #
 # Exercises the real user journey against real GitHub + real npm:
 #   bootstrap build -> install (npm latest) -> install --ref (build-from-source)
@@ -22,13 +22,13 @@ E2E_REPO="${E2E_REPO:-paperclipai/paperclip}"
 E2E_REF="${E2E_REF:-master}"
 E2E_SERVICE_TIMEOUT_SECS="${E2E_SERVICE_TIMEOUT_SECS:-300}"
 
-# A clean environment: no inherited Paperclip or build-mode state.
-for var in $(env | grep -o '^PAPERCLIP_[A-Z_]*' || true); do unset "$var"; done
+# A clean environment: no inherited Pilot or build-mode state.
+for var in $(env | grep -o '^PILOT_[A-Z_]*' || true); do unset "$var"; done
 unset NODE_ENV npm_config_prefix 2>/dev/null || true
 export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 export CI="${CI:-1}"
 
-SHIM="$HOME/.local/bin/paperclipai"
+SHIM="$HOME/.local/bin/pilotai"
 STORE="$HOME/.paperclip/cli"
 RESULTS=()
 FAILED=0
@@ -93,14 +93,14 @@ if [ "${E2E_SKIP_NPM:-0}" != "1" ]; then
   else
     fail_ "2a install (latest) exits 0"
   fi
-  [ -x "$SHIM" ] && pass "2b shim created at ~/.local/bin/paperclipai" || fail_ "2b shim created"
+  [ -x "$SHIM" ] && pass "2b shim created at ~/.local/bin/pilotai" || fail_ "2b shim created"
   case "$(current_target)" in
     *"installs/npm/"*) pass "2c current -> installs/npm/<version> ($(basename "$(current_target)"))" ;;
     *) fail_ "2c current -> installs/npm/<version> (got: $(current_target))" ;;
   esac
   [ -f "$STORE/install.json" ] && pass "2d install.json manifest present" || fail_ "2d install.json manifest present"
   NPM_VERSION="$("$SHIM" --version 2>/dev/null || true)"
-  [ -n "$NPM_VERSION" ] && pass "2e shim runs: paperclipai --version = $NPM_VERSION" || fail_ "2e shim runs paperclipai --version"
+  [ -n "$NPM_VERSION" ] && pass "2e shim runs: pilotai --version = $NPM_VERSION" || fail_ "2e shim runs pilotai --version"
 else
   skip_ "2 install (npm latest)" "E2E_SKIP_NPM=1"
 fi

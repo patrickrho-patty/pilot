@@ -1,11 +1,11 @@
 # Agent Artifact Upload Workflow
 
 Generated files that a board user or reviewer should inspect as deliverables
-must be attached to the Paperclip issue before the agent chooses a final
+must be attached to the Pilot issue before the agent chooses a final
 disposition. A local workspace path is not enough, because cloud users and
 reviewers often cannot access the agent's disk.
 
-Use the helper bundled with the Paperclip skill from the repo root:
+Use the helper bundled with the Pilot skill from the repo root:
 
 ```sh
 skills/paperclip/scripts/paperclip-upload-artifact.sh path/to/output.webm \
@@ -13,14 +13,14 @@ skills/paperclip/scripts/paperclip-upload-artifact.sh path/to/output.webm \
   --summary "Rendered walkthrough for review"
 ```
 
-The helper uses the authenticated Paperclip API from the current heartbeat
+The helper uses the authenticated Pilot API from the current heartbeat
 environment:
 
-- `PAPERCLIP_API_URL`
-- `PAPERCLIP_API_KEY`
-- `PAPERCLIP_COMPANY_ID`
-- `PAPERCLIP_TASK_ID`
-- `PAPERCLIP_RUN_ID`
+- `PILOT_API_URL`
+- `PILOT_API_KEY`
+- `PILOT_COMPANY_ID`
+- `PILOT_TASK_ID`
+- `PILOT_RUN_ID`
 
 It uploads the file to
 `POST /api/companies/{companyId}/issues/{issueId}/attachments` and creates an
@@ -32,7 +32,7 @@ The command prints issue-safe markdown links for the final task comment.
 Use uploaded artifacts for deliverables: videos, PDFs, screenshots, archives,
 reports, rendered HTML, or any file the board should inspect without needing the
 agent's checkout. Attachment-backed artifact work products set `type` to
-`artifact` and `provider` to `paperclip`, with metadata canonicalized from the
+`artifact` and `provider` to `pilot`, with metadata canonicalized from the
 uploaded `attachmentId`.
 
 Use `workspace_file` metadata only for important files that intentionally remain
@@ -61,10 +61,10 @@ Expected work product metadata shape:
 `column` are optional. `relativePath` must be relative to that workspace root;
 do not store host-local absolute paths as workspace references.
 
-Workspace file links resolve only inside registered Paperclip workspaces. The
+Workspace file links resolve only inside registered Pilot workspaces. The
 default target is the current issue's execution workspace first, then its
 project workspace. A link may target another same-company project workspace only
-when it carries both that `projectId` and `workspaceId`. Paperclip does not
+when it carries both that `projectId` and `workspaceId`. Pilot does not
 resolve arbitrary machine-wide filesystem paths, absolute host paths, home
 paths, or relative paths that escape the selected workspace.
 
@@ -119,9 +119,9 @@ If the helper is unavailable, use the same API shape:
 
 ```sh
 curl -sS -X POST \
-  "$PAPERCLIP_API_URL/api/companies/$PAPERCLIP_COMPANY_ID/issues/$PAPERCLIP_TASK_ID/attachments" \
-  -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-  -H "X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID" \
+  "$PILOT_API_URL/api/companies/$PILOT_COMPANY_ID/issues/$PILOT_TASK_ID/attachments" \
+  -H "Authorization: Bearer $PILOT_API_KEY" \
+  -H "X-Pilot-Run-Id: $PILOT_RUN_ID" \
   -F 'file=@"dist/demo.mp4";type=video/mp4'
 ```
 
@@ -129,13 +129,13 @@ Then create a work product when the uploaded file is the deliverable:
 
 ```sh
 curl -sS -X POST \
-  "$PAPERCLIP_API_URL/api/issues/$PAPERCLIP_TASK_ID/work-products" \
-  -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-  -H "X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID" \
+  "$PILOT_API_URL/api/issues/$PILOT_TASK_ID/work-products" \
+  -H "Authorization: Bearer $PILOT_API_KEY" \
+  -H "X-Pilot-Run-Id: $PILOT_RUN_ID" \
   -H "Content-Type: application/json" \
   --data-binary @artifact-work-product.json
 ```
 
-Use `type: "artifact"`, `provider: "paperclip"`, and metadata containing the
+Use `type: "artifact"`, `provider: "pilot"`, and metadata containing the
 uploaded `attachmentId`. The server canonicalizes `contentType`, `byteSize`,
 `contentPath`, `openPath`, `downloadPath`, and `originalFilename`.

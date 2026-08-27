@@ -17,7 +17,7 @@ import {
   DEFAULT_REMOTE_SANDBOX_ADAPTER_TIMEOUT_SEC,
   adapterExecutionTargetSessionIdentity,
   adapterExecutionTargetToRemoteSpec,
-  adapterExecutionTargetUsesPaperclipBridge,
+  adapterExecutionTargetUsesPilotBridge,
   ensureAdapterExecutionTargetCommandResolvable,
   formatAdapterExecutionTimeoutErrorMessage,
   formatAdapterExecutionTimeoutStartLogLine,
@@ -27,7 +27,7 @@ import {
   runAdapterExecutionTargetProcess,
   runAdapterExecutionTargetShellCommand,
   startAdapterExecutionTargetProcessSessionBridge,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
   type AdapterSandboxExecutionTarget,
 } from "./execution-target.js";
 import {
@@ -1935,7 +1935,7 @@ describe("sandbox adapter execution targets", () => {
       },
     };
 
-    expect(adapterExecutionTargetUsesPaperclipBridge(target)).toBe(true);
+    expect(adapterExecutionTargetUsesPilotBridge(target)).toBe(true);
     expect(adapterExecutionTargetSessionIdentity(target)).toEqual({
       transport: "ssh",
       host: "ssh.example.test",
@@ -2018,7 +2018,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge",
       target,
       runtimeRootDir,
@@ -2028,13 +2028,13 @@ describe("sandbox adapter execution targets", () => {
     });
     try {
       expect(bridge).not.toBeNull();
-      expect(bridge?.env.PAPERCLIP_API_URL).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
-      expect(bridge?.env.PAPERCLIP_API_KEY).not.toBe("real-run-jwt");
-      expect(bridge?.env.PAPERCLIP_API_BRIDGE_MODE).toBe("queue_v1");
+      expect(bridge?.env.PILOT_API_URL).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(bridge?.env.PILOT_API_KEY).not.toBe("real-run-jwt");
+      expect(bridge?.env.PILOT_API_BRIDGE_MODE).toBe("queue_v1");
 
-      const response = await fetch(`${bridge!.env.PAPERCLIP_API_URL}/api/agents/me`, {
+      const response = await fetch(`${bridge!.env.PILOT_API_URL}/api/agents/me`, {
         headers: {
-          authorization: `Bearer ${bridge!.env.PAPERCLIP_API_KEY}`,
+          authorization: `Bearer ${bridge!.env.PILOT_API_KEY}`,
           accept: "application/json",
         },
       });
@@ -2073,7 +2073,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-stream",
       target,
       runtimeRootDir,
@@ -2115,7 +2115,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const defaultBridge = await startAdapterExecutionTargetPaperclipBridge({
+    const defaultBridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-stream-default",
       target: baseTarget,
       runtimeRootDir,
@@ -2129,7 +2129,7 @@ describe("sandbox adapter execution targets", () => {
       await defaultBridge?.stop();
     }
 
-    const optOutBridge = await startAdapterExecutionTargetPaperclipBridge({
+    const optOutBridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-stream-opt-out",
       target: { ...baseTarget, streamRunLogs: false },
       runtimeRootDir,
@@ -2209,7 +2209,7 @@ describe("sandbox adapter execution targets", () => {
     expect(runner.execute).toHaveBeenCalledWith(expect.objectContaining({
       command: "sh",
       cwd: "/workspace",
-      env: { PAPERCLIP_SANDBOX_EXEC_CHANNEL: "bridge" },
+      env: { PILOT_SANDBOX_EXEC_CHANNEL: "bridge" },
       timeoutMs: 50,
     }));
   });
@@ -2334,7 +2334,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-shell",
       target,
       runtimeRootDir,
@@ -2345,14 +2345,14 @@ describe("sandbox adapter execution targets", () => {
     try {
       expect(bridge).not.toBeNull();
       const shellProbe = [
-        "const url = `${process.env.PAPERCLIP_API_URL}/api/agents/me`;",
-        "fetch(url, { headers: { authorization: `Bearer ${process.env.PAPERCLIP_API_KEY}`, accept: 'application/json' } })",
+        "const url = `${process.env.PILOT_API_URL ?? process.env.PAPERCLIP_API_URL}/api/agents/me`;",
+        "fetch(url, { headers: { authorization: `Bearer ${process.env.PILOT_API_KEY ?? process.env.PAPERCLIP_API_KEY}`, accept: 'application/json' } })",
         "  .then(async (response) => {",
         "    const body = await response.json();",
         "    process.stdout.write(JSON.stringify({",
         "      status: response.status,",
         "      body,",
-        "      bridgeMode: process.env.PAPERCLIP_API_BRIDGE_MODE,",
+        "      bridgeMode: process.env.PILOT_API_BRIDGE_MODE ?? process.env.PAPERCLIP_API_BRIDGE_MODE,",
         "    }));",
         "  })",
         "  .catch((error) => {",
@@ -2382,7 +2382,7 @@ describe("sandbox adapter execution targets", () => {
         bridgeMode: "queue_v1",
       });
       expect(`${result.stdout}\n${result.stderr}`).not.toContain("real-run-jwt");
-      expect(`${result.stdout}\n${result.stderr}`).not.toContain(bridge!.env.PAPERCLIP_API_KEY);
+      expect(`${result.stdout}\n${result.stderr}`).not.toContain(bridge!.env.PILOT_API_KEY);
       const runnerCommandText = JSON.stringify(
         runner.execute.mock.calls.map(([call]) => ({
           command: call.command,
@@ -2390,10 +2390,10 @@ describe("sandbox adapter execution targets", () => {
         })),
       );
       expect(runnerCommandText).not.toContain("real-run-jwt");
-      expect(runnerCommandText).not.toContain(bridge!.env.PAPERCLIP_API_KEY);
+      expect(runnerCommandText).not.toContain(bridge!.env.PILOT_API_KEY);
       const runtimeFiles = (await readRuntimeTextFiles(runtimeRootDir)).join("\n");
       expect(runtimeFiles).not.toContain("real-run-jwt");
-      expect(runtimeFiles).not.toContain(bridge!.env.PAPERCLIP_API_KEY);
+      expect(runtimeFiles).not.toContain(bridge!.env.PILOT_API_KEY);
       expect(requests).toEqual([{
         method: "GET",
         url: "/api/agents/me",
@@ -2441,7 +2441,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-timeout",
       target,
       runtimeRootDir,
@@ -2504,7 +2504,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-limit",
       target,
       runtimeRootDir,
@@ -2514,9 +2514,9 @@ describe("sandbox adapter execution targets", () => {
       maxBodyBytes: 32,
     });
     try {
-      const response = await fetch(`${bridge!.env.PAPERCLIP_API_URL}/api/agents/me`, {
+      const response = await fetch(`${bridge!.env.PILOT_API_URL}/api/agents/me`, {
         headers: {
-          authorization: `Bearer ${bridge!.env.PAPERCLIP_API_KEY}`,
+          authorization: `Bearer ${bridge!.env.PILOT_API_KEY}`,
           accept: "application/json",
         },
       });
@@ -2577,7 +2577,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-outcome",
       target,
       runtimeRootDir,
@@ -2586,10 +2586,10 @@ describe("sandbox adapter execution targets", () => {
       hostApiUrl: `http://127.0.0.1:${address.port}`,
     });
     try {
-      const response = await fetch(`${bridge!.env.PAPERCLIP_API_URL}/api/issues/issue-1/comments`, {
+      const response = await fetch(`${bridge!.env.PILOT_API_URL}/api/issues/issue-1/comments`, {
         method: "POST",
         headers: {
-          authorization: `Bearer ${bridge!.env.PAPERCLIP_API_KEY}`,
+          authorization: `Bearer ${bridge!.env.PILOT_API_KEY}`,
           "content-type": "application/json",
         },
         body: JSON.stringify({ body: "Status update." }),
@@ -2643,10 +2643,10 @@ describe("sandbox adapter execution targets", () => {
     // and the local listen host/port via PAPERCLIP_LISTEN_HOST / PAPERCLIP_LISTEN_PORT.
     // The wildcard listen host must map to the loopback address of the same
     // family (0.0.0.0 -> 127.0.0.1), where the test API server is bound.
-    vi.stubEnv("PAPERCLIP_RUNTIME_API_URL", "https://public.example.invalid");
-    vi.stubEnv("PAPERCLIP_API_URL", "https://public.example.invalid");
-    vi.stubEnv("PAPERCLIP_LISTEN_HOST", "0.0.0.0");
-    vi.stubEnv("PAPERCLIP_LISTEN_PORT", String(address.port));
+    vi.stubEnv("PILOT_RUNTIME_API_URL", "https://public.example.invalid");
+    vi.stubEnv("PILOT_API_URL", "https://public.example.invalid");
+    vi.stubEnv("PILOT_LISTEN_HOST", "0.0.0.0");
+    vi.stubEnv("PILOT_LISTEN_PORT", String(address.port));
 
     const target: AdapterSandboxExecutionTarget = {
       kind: "remote",
@@ -2659,7 +2659,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-local",
       target,
       runtimeRootDir,
@@ -2668,9 +2668,9 @@ describe("sandbox adapter execution targets", () => {
     });
     try {
       expect(bridge).not.toBeNull();
-      const response = await fetch(`${bridge!.env.PAPERCLIP_API_URL}/api/agents/me`, {
+      const response = await fetch(`${bridge!.env.PILOT_API_URL}/api/agents/me`, {
         headers: {
-          authorization: `Bearer ${bridge!.env.PAPERCLIP_API_KEY}`,
+          authorization: `Bearer ${bridge!.env.PILOT_API_KEY}`,
           accept: "application/json",
         },
       });
@@ -2713,10 +2713,10 @@ describe("sandbox adapter execution targets", () => {
 
     // Neither the public URL envs nor the listen host/port should matter when
     // the caller passes an explicit hostApiUrl.
-    vi.stubEnv("PAPERCLIP_RUNTIME_API_URL", "https://public.example.invalid");
-    vi.stubEnv("PAPERCLIP_API_URL", "https://public.example.invalid");
-    vi.stubEnv("PAPERCLIP_LISTEN_HOST", "203.0.113.1");
-    vi.stubEnv("PAPERCLIP_LISTEN_PORT", "9");
+    vi.stubEnv("PILOT_RUNTIME_API_URL", "https://public.example.invalid");
+    vi.stubEnv("PILOT_API_URL", "https://public.example.invalid");
+    vi.stubEnv("PILOT_LISTEN_HOST", "203.0.113.1");
+    vi.stubEnv("PILOT_LISTEN_PORT", "9");
 
     const target: AdapterSandboxExecutionTarget = {
       kind: "remote",
@@ -2729,7 +2729,7 @@ describe("sandbox adapter execution targets", () => {
       timeoutMs: 30_000,
     };
 
-    const bridge = await startAdapterExecutionTargetPaperclipBridge({
+    const bridge = await startAdapterExecutionTargetPilotBridge({
       runId: "run-bridge-override",
       target,
       runtimeRootDir,
@@ -2739,9 +2739,9 @@ describe("sandbox adapter execution targets", () => {
     });
     try {
       expect(bridge).not.toBeNull();
-      const response = await fetch(`${bridge!.env.PAPERCLIP_API_URL}/api/agents/me`, {
+      const response = await fetch(`${bridge!.env.PILOT_API_URL}/api/agents/me`, {
         headers: {
-          authorization: `Bearer ${bridge!.env.PAPERCLIP_API_KEY}`,
+          authorization: `Bearer ${bridge!.env.PILOT_API_KEY}`,
           accept: "application/json",
         },
       });
@@ -2853,9 +2853,9 @@ describe("sandbox duplex gateway", () => {
       stdio: ["pipe", "pipe", "pipe"],
       env: {
         ...process.env,
-        PAPERCLIP_API_BRIDGE_MODE: "duplex_v1",
-        PAPERCLIP_BRIDGE_HOST: "127.0.0.1",
-        PAPERCLIP_BRIDGE_PORT: "0",
+        PILOT_API_BRIDGE_MODE: "duplex_v1",
+        PILOT_BRIDGE_HOST: "127.0.0.1",
+        PILOT_BRIDGE_PORT: "0",
         ...env,
       },
     });
@@ -3024,7 +3024,7 @@ describe("sandbox duplex gateway", () => {
 
   it("returns the same HTTP response as the file gateway for a forwarded request", async () => {
     const token = "duplex-token-forward";
-    const gateway = await startDuplexGateway({ PAPERCLIP_BRIDGE_TOKEN: token });
+    const gateway = await startDuplexGateway({ PILOT_BRIDGE_TOKEN: token });
 
     const responsePromise = fetch(`${gateway.baseUrl}/api/agents/me?view=compact`, {
       headers: {
@@ -3087,9 +3087,9 @@ describe("sandbox duplex gateway", () => {
   it("enforces the bearer check, JSON-only rule, body limit, and depth limit", async () => {
     const token = "duplex-token-contract";
     const gateway = await startDuplexGateway({
-      PAPERCLIP_BRIDGE_TOKEN: token,
-      PAPERCLIP_BRIDGE_MAX_QUEUE_DEPTH: "1",
-      PAPERCLIP_BRIDGE_MAX_BODY_BYTES: "16",
+      PILOT_BRIDGE_TOKEN: token,
+      PILOT_BRIDGE_MAX_QUEUE_DEPTH: "1",
+      PILOT_BRIDGE_MAX_BODY_BYTES: "16",
     });
 
     const badAuth = await fetch(`${gateway.baseUrl}/api/agents/me`, {
@@ -3147,8 +3147,8 @@ describe("sandbox duplex gateway", () => {
   it("answers outstanding requests 409 and new requests 503 on stdin EOF, then exits", async () => {
     const token = "duplex-token-eof";
     const gateway = await startDuplexGateway({
-      PAPERCLIP_BRIDGE_TOKEN: token,
-      PAPERCLIP_BRIDGE_LOSS_EXIT_GRACE_MS: "3000",
+      PILOT_BRIDGE_TOKEN: token,
+      PILOT_BRIDGE_LOSS_EXIT_GRACE_MS: "3000",
     });
 
     const outstanding = fetch(`${gateway.baseUrl}/api/agents/me`, {
@@ -3175,10 +3175,10 @@ describe("sandbox duplex gateway", () => {
   it("applies the same loss behavior on a heartbeat timeout", async () => {
     const token = "duplex-token-heartbeat";
     const gateway = await startDuplexGateway({
-      PAPERCLIP_BRIDGE_TOKEN: token,
-      PAPERCLIP_BRIDGE_HEARTBEAT_TIMEOUT_MS: "400",
-      PAPERCLIP_BRIDGE_LOSS_EXIT_GRACE_MS: "3000",
-      PAPERCLIP_BRIDGE_RESPONSE_TIMEOUT_MS: "30000",
+      PILOT_BRIDGE_TOKEN: token,
+      PILOT_BRIDGE_HEARTBEAT_TIMEOUT_MS: "400",
+      PILOT_BRIDGE_LOSS_EXIT_GRACE_MS: "3000",
+      PILOT_BRIDGE_RESPONSE_TIMEOUT_MS: "30000",
     });
 
     // Never send an inbound frame: inbound silence trips the heartbeat timeout.
@@ -3203,7 +3203,7 @@ describe("sandbox duplex gateway", () => {
 
   it("keeps diagnostics off stdout; stdout carries only frames", async () => {
     const token = "duplex-token-stdout";
-    const gateway = await startDuplexGateway({ PAPERCLIP_BRIDGE_TOKEN: token });
+    const gateway = await startDuplexGateway({ PILOT_BRIDGE_TOKEN: token });
 
     const responsePromise = fetch(`${gateway.baseUrl}/api/agents/me`, {
       headers: { authorization: `Bearer ${token}` },
@@ -3257,9 +3257,9 @@ describe("sandbox duplex gateway", () => {
 
     const token = "duplex-token-budget";
     const gateway = await startDuplexGateway({
-      PAPERCLIP_BRIDGE_TOKEN: token,
-      PAPERCLIP_BRIDGE_RESPONSE_TIMEOUT_MS: "150",
-      PAPERCLIP_BRIDGE_HEARTBEAT_TIMEOUT_MS: "30000",
+      PILOT_BRIDGE_TOKEN: token,
+      PILOT_BRIDGE_RESPONSE_TIMEOUT_MS: "150",
+      PILOT_BRIDGE_HEARTBEAT_TIMEOUT_MS: "30000",
     });
 
     const started = Date.now();

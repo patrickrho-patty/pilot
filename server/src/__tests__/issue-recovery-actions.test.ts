@@ -24,7 +24,7 @@ import {
 } from "./helpers/embedded-postgres.js";
 import { errorHandler } from "../middleware/index.js";
 import { issueRoutes } from "../routes/issues.js";
-import { buildPaperclipWakePayload } from "../services/heartbeat.js";
+import { buildPilotWakePayload } from "../services/heartbeat.js";
 import { issueRecoveryActionService } from "../services/issue-recovery-actions.js";
 import { recoveryService } from "../services/recovery/service.js";
 import { noticeMetadataReferencesRecoveryAction } from "../services/recovery/successful-run-handoff.js";
@@ -1501,7 +1501,7 @@ describeEmbeddedPostgres("issue recovery actions", () => {
       maxAttempts: 3,
     });
 
-    const payload = await buildPaperclipWakePayload({
+    const payload = await buildPilotWakePayload({
       db,
       companyId,
       contextSnapshot: {

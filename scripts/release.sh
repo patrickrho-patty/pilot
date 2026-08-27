@@ -266,7 +266,7 @@ set_cleanup_trap
 
 # The release flow already prepares ui/dist before packaging. Reuse that output
 # so server prepack does not rebuild the UI a second time during preview/publish.
-export PAPERCLIP_RELEASE_REUSE_UI_DIST=1
+export PILOT_RELEASE_REUSE_UI_DIST=1
 
 if [ "$skip_verify" = false ]; then
   release_info ""
@@ -396,9 +396,9 @@ else
     release_fail "publish completed, but npm dist-tags or registry metadata never converged for ${TARGET_PUBLISH_VERSION}"
   fi
 
-  release_info "  Installing paperclipai@$DIST_TAG into a clean prefix..."
-  if ! verify_npm_installable "paperclipai@$DIST_TAG" "$TARGET_PUBLISH_VERSION"; then
-    release_fail "paperclipai@$DIST_TAG did not install cleanly at expected version ${TARGET_PUBLISH_VERSION}"
+  release_info "  Installing pilotai@$DIST_TAG into a clean prefix..."
+  if ! verify_npm_installable "pilotai@$DIST_TAG" "$TARGET_PUBLISH_VERSION"; then
+    release_fail "pilotai@$DIST_TAG did not install cleanly at expected version ${TARGET_PUBLISH_VERSION}"
   fi
   release_info "    ✓ Clean-prefix install resolved ${TARGET_PUBLISH_VERSION}"
 fi

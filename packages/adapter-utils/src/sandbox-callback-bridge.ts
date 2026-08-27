@@ -52,7 +52,7 @@ const MAX_BACKSTOP_WRITE_ATTEMPTS = 3;
 const BACKSTOP_WRITE_RETRY_MS = 50;
 const REMOTE_WRITE_BASE64_CHUNK_SIZE = 32 * 1024;
 const SANDBOX_CALLBACK_BRIDGE_ENTRYPOINT = "paperclip-bridge-server.mjs";
-const SANDBOX_EXEC_CHANNEL_ENV = "PAPERCLIP_SANDBOX_EXEC_CHANNEL";
+const SANDBOX_EXEC_CHANNEL_ENV = "PILOT_SANDBOX_EXEC_CHANNEL";
 const SANDBOX_EXEC_CHANNEL_BRIDGE = "bridge";
 
 // The two bridge modes the generated gateway supports. The file mode polls a
@@ -77,7 +77,7 @@ const DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_TIMEOUT_MS = 20_000;
 // the 409 for an outstanding request and a 503 for a new request.
 const DEFAULT_DUPLEX_GATEWAY_LOSS_EXIT_GRACE_MS = 1_000;
 
-/** Span name that wraps one Paperclip-API callback request — read the request,
+/** Span name that wraps one Pilot-API callback request — read the request,
  * write the response, and remove the request file. */
 const CALLBACK_BRIDGE_RELAY_REQUEST_SPAN = "sandbox.callbackBridge.relayRequest";
 
@@ -97,7 +97,7 @@ export interface SandboxCallbackBridgeRouteRule {
 // Routes the in-sandbox heartbeat skill is documented to call. The server
 // still enforces actor-level permissions on top of this allowlist; the list
 // exists to bound the surface area a compromised CLI could reach via the
-// reverse bridge. Keep this in sync with the Paperclip skill in
+// reverse bridge. Keep this in sync with the Pilot skill in
 // `skills/paperclip/SKILL.md` and `references/api-reference.md`.
 export const DEFAULT_SANDBOX_CALLBACK_BRIDGE_ROUTE_ALLOWLIST: readonly SandboxCallbackBridgeRouteRule[] = [
   // Identity, inbox, agent self-management
@@ -149,7 +149,7 @@ export const DEFAULT_SANDBOX_CALLBACK_BRIDGE_ROUTE_ALLOWLIST: readonly SandboxCa
   // Subtasks / delegation
   { method: "POST", path: /^\/api\/companies\/[^/]+\/issues$/ },
 
-  // Hiring (paperclip-create-agent skill): adapter/icon discovery, comparing
+  // Hiring (pilot-create-agent skill): adapter/icon discovery, comparing
   // existing agent configs, submitting the hire request, and linking the
   // resulting approval to its source issue. Direct agent creation
   // (POST /api/companies/:id/agents) stays denied — hires must go through the
@@ -435,21 +435,21 @@ export function buildSandboxCallbackBridgeEnv(input: {
   maxBodyBytes?: number | null;
 }): Record<string, string> {
   return {
-    PAPERCLIP_API_BRIDGE_MODE: SANDBOX_CALLBACK_BRIDGE_FILE_MODE,
-    PAPERCLIP_BRIDGE_QUEUE_DIR: input.queueDir,
-    PAPERCLIP_BRIDGE_TOKEN: input.bridgeToken,
-    PAPERCLIP_BRIDGE_HOST: input.host?.trim() || "127.0.0.1",
-    PAPERCLIP_BRIDGE_PORT: String(input.port && input.port > 0 ? Math.trunc(input.port) : 0),
-    PAPERCLIP_BRIDGE_POLL_INTERVAL_MS: String(
+    PILOT_API_BRIDGE_MODE: SANDBOX_CALLBACK_BRIDGE_FILE_MODE,
+    PILOT_BRIDGE_QUEUE_DIR: input.queueDir,
+    PILOT_BRIDGE_TOKEN: input.bridgeToken,
+    PILOT_BRIDGE_HOST: input.host?.trim() || "127.0.0.1",
+    PILOT_BRIDGE_PORT: String(input.port && input.port > 0 ? Math.trunc(input.port) : 0),
+    PILOT_BRIDGE_POLL_INTERVAL_MS: String(
       normalizeTimeoutMs(input.pollIntervalMs, DEFAULT_BRIDGE_POLL_INTERVAL_MS),
     ),
-    PAPERCLIP_BRIDGE_RESPONSE_TIMEOUT_MS: String(
+    PILOT_BRIDGE_RESPONSE_TIMEOUT_MS: String(
       normalizeTimeoutMs(input.responseTimeoutMs, DEFAULT_BRIDGE_RESPONSE_TIMEOUT_MS),
     ),
-    PAPERCLIP_BRIDGE_MAX_QUEUE_DEPTH: String(
+    PILOT_BRIDGE_MAX_QUEUE_DEPTH: String(
       normalizeTimeoutMs(input.maxQueueDepth, DEFAULT_BRIDGE_MAX_QUEUE_DEPTH),
     ),
-    PAPERCLIP_BRIDGE_MAX_BODY_BYTES: String(
+    PILOT_BRIDGE_MAX_BODY_BYTES: String(
       normalizeTimeoutMs(input.maxBodyBytes, DEFAULT_BRIDGE_MAX_BODY_BYTES),
     ),
   };
@@ -769,7 +769,7 @@ export async function startSandboxCallbackBridgeWorker(input: {
   // otherwise). When it is absent, the request work runs with an empty store,
   // exactly like the earlier `runWithoutActiveStep` behavior.
   getRuntimeParentContext?: () => StartupSpanContext | undefined;
-  // Wrap each Paperclip-API callback request in a
+  // Wrap each Pilot-API callback request in a
   // `sandbox.callbackBridge.relayRequest` span, so the request's read, write, and
   // remove execs group under one named span. When it is absent, the request work
   // runs under the run parent with no wrapper span, exactly like the earlier
@@ -1446,7 +1446,7 @@ export async function startSandboxCallbackBridgeWorker(input: {
 }
 
 /**
- * Content-hash-skip write of a Paperclip-authored text file into the sandbox, in
+ * Content-hash-skip write of a Pilot-authored text file into the sandbox, in
  * a SINGLE remote exec. The body's sha256 is computed on the host; the one shell
  * round-trip skips the write entirely when the remote file already hashes to the
  * same value (warm start — 0 write execs), otherwise it uploads (base64 over
@@ -1917,28 +1917,28 @@ import { createServer } from "node:http";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-const bridgeMode = process.env.PAPERCLIP_API_BRIDGE_MODE || "${SANDBOX_CALLBACK_BRIDGE_FILE_MODE}";
-const queueDir = process.env.PAPERCLIP_BRIDGE_QUEUE_DIR;
-const bridgeToken = process.env.PAPERCLIP_BRIDGE_TOKEN;
-const host = process.env.PAPERCLIP_BRIDGE_HOST || "127.0.0.1";
-const port = Number(process.env.PAPERCLIP_BRIDGE_PORT || "0");
-const pollIntervalMs = Number(process.env.PAPERCLIP_BRIDGE_POLL_INTERVAL_MS || "100");
+const bridgeMode = (process.env.PILOT_API_BRIDGE_MODE ?? process.env.PAPERCLIP_API_BRIDGE_MODE) || "${SANDBOX_CALLBACK_BRIDGE_FILE_MODE}";
+const queueDir = process.env.PILOT_BRIDGE_QUEUE_DIR ?? process.env.PAPERCLIP_BRIDGE_QUEUE_DIR;
+const bridgeToken = process.env.PILOT_BRIDGE_TOKEN ?? process.env.PILOT_BRIDGE_TOKEN ?? process.env.PAPERCLIP_BRIDGE_TOKEN;
+const host = (process.env.PILOT_BRIDGE_HOST ?? process.env.PAPERCLIP_BRIDGE_HOST) || "127.0.0.1";
+const port = Number((process.env.PILOT_BRIDGE_PORT ?? process.env.PAPERCLIP_BRIDGE_PORT) || "0");
+const pollIntervalMs = Number((process.env.PILOT_BRIDGE_POLL_INTERVAL_MS ?? process.env.PAPERCLIP_BRIDGE_POLL_INTERVAL_MS) || "100");
 const responseTimeoutMs = Number(
-  process.env.PAPERCLIP_BRIDGE_RESPONSE_TIMEOUT_MS ||
+  (process.env.PILOT_BRIDGE_RESPONSE_TIMEOUT_MS ?? process.env.PAPERCLIP_BRIDGE_RESPONSE_TIMEOUT_MS) ||
     (bridgeMode === "${SANDBOX_CALLBACK_BRIDGE_DUPLEX_MODE}"
       ? "${DEFAULT_DUPLEX_GATEWAY_WAIT_BUDGET_MS}"
       : "${DEFAULT_BRIDGE_RESPONSE_TIMEOUT_MS}"),
 );
-const maxQueueDepth = Number(process.env.PAPERCLIP_BRIDGE_MAX_QUEUE_DEPTH || "${DEFAULT_BRIDGE_MAX_QUEUE_DEPTH}");
-const maxBodyBytes = Number(process.env.PAPERCLIP_BRIDGE_MAX_BODY_BYTES || "${DEFAULT_BRIDGE_MAX_BODY_BYTES}");
+const maxQueueDepth = Number((process.env.PILOT_BRIDGE_MAX_QUEUE_DEPTH ?? process.env.PAPERCLIP_BRIDGE_MAX_QUEUE_DEPTH) || "${DEFAULT_BRIDGE_MAX_QUEUE_DEPTH}");
+const maxBodyBytes = Number((process.env.PILOT_BRIDGE_MAX_BODY_BYTES ?? process.env.PAPERCLIP_BRIDGE_MAX_BODY_BYTES) || "${DEFAULT_BRIDGE_MAX_BODY_BYTES}");
 const heartbeatIntervalMs = Number(
-  process.env.PAPERCLIP_BRIDGE_HEARTBEAT_INTERVAL_MS || "${DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_INTERVAL_MS}",
+  (process.env.PILOT_BRIDGE_HEARTBEAT_INTERVAL_MS ?? process.env.PAPERCLIP_BRIDGE_HEARTBEAT_INTERVAL_MS) || "${DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_INTERVAL_MS}",
 );
 const heartbeatTimeoutMs = Number(
-  process.env.PAPERCLIP_BRIDGE_HEARTBEAT_TIMEOUT_MS || "${DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_TIMEOUT_MS}",
+  (process.env.PILOT_BRIDGE_HEARTBEAT_TIMEOUT_MS ?? process.env.PAPERCLIP_BRIDGE_HEARTBEAT_TIMEOUT_MS) || "${DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_TIMEOUT_MS}",
 );
 const lossExitGraceMs = Number(
-  process.env.PAPERCLIP_BRIDGE_LOSS_EXIT_GRACE_MS || "${DEFAULT_DUPLEX_GATEWAY_LOSS_EXIT_GRACE_MS}",
+  (process.env.PILOT_BRIDGE_LOSS_EXIT_GRACE_MS ?? process.env.PAPERCLIP_BRIDGE_LOSS_EXIT_GRACE_MS) || "${DEFAULT_DUPLEX_GATEWAY_LOSS_EXIT_GRACE_MS}",
 );
 // The header allowlist. Both the file gateway and the duplex gateway strip an
 // inbound request to these headers before they forward it. One copy serves both
@@ -1947,7 +1947,7 @@ const lossExitGraceMs = Number(
 const allowedHeaders = new Set(${JSON.stringify([...DEFAULT_SANDBOX_CALLBACK_BRIDGE_HEADER_ALLOWLIST])});
 
 if (!bridgeToken) {
-  throw new Error("PAPERCLIP_BRIDGE_TOKEN is required.");
+  throw new Error("PAPERCLIP_BRIDGE_TOKEN is required.");  // legacy message kept for grep-ability
 }
 if (bridgeMode !== "${SANDBOX_CALLBACK_BRIDGE_DUPLEX_MODE}" && !queueDir) {
   throw new Error("PAPERCLIP_BRIDGE_QUEUE_DIR and PAPERCLIP_BRIDGE_TOKEN are required.");

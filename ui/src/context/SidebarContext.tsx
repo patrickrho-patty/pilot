@@ -50,7 +50,7 @@ const PEEK_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
 //   false → pinned expanded ("0")
 //   null  → no pin (fall through to route request, then global default)
 // Read synchronously in the state initializer so first paint matches the
-// persisted mode (mirrors the `paperclip.sidebar.width` pattern in
+// persisted mode (mirrors the `pilot.sidebar.width` pattern in
 // ResizableSidebarPane and avoids an expand→collapse flash).
 function readStoredCollapsed(): boolean | null {
   if (typeof window === "undefined") return null;

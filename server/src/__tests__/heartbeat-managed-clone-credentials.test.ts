@@ -15,14 +15,14 @@ let tempHome: string;
 let originalHome: string | undefined;
 
 beforeAll(async () => {
-  originalHome = process.env.PAPERCLIP_HOME;
+  originalHome = process.env.PILOT_HOME;
   tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-managed-clone-"));
-  process.env.PAPERCLIP_HOME = tempHome;
+  process.env.PILOT_HOME = tempHome;
 });
 
 afterAll(async () => {
-  if (originalHome === undefined) delete process.env.PAPERCLIP_HOME;
-  else process.env.PAPERCLIP_HOME = originalHome;
+  if (originalHome === undefined) delete process.env.PILOT_HOME;
+  else process.env.PILOT_HOME = originalHome;
   await fs.rm(tempHome, { recursive: true, force: true });
 });
 

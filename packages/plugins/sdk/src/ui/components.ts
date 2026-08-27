@@ -474,7 +474,7 @@ export interface ManagedRoutinesListProps {
  * @see PLUGIN_SPEC.md §19.6 — Shared Components
  */
 function createSdkUiComponent<TProps>(name: string): React.ComponentType<TProps> {
-  return function PaperclipSdkUiComponent(props: TProps) {
+  return function PilotSdkUiComponent(props: TProps) {
     return renderSdkUiComponent(name, props) as React.ReactNode;
   };
 }
@@ -510,7 +510,7 @@ export const TimeseriesChart = createSdkUiComponent<TimeseriesChartProps>("Times
 export const MarkdownBlock = createSdkUiComponent<MarkdownBlockProps>("MarkdownBlock");
 
 /**
- * Renders Paperclip's shared Markdown editor.
+ * Renders Pilot's shared Markdown editor.
  *
  * @see PLUGIN_SPEC.md §19.6 — Shared Components
  */
@@ -576,7 +576,7 @@ export const ErrorBoundary = createSdkUiComponent<ErrorBoundaryProps>("ErrorBoun
 export const FileTree = createSdkUiComponent<FileTreeProps>("FileTree");
 
 /**
- * Renders Paperclip's native issue list component for company-scoped plugin
+ * Renders Pilot's native issue list component for company-scoped plugin
  * pages that need a standard board issue view.
  */
 export const IssuesList = createSdkUiComponent<IssuesListProps>("IssuesList");
@@ -592,6 +592,6 @@ export const AssigneePicker = createSdkUiComponent<AssigneePickerProps>("Assigne
 export const ProjectPicker = createSdkUiComponent<ProjectPickerProps>("ProjectPicker");
 
 /**
- * Renders Paperclip's native managed routines list for plugin settings pages.
+ * Renders Pilot's native managed routines list for plugin settings pages.
  */
 export const ManagedRoutinesList = createSdkUiComponent<ManagedRoutinesListProps>("ManagedRoutinesList");

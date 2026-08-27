@@ -722,7 +722,7 @@ export type PluginObjectReferenceProviderDeclarationInput = z.infer<
 // ---------------------------------------------------------------------------
 
 /**
- * Zod schema for {@link PaperclipPluginManifestV1} — the complete runtime
+ * Zod schema for {@link PilotPluginManifestV1} — the complete runtime
  * validator for plugin manifests read at install time.
  *
  * Field-level constraints (see PLUGIN_SPEC.md §10.1 for the normative rules):
@@ -737,7 +737,7 @@ export type PluginObjectReferenceProviderDeclarationInput = z.infer<
  * | `author`                 | string     | 1–200 chars                                  |
  * | `categories`             | enum[]     | at least one; values from PLUGIN_CATEGORIES  |
  * | `minimumHostVersion`     | string?    | semver lower bound if present, no leading `v`|
- * | `minimumPaperclipVersion`| string?    | legacy alias of `minimumHostVersion`         |
+ * | `minimumPilotVersion`| string?    | legacy alias of `minimumHostVersion`         |
  * | `capabilities`           | enum[]     | at least one; values from PLUGIN_CAPABILITIES|
  * | `entrypoints.worker`     | string     | min 1 char                                   |
  * | `entrypoints.ui`         | string?    | required when `ui.slots` is declared         |
@@ -755,7 +755,7 @@ export type PluginObjectReferenceProviderDeclarationInput = z.infer<
  * - duplicate `ui.slots[].id` values are rejected
  *
  * @see PLUGIN_SPEC.md §10.1 — Manifest shape
- * @see {@link PaperclipPluginManifestV1} — the inferred TypeScript type
+ * @see {@link PilotPluginManifestV1} — the inferred TypeScript type
  */
 export const pluginManifestV1Schema = z.object({
   id: z.string().min(1).regex(

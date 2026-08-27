@@ -21,7 +21,7 @@ function stripActionSignals(response: string): string {
  * Board Concierge Chat routes.
  *
  * Implements `POST /board/chat/stream` (mounted under `/api`): a lightweight
- * chat relay that spawns the `claude` CLI with the paperclip-board skill as
+ * chat relay that spawns the `claude` CLI with the pilot-board skill as
  * its system prompt and streams the response back to the web UI via
  * Server-Sent Events. The conversation is persisted to a standing
  * "Board Operations" issue so it survives reloads.
@@ -252,8 +252,8 @@ export function boardChatRoutes(
       cwd: "/tmp",
       env: {
         ...process.env,
-        PAPERCLIP_API_URL: apiUrl,
-        PAPERCLIP_COMPANY_ID: companyId,
+        PILOT_API_URL: apiUrl,
+        PILOT_COMPANY_ID: companyId,
       },
     });
 

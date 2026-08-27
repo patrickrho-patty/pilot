@@ -109,7 +109,7 @@ describe("managed install store", () => {
     const shim = fs.readFileSync(paths.shimPath, "utf8");
     expect(shim).toContain(process.execPath);
     expect(shim).toContain(paths.currentPath);
-    expect(shim).not.toContain("PAPERCLIP_HOME");
+    expect(shim).not.toContain("PILOT_HOME");
     expect(fs.statSync(paths.shimPath).mode & 0o777).toBe(0o755);
 
     const rcPath = path.join(root, "home", ".bashrc");

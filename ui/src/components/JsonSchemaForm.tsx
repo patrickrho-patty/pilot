@@ -77,7 +77,7 @@ export interface JsonSchemaNode {
   readOnly?: boolean;
   writeOnly?: boolean;
 
-  // Paperclip extensions
+  // Pilot extensions
   /**
    * When true, the field is hidden behind an "Advanced options" disclosure
    * in the top-level `JsonSchemaForm`. Defaults to false (essential).
@@ -86,7 +86,7 @@ export interface JsonSchemaNode {
   /**
    * Optional sub-section name used to group advanced fields under headings
    * inside the disclosure (e.g. "SSH access", "VM resources"). Ignored when
-   * `x-paperclip-advanced` is not true.
+   * `x-pilot-advanced` is not true.
    */
   "x-paperclip-group"?: string;
 

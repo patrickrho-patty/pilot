@@ -7,14 +7,14 @@ import pc from "picocolors";
 import { bootstrapCeoInvite } from "./auth-bootstrap-ceo.js";
 import { onboard } from "./onboard.js";
 import { doctor } from "./doctor.js";
-import { loadPaperclipEnvFile } from "../config/env.js";
+import { loadPilotEnvFile } from "../config/env.js";
 import { configExists, resolveConfigPath } from "../config/store.js";
-import type { PaperclipConfig } from "../config/schema.js";
+import type { PilotConfig } from "../config/schema.js";
 import { readConfig } from "../config/store.js";
 import {
   describeLocalInstancePaths,
-  resolvePaperclipHomeDir,
-  resolvePaperclipInstanceId,
+  resolvePilotHomeDir,
+  resolvePilotInstanceId,
 } from "../config/home.js";
 import { assertForegroundRunAllowed } from "../services/service-manager.js";
 import { printUpdateNotice } from "../update-notice.js";
@@ -37,19 +37,19 @@ interface StartedServer {
 }
 
 export async function runCommand(opts: RunOptions): Promise<void> {
-  const instanceId = resolvePaperclipInstanceId(opts.instance);
-  process.env.PAPERCLIP_INSTANCE_ID = instanceId;
+  const instanceId = resolvePilotInstanceId(opts.instance);
+  process.env.PILOT_INSTANCE_ID = instanceId;
   await assertForegroundRunAllowed(instanceId, opts.force);
 
-  const homeDir = resolvePaperclipHomeDir();
+  const homeDir = resolvePilotHomeDir();
   fs.mkdirSync(homeDir, { recursive: true });
 
   const paths = describeLocalInstancePaths(instanceId);
   fs.mkdirSync(paths.instanceRoot, { recursive: true });
 
   const configPath = resolveConfigPath(opts.config);
-  process.env.PAPERCLIP_CONFIG = configPath;
-  loadPaperclipEnvFile(configPath);
+  process.env.PILOT_CONFIG = configPath;
+  loadPilotEnvFile(configPath);
   await printUpdateNotice(configPath);
 
   p.intro(pc.bgCyan(pc.black(" paperclipai run ")));
@@ -105,12 +105,12 @@ export async function runCommand(opts: RunOptions): Promise<void> {
 }
 
 function resolveBootstrapInviteBaseUrl(
-  config: PaperclipConfig,
+  config: PilotConfig,
   startedServer: StartedServer,
 ): string {
   const explicitBaseUrl =
-    process.env.PAPERCLIP_PUBLIC_URL ??
-    process.env.PAPERCLIP_AUTH_PUBLIC_BASE_URL ??
+    process.env.PILOT_PUBLIC_URL ??
+    process.env.PILOT_AUTH_PUBLIC_BASE_URL ??
     process.env.BETTER_AUTH_URL ??
     process.env.BETTER_AUTH_BASE_URL ??
     (config.auth.baseUrlMode === "explicit" ? config.auth.publicBaseUrl : undefined);
@@ -152,10 +152,10 @@ function getMissingModuleSpecifier(err: unknown): string | null {
 }
 
 function maybeEnableUiDevMiddleware(entrypoint: string): void {
-  if (process.env.PAPERCLIP_UI_DEV_MIDDLEWARE !== undefined) return;
+  if (process.env.PILOT_UI_DEV_MIDDLEWARE !== undefined) return;
   const normalized = entrypoint.replaceAll("\\", "/");
   if (normalized.endsWith("/server/src/index.ts") || normalized.endsWith("@paperclipai/server/src/index.ts")) {
-    process.env.PAPERCLIP_UI_DEV_MIDDLEWARE = "true";
+    process.env.PILOT_UI_DEV_MIDDLEWARE = "true";
   }
 }
 
@@ -214,7 +214,7 @@ async function importServerEntry(): Promise<StartedServer> {
   }
 }
 
-function shouldGenerateBootstrapInviteAfterStart(config: PaperclipConfig): boolean {
+function shouldGenerateBootstrapInviteAfterStart(config: PilotConfig): boolean {
   return config.server.deploymentMode === "authenticated" && config.database.mode === "embedded-postgres";
 }
 

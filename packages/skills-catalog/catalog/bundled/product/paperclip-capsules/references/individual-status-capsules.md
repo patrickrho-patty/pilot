@@ -8,7 +8,7 @@ Use this reference for product UI, onboarding, org surfaces, and heartbeat statu
 2. `ui/src/index.css` - animation timings, reduced-motion behavior, agent gradient token values.
 3. `ui/src/lib/status-colors.ts` - heartbeat status color/motion mapping.
 4. `ui/src/components/OnboardingWizard.tsx` and `ui/src/pages/DesignGuide.tsx` - accepted usage examples.
-5. Website brand guide files under `paperclip-website/src/components/brand/sections/*` - marketing rules and the 12-preset website palette.
+5. Website brand guide files under `pilot-website/src/components/brand/sections/*` - marketing rules and the 12-preset website palette.
 
 ## Individual Agent Capsule
 
@@ -63,7 +63,7 @@ The app component currently exposes 10 gradient pairs. `AgentCapsule` wraps out-
 | 9 | `--agent-9a` | `#f3b49e` | `--agent-9b` | `#1f4ed4` |
 | 10 | `--agent-10a` | `#f2d95f` | `--agent-10b` | `#4fbcba` |
 
-Do not treat these as the universal Paperclip capsule palette. The website brand guide exposes 12 presets, the video references have a separate 12-gradient palette, and the hero bank has 45 gradients.
+Do not treat these as the universal Pilot capsule palette. The website brand guide exposes 12 presets, the video references have a separate 12-gradient palette, and the hero bank has 45 gradients.
 
 ## Website Marketing Capsule Palette
 

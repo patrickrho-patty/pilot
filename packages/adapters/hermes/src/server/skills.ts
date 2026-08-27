@@ -7,8 +7,8 @@ import type {
   AdapterSkillSnapshot,
 } from "@paperclipai/adapter-utils";
 import {
-  readPaperclipRuntimeSkillEntries,
-  resolvePaperclipDesiredSkillNames,
+  readPilotRuntimeSkillEntries,
+  resolvePilotDesiredSkillNames,
 } from "@paperclipai/adapter-utils/server-utils";
 import { fileURLToPath } from "node:url";
 
@@ -115,7 +115,7 @@ async function buildSkillEntry(
     origin: "user_installed",
     originLabel: "Hermes skill",
     locationLabel: `~/.hermes/skills/${categoryPath}`,
-    readOnly: true, // Hermes manages its own skills — Paperclip can't toggle them
+    readOnly: true, // Hermes manages its own skills — Pilot can't toggle them
     sourcePath: skillMdPath,
     targetPath: null,
     detail: description,
@@ -130,22 +130,22 @@ async function buildHermesSkillSnapshot(config: Record<string, unknown>): Promis
   const home = resolveHermesHome(config);
   const hermesSkillsHome = path.join(home, ".hermes", "skills");
 
-  // 1. Scan Paperclip-managed skills (bundled with the adapter)
-  const paperclipEntries = await readPaperclipRuntimeSkillEntries(config, __moduleDir);
-  const desiredSkills = resolvePaperclipDesiredSkillNames(config, paperclipEntries);
+  // 1. Scan Pilot-managed skills (bundled with the adapter)
+  const pilotEntries = await readPilotRuntimeSkillEntries(config, __moduleDir);
+  const desiredSkills = resolvePilotDesiredSkillNames(config, pilotEntries);
   const desiredSet = new Set(desiredSkills);
-  const availableByKey = new Map(paperclipEntries.map((e) => [e.key, e]));
+  const availableByKey = new Map(pilotEntries.map((e) => [e.key, e]));
 
   // 2. Scan Hermes's own skills from ~/.hermes/skills/
   const hermesSkillEntries = await scanHermesSkills(hermesSkillsHome);
   const hermesKeys = new Set(hermesSkillEntries.map((e) => e.key));
 
-  // 3. Merge: Paperclip skills first (ephemeral), then Hermes skills
+  // 3. Merge: Pilot skills first (ephemeral), then Hermes skills
   const entries: AdapterSkillEntry[] = [];
   const warnings: string[] = [];
 
-  // Paperclip-managed skills
-  for (const entry of paperclipEntries) {
+  // Pilot-managed skills
+  for (const entry of pilotEntries) {
     const desired = desiredSet.has(entry.key);
     entries.push({
       key: entry.key,
@@ -166,7 +166,7 @@ async function buildHermesSkillSnapshot(config: Record<string, unknown>): Promis
 
   // Hermes-installed skills (read-only, always loaded)
   for (const entry of hermesSkillEntries) {
-    // Skip if Paperclip already manages a skill with the same key
+    // Skip if Pilot already manages a skill with the same key
     if (availableByKey.has(entry.key)) continue;
     entries.push(entry);
   }
@@ -222,5 +222,5 @@ export function resolveHermesDesiredSkillNames(
   config: Record<string, unknown>,
   availableEntries: Array<{ key: string; runtimeName?: string | null }>,
 ): string[] {
-  return resolvePaperclipDesiredSkillNames(config, availableEntries);
+  return resolvePilotDesiredSkillNames(config, availableEntries);
 }

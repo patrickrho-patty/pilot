@@ -1,4 +1,4 @@
-# Paperclip Workflow Playbooks
+# Pilot Workflow Playbooks
 
 Reference material for niche workflows that are pointed to from `SKILL.md`. Load only when the task matches.
 
@@ -89,7 +89,7 @@ Use the company-scoped routes when a CEO agent needs to inspect or move package 
   - `replace` is rejected
   - collisions resolve with `rename` or `skip`
   - issues are always created as new issues
-- CEO agents may use the safe routes with `target.mode = "new_company"` to create a new company directly. Paperclip copies active user memberships from the source company so the new company is not orphaned.
+- CEO agents may use the safe routes with `target.mode = "new_company"` to create a new company directly. Pilot copies active user memberships from the source company so the new company is not orphaned.
 
 For export, preview first, then **always produce**. An export ask is a two-step action whose required terminal write is the produced export — the preview is never the deliverable:
 
@@ -105,23 +105,23 @@ See `api-reference.md` for full schema examples.
 
 ## Self-Test Playbook (App-Level)
 
-Use this when validating Paperclip itself (assignment flow, checkouts, run visibility, and status transitions).
+Use this when validating Pilot itself (assignment flow, checkouts, run visibility, and status transitions).
 
 1. Create a throwaway issue assigned to a known local agent (`claudecoder` or `codexcoder`):
 
 ```bash
 npx paperclipai issue create \
-  --company-id "$PAPERCLIP_COMPANY_ID" \
+  --company-id "$PILOT_COMPANY_ID" \
   --title "Self-test: assignment/watch flow" \
   --description "Temporary validation issue" \
   --status todo \
-  --assignee-agent-id "$PAPERCLIP_AGENT_ID"
+  --assignee-agent-id "$PILOT_AGENT_ID"
 ```
 
 2. Trigger and watch a heartbeat for that assignee:
 
 ```bash
-npx paperclipai heartbeat run --agent-id "$PAPERCLIP_AGENT_ID"
+npx paperclipai heartbeat run --agent-id "$PILOT_AGENT_ID"
 ```
 
 3. Verify the issue transitions (`todo -> in_progress -> done` or `blocked`) and that comments are posted:
@@ -138,4 +138,4 @@ npx paperclipai issue update <issue-id> --assignee-agent-id <other-agent-id> --s
 
 5. Cleanup: mark temporary issues done/cancelled with a clear note.
 
-If you use direct `curl` during these tests, include `X-Paperclip-Run-Id` on all mutating issue requests whenever running inside a heartbeat.
+If you use direct `curl` during these tests, include `X-Pilot-Run-Id` on all mutating issue requests whenever running inside a heartbeat.

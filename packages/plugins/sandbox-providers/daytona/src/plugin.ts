@@ -628,7 +628,7 @@ function leaseMetadata(input: {
     ...(input.config.archiveOnRelease ? { archiveOnRelease: true } : {}),
     remoteCwd: input.remoteCwd,
     resumedLease: input.resumedLease,
-    // Record the resources Paperclip attempted to request so future diagnosis
+    // Record the resources Pilot attempted to request so future diagnosis
     // can compare requested allocation against what Daytona provisioned.
     ...(input.config.cpu != null ? { cpu: input.config.cpu } : {}),
     ...(input.config.memory != null ? { memory: input.config.memory } : {}),
@@ -652,7 +652,7 @@ function expiresAtForMinutes(minutes: number): string {
 }
 
 // Configure a provider-side time-to-live so Daytona destroys the sandbox at or
-// before the caller-requested deadline, even after a Paperclip crash or outage.
+// before the caller-requested deadline, even after a Pilot crash or outage.
 // `setTtl` counts wall-clock time regardless of the sandbox state, so the destroy
 // happens even when the sandbox is stopped, paused, or archived. The function
 // returns the real provider destroy time (`autoDestroyAt`) as evidence of the
@@ -2080,7 +2080,7 @@ const plugin = definePlugin({
       const remoteCwd = await resolveSandboxWorkingDirectory(sandbox);
       const shellCommand = await detectSandboxShellCommand(sandbox, toTimeoutSeconds(config.timeoutMs));
       // Configure a provider-side destroy time at or before a caller deadline, so
-      // an abandoned sandbox self-destroys even if Paperclip is down. The lease
+      // an abandoned sandbox self-destroys even if Pilot is down. The lease
       // carries the real provider expiry (or none) as evidence of the bound.
       const expiresAt = await configureSandboxExpiry({
         sandbox,

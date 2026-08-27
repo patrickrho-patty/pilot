@@ -522,7 +522,7 @@ describe.sequential("execution workspace runtime control conflict and failure re
         workspaceCwd: fixture.workspaceCwd,
         executionWorkspaceId,
         companyId: "company-1",
-        env: { PAPERCLIP_WORKSPACE_HANDOFF_SECRET: "test-root-secret" },
+        env: { PILOT_WORKSPACE_HANDOFF_SECRET: "test-root-secret" },
       })?.instanceId).toBe(recordedInstanceId);
       mockEnsurePersistedExecutionWorkspaceAvailable.mockResolvedValue({ cwd: fixture.workspaceCwd });
       mockStartRuntimeServices.mockResolvedValue([{
@@ -536,9 +536,9 @@ describe.sequential("execution workspace runtime control conflict and failure re
           "--seed-mode", "full", "--yes", "--backup-target",
         ]));
         expect(options.env).toMatchObject({
-          PAPERCLIP_SEED_EXPECTED_COMPANY_ID: "company-1",
-          PAPERCLIP_WORKSPACE_BASE_CWD: fixture.baseCwd,
-          PAPERCLIP_PROJECT_WORKSPACE_ID: projectWorkspaceId,
+          PILOT_SEED_EXPECTED_COMPANY_ID: "company-1",
+          PILOT_WORKSPACE_BASE_CWD: fixture.baseCwd,
+          PILOT_PROJECT_WORKSPACE_ID: projectWorkspaceId,
         });
         const child = new EventEmitter() as EventEmitter & {
           stdout: PassThrough;

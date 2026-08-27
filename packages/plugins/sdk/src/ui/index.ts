@@ -1,5 +1,5 @@
 /**
- * `@paperclipai/plugin-sdk/ui` — Paperclip plugin UI SDK.
+ * `@paperclipai/plugin-sdk/ui` — Pilot plugin UI SDK.
  *
  * Import this subpath from plugin UI bundles (React components that run in
  * the host frontend).  Do **not** import this from plugin worker code.
@@ -43,7 +43,7 @@
  * - `usePluginData(key, params)` — fetch data from the worker's `getData` handler
  * - `usePluginAction(key)` — get a callable that invokes the worker's `performAction` handler
  * - `useHostContext()` — read the current active company, project, entity, and user IDs
- * - `useHostNavigation()` — navigate Paperclip-internal links through the host router
+ * - `useHostNavigation()` — navigate Pilot-internal links through the host router
  * - `useHostLocation()` — observe the current host pathname/search/hash for URL-driven UI
  * - `usePluginStream(channel)` — subscribe to real-time SSE events from the worker
  */

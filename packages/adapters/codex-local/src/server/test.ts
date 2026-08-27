@@ -179,7 +179,7 @@ async function prepareCodexHelloProbe(input: {
       env: {
         ...input.env,
         CODEX_HOME: probeHome,
-        _PAPERCLIP_CODEX_AUTH_JSON: JSON.stringify({ OPENAI_API_KEY: input.probeApiKey }),
+        _PILOT_CODEX_AUTH_JSON: JSON.stringify({ OPENAI_API_KEY: input.probeApiKey }),
       },
       cleanup,
     };

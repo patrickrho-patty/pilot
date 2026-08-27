@@ -11,17 +11,17 @@ import {
 } from "@cursor/sdk";
 import type { AdapterExecutionContext, AdapterExecutionResult, AdapterInvocationMeta } from "@paperclipai/adapter-utils";
 import {
-  DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE,
+  DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE,
   asBoolean,
   asString,
-  buildPaperclipEnv,
+  buildPilotEnv,
   joinPromptSections,
   parseObject,
-  readPaperclipIssueWorkModeFromContext,
-  renderPaperclipWakePrompt,
-  isPaperclipRecoveryWakePayload,
+  readPilotIssueWorkModeFromContext,
+  renderPilotWakePrompt,
+  isPilotRecoveryWakePayload,
   renderTemplate,
-  stringifyPaperclipWakePayload,
+  stringifyPilotWakePayload,
 } from "@paperclipai/adapter-utils/server-utils";
 
 type CursorCloudSession = {
@@ -105,12 +105,12 @@ function buildWakeEnv(ctx: AdapterExecutionContext, configEnv: Record<string, st
   const { runId, agent, context, authToken } = ctx;
   const env: Record<string, string> = {
     ...configEnv,
-    ...buildPaperclipEnv(agent),
-    PAPERCLIP_RUN_ID: runId,
+    ...buildPilotEnv(agent),
+    PILOT_RUN_ID: runId,
   };
   // PAPERCLIP_API_KEY is never accepted from config — the harness-minted run
-  // token is the only source of Paperclip API identity.
-  delete env.PAPERCLIP_API_KEY;
+  // token is the only source of Pilot API identity.
+  delete env.PILOT_API_KEY;
 
   const wakeTaskId = trimNullable(context.taskId) ?? trimNullable(context.issueId);
   const wakeReason = trimNullable(context.wakeReason);
@@ -120,44 +120,44 @@ function buildWakeEnv(ctx: AdapterExecutionContext, configEnv: Record<string, st
   const linkedIssueIds = Array.isArray(context.issueIds)
     ? context.issueIds.filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     : [];
-  const wakePayloadJson = stringifyPaperclipWakePayload(context.paperclipWake);
-  const issueWorkMode = readPaperclipIssueWorkModeFromContext(context);
+  const wakePayloadJson = stringifyPilotWakePayload(context.paperclipWake);
+  const issueWorkMode = readPilotIssueWorkModeFromContext(context);
 
-  if (wakeTaskId) env.PAPERCLIP_TASK_ID = wakeTaskId;
-  if (wakeReason) env.PAPERCLIP_WAKE_REASON = wakeReason;
-  if (wakeCommentId) env.PAPERCLIP_WAKE_COMMENT_ID = wakeCommentId;
-  if (approvalId) env.PAPERCLIP_APPROVAL_ID = approvalId;
-  if (approvalStatus) env.PAPERCLIP_APPROVAL_STATUS = approvalStatus;
-  if (linkedIssueIds.length > 0) env.PAPERCLIP_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
-  if (wakePayloadJson) env.PAPERCLIP_WAKE_PAYLOAD_JSON = wakePayloadJson;
-  if (issueWorkMode) env.PAPERCLIP_ISSUE_WORK_MODE = issueWorkMode;
+  if (wakeTaskId) env.PILOT_TASK_ID = wakeTaskId;
+  if (wakeReason) env.PILOT_WAKE_REASON = wakeReason;
+  if (wakeCommentId) env.PILOT_WAKE_COMMENT_ID = wakeCommentId;
+  if (approvalId) env.PILOT_APPROVAL_ID = approvalId;
+  if (approvalStatus) env.PILOT_APPROVAL_STATUS = approvalStatus;
+  if (linkedIssueIds.length > 0) env.PILOT_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
+  if (wakePayloadJson) env.PILOT_WAKE_PAYLOAD_JSON = wakePayloadJson;
+  if (issueWorkMode) env.PILOT_ISSUE_WORK_MODE = issueWorkMode;
   if (authToken) {
-    env.PAPERCLIP_API_KEY = authToken;
+    env.PILOT_API_KEY = authToken;
   }
 
   // cursor_cloud runs remotely in Cursor's cloud and is intentionally not
-  // issued a Paperclip run JWT (registry: supportsLocalAgentJwt=false).
-  // buildPaperclipEnv always sets PAPERCLIP_API_URL, defaulting to the local
+  // issued a Pilot run JWT (registry: supportsLocalAgentJwt=false).
+  // buildPilotEnv always sets PAPERCLIP_API_URL, defaulting to the local
   // runtime host — which a remote worker can neither reach nor authenticate
-  // against, so any agent-initiated Paperclip API call would fail with a 401
+  // against, so any agent-initiated Pilot API call would fail with a 401
   // (or be unreachable) and add noise. When there is no usable key, drop the
-  // callback wiring so cloud-side Paperclip tools degrade to a clean no-op.
+  // callback wiring so cloud-side Pilot tools degrade to a clean no-op.
   // Run results are delivered server-side via the Cursor Agent SDK (getRun /
   // wait), not through this callback, so nothing is lost.
-  if (!trimNullable(env.PAPERCLIP_API_KEY)) {
-    delete env.PAPERCLIP_API_URL;
-    delete env.PAPERCLIP_API_BRIDGE_MODE;
+  if (!trimNullable(env.PILOT_API_KEY)) {
+    delete env.PILOT_API_URL;
+    delete env.PILOT_API_BRIDGE_MODE;
   }
 
   const workspace = parseObject(context.paperclipWorkspace);
   const workspaceMappings: Array<[string, unknown]> = [
-    ["PAPERCLIP_WORKSPACE_CWD", workspace.cwd],
-    ["PAPERCLIP_WORKSPACE_SOURCE", workspace.source],
-    ["PAPERCLIP_WORKSPACE_ID", workspace.workspaceId],
-    ["PAPERCLIP_WORKSPACE_REPO_URL", workspace.repoUrl],
-    ["PAPERCLIP_WORKSPACE_REPO_REF", workspace.repoRef],
-    ["PAPERCLIP_WORKSPACE_BRANCH", workspace.branch],
-    ["PAPERCLIP_WORKSPACE_WORKTREE_PATH", workspace.worktreePath],
+    ["PILOT_WORKSPACE_CWD", workspace.cwd],
+    ["PILOT_WORKSPACE_SOURCE", workspace.source],
+    ["PILOT_WORKSPACE_ID", workspace.workspaceId],
+    ["PILOT_WORKSPACE_REPO_URL", workspace.repoUrl],
+    ["PILOT_WORKSPACE_REPO_REF", workspace.repoRef],
+    ["PILOT_WORKSPACE_BRANCH", workspace.branch],
+    ["PILOT_WORKSPACE_WORKTREE_PATH", workspace.worktreePath],
     ["AGENT_HOME", workspace.agentHome],
   ];
   for (const [key, value] of workspaceMappings) {
@@ -206,7 +206,7 @@ async function buildInstructionsPrefix(
   }
 }
 
-function renderPaperclipEnvNote(env: Record<string, string>): string {
+function renderPilotEnvNote(env: Record<string, string>): string {
   const keys = Object.keys(env)
     .filter((key) => key.startsWith("PAPERCLIP_"))
     .sort();
@@ -395,7 +395,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       }
     : null);
   const canReuseSession = sessionMatches(session, envType, envName, repos);
-  const promptTemplate = asString(config.promptTemplate, DEFAULT_PAPERCLIP_AGENT_PROMPT_TEMPLATE);
+  const promptTemplate = asString(config.promptTemplate, DEFAULT_PILOT_AGENT_PROMPT_TEMPLATE);
   const bootstrapPromptTemplate = asString(config.bootstrapPromptTemplate, "");
   const templateData = {
     agentId: agent.id,
@@ -407,21 +407,21 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     context,
   };
   const instructions = await buildInstructionsPrefix(config, onLog);
-  const wakePrompt = renderPaperclipWakePrompt(context.paperclipWake, { resumedSession: canReuseSession });
+  const wakePrompt = renderPilotWakePrompt(context.paperclipWake, { resumedSession: canReuseSession });
   const renderedBootstrapPrompt =
     !canReuseSession && bootstrapPromptTemplate.trim().length > 0
       ? renderTemplate(bootstrapPromptTemplate, templateData).trim()
       : "";
   const renderedPrompt =
-    (canReuseSession && wakePrompt.length > 0) || isPaperclipRecoveryWakePayload(context.paperclipWake)
+    (canReuseSession && wakePrompt.length > 0) || isPilotRecoveryWakePayload(context.paperclipWake)
       ? ""
       : renderTemplate(promptTemplate, templateData).trim();
-  const paperclipEnvNote = renderPaperclipEnvNote(remoteEnv);
+  const pilotEnvNote = renderPilotEnvNote(remoteEnv);
   const prompt = joinPromptSections([
     instructions.prefix,
     renderedBootstrapPrompt,
     wakePrompt,
-    paperclipEnvNote,
+    pilotEnvNote,
     renderedPrompt,
   ]);
   const sessionHandoffNote = asString(context.paperclipSessionHandoffMarkdown, "").trim();

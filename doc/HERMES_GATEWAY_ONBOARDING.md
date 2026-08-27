@@ -1,23 +1,23 @@
 # Hermes Gateway Onboarding
 
-Use this guide when a Hermes runtime should join Paperclip as an external
+Use this guide when a Hermes runtime should join Pilot as an external
 `hermes_gateway` employee. This mirrors the OpenClaw gateway invite path, but
 Hermes uses the generic agent invite/onboarding flow instead of the
 OpenClaw-specific invite prompt endpoint.
 
 ## Choose The Adapter
 
-Paperclip ships both Hermes adapters as built-ins:
+Pilot ships both Hermes adapters as built-ins:
 
 - `hermes_local` runs the local `hermes` CLI as a child process on the
-  Paperclip host.
+  Pilot host.
 - `hermes_gateway` calls an already-running Hermes API server over HTTP/SSE.
 
 No Adapter manager installation is required for normal use. Adapter manager is
 only needed when you intentionally install an external
-`@paperclipai/hermes-paperclip-adapter` package to override or shadow a built-in
+`@paperclipai/hermes-pilot-adapter` package to override or shadow a built-in
 adapter while developing the Hermes package. If the external override is paused
-or removed, Paperclip restores the built-in `hermes_local` / `hermes_gateway`
+or removed, Pilot restores the built-in `hermes_local` / `hermes_gateway`
 adapter.
 
 ## Required Credentials
@@ -27,15 +27,15 @@ Keep these credentials distinct:
 - Hermes inference provider key: set at least one provider key for Hermes, such
   as `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
   `GEMINI_API_KEY`, `GOOGLE_API_KEY`, or `MISTRAL_API_KEY`.
-- Hermes gateway key: set `API_SERVER_KEY` before starting Hermes. Paperclip
+- Hermes gateway key: set `API_SERVER_KEY` before starting Hermes. Pilot
   stores the same value as `agentDefaultsPayload.apiKey` so it can call Hermes.
-- Paperclip agent key: created after the board approves the join request and
+- Pilot agent key: created after the board approves the join request and
   claimed once by the Hermes agent. Hermes uses this key as
-  `PAPERCLIP_API_KEY` when it calls Paperclip.
+  `PILOT_API_KEY` when it calls Pilot.
 
-Do not reuse the Hermes gateway key as the Paperclip agent key. The Hermes
-gateway key authenticates Paperclip-to-Hermes traffic; the claimed Paperclip key
-authenticates Hermes-to-Paperclip traffic.
+Do not reuse the Hermes gateway key as the Pilot agent key. The Hermes
+gateway key authenticates Pilot-to-Hermes traffic; the claimed Pilot key
+authenticates Hermes-to-Pilot traffic.
 
 ## Start Hermes Gateway
 
@@ -49,9 +49,9 @@ API_SERVER_ENABLED=true hermes gateway run --replace --accept-hooks
 ```
 
 The default Hermes API server port is `8642`. For local loopback testing,
-Paperclip can usually store `http://127.0.0.1:8642` as the gateway URL. For
+Pilot can usually store `http://127.0.0.1:8642` as the gateway URL. For
 Docker, LAN, tailnet, or reverse-proxy setups, use a URL reachable by the
-Paperclip server process.
+Pilot server process.
 
 Plain HTTP is accepted for loopback. Non-loopback HTTP is denied by default in
 the join flow; use HTTPS for real remote gateways. For private local
@@ -59,7 +59,7 @@ development only, the join payload can set
 `dangerouslyAllowInsecureRemoteHttp: true`, and the smoke scripts expose the
 same escape hatch as `HERMES_GATEWAY_ALLOW_INSECURE_HTTP=1`.
 
-## Invite From Paperclip
+## Invite From Pilot
 
 In the board UI:
 
@@ -96,7 +96,7 @@ Hermes should submit a join request with `requestType: "agent"` and
   "agentDefaultsPayload": {
     "apiBaseUrl": "http://127.0.0.1:8642",
     "apiKey": "<same-value-as-API_SERVER_KEY>",
-    "paperclipApiUrl": "http://127.0.0.1:3100",
+    "pilotApiUrl": "http://127.0.0.1:3100",
     "sessionKeyStrategy": "issue"
   }
 }
@@ -104,18 +104,18 @@ Hermes should submit a join request with `requestType: "agent"` and
 
 Important URL roles:
 
-- `agentDefaultsPayload.apiBaseUrl` is the Hermes gateway URL that Paperclip
+- `agentDefaultsPayload.apiBaseUrl` is the Hermes gateway URL that Pilot
   calls.
-- `agentDefaultsPayload.paperclipApiUrl` is the Paperclip base URL that Hermes
+- `agentDefaultsPayload.pilotApiUrl` is the Pilot base URL that Hermes
   can call after approval and key claim.
-- `PAPERCLIP_API_URL` / `PAPERCLIP_API_KEY` are injected runtime values for
-  Hermes-originated Paperclip API calls after the agent is approved.
+- `PILOT_API_URL` / `PILOT_API_KEY` are injected runtime values for
+  Hermes-originated Pilot API calls after the agent is approved.
 
 ## Approve And Claim
 
 After Hermes submits the join request:
 
-1. In Paperclip, review the pending agent join request.
+1. In Pilot, review the pending agent join request.
 2. Approve it from the board UI, or use:
 
    ```sh
@@ -129,21 +129,21 @@ After Hermes submits the join request:
    npx paperclipai join claim-key <request-id> --claim-secret <secret>
    ```
 
-4. Store the claimed Paperclip key in Hermes runtime state or secrets. The claim
+4. Store the claimed Pilot key in Hermes runtime state or secrets. The claim
    secret and claimed key are sensitive and should not be pasted into issue
    comments, logs, or prompt text.
 
 Once the key is claimed, create an issue assigned to the new Hermes gateway
-agent and wake it through the normal Paperclip heartbeat path.
+agent and wake it through the normal Pilot heartbeat path.
 
 ## Local Fresh-State Smoke
 
-For a fresh Docker-backed Hermes gateway and end-to-end Paperclip join/run
+For a fresh Docker-backed Hermes gateway and end-to-end Pilot join/run
 verification, use:
 
 ```sh
-PAPERCLIP_API_URL=http://127.0.0.1:3100 \
-PAPERCLIP_AUTH_HEADER='Bearer <board-token>' \
+PILOT_API_URL=http://127.0.0.1:3100 \
+PILOT_AUTH_HEADER='Bearer <board-token>' \
 pnpm smoke:hermes-gateway-e2e
 ```
 
@@ -153,10 +153,10 @@ The E2E smoke:
 - seeds a minimal non-secret Hermes model config
 - passes provider keys from the host environment without printing them
 - verifies Hermes `/health`, `/v1/capabilities`, `/v1/runs`, SSE, and stop
-- creates and approves a Paperclip agent-only invite
+- creates and approves a Pilot agent-only invite
 - joins as `hermes_gateway`
 - wakes the agent on a smoke issue
-- removes Paperclip and Docker test state on success
+- removes Pilot and Docker test state on success
 
 If a Hermes gateway is already running and you only need to validate the invite
 and stored adapter config, use the join-only helper:
@@ -164,8 +164,8 @@ and stored adapter config, use the join-only helper:
 ```sh
 API_SERVER_ENABLED=true API_SERVER_KEY='<gateway-key>' hermes gateway run --replace --accept-hooks
 
-PAPERCLIP_API_URL=http://127.0.0.1:3100 \
-PAPERCLIP_AUTH_HEADER='Bearer <board-token>' \
+PILOT_API_URL=http://127.0.0.1:3100 \
+PILOT_AUTH_HEADER='Bearer <board-token>' \
 HERMES_GATEWAY_API_BASE_URL=http://127.0.0.1:8642 \
 HERMES_GATEWAY_API_KEY='<gateway-key>' \
 pnpm smoke:hermes-gateway-join
@@ -188,6 +188,6 @@ Use these entry points depending on who is driving setup:
   verification and `pnpm smoke:hermes-gateway-join` for an already-running
   gateway.
 - Adapter development override: Adapter manager can install
-  `@paperclipai/hermes-paperclip-adapter` as an external override, but normal
+  `@paperclipai/hermes-pilot-adapter` as an external override, but normal
   operators should use the built-in `hermes_local` and `hermes_gateway`
   adapters.

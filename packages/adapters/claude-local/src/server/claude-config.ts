@@ -15,7 +15,7 @@ import {
   type AdapterExecutionTarget,
   type AdapterExecutionTargetShellOptions,
 } from "@paperclipai/adapter-utils/execution-target";
-import { resolvePaperclipInstanceRootForAdapter } from "@paperclipai/adapter-utils/server-utils";
+import { resolvePilotInstanceRootForAdapter } from "@paperclipai/adapter-utils/server-utils";
 import { shellQuote } from "@paperclipai/adapter-utils/ssh";
 import { classifyThrownErrorClass, logSandboxProbeDiagnostic } from "./probe-diagnostics.js";
 
@@ -131,9 +131,9 @@ export function resolveManagedClaudeConfigSeedDir(
   env: NodeJS.ProcessEnv,
   companyId?: string,
 ): string {
-  const instanceRoot = resolvePaperclipInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+  const instanceRoot = resolvePilotInstanceRootForAdapter({
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   return companyId
@@ -146,15 +146,15 @@ export function resolveManagedClaudeRuntimeStateDir(
   companyId: string,
   agentId: string,
 ): string {
-  const instanceRoot = resolvePaperclipInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+  const instanceRoot = resolvePilotInstanceRootForAdapter({
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   return path.join(instanceRoot, "companies", companyId, "agents", agentId, "claude-runtime");
 }
 
-export async function writePaperclipClaudeMcpConfig(input: {
+export async function writePilotClaudeMcpConfig(input: {
   stateDir: string;
   runId: string;
   servers: AdapterRuntimeMcpServer[];
@@ -258,7 +258,7 @@ function isNonEmptyString(value: unknown): value is string {
 /**
  * Prepare the sandbox runtime that a Claude hello probe needs. The step
  * installs the Claude CLI in the sandbox when the CLI is absent, and it
- * materializes the Paperclip-managed Claude config directory. Both the CLI
+ * materializes the Pilot-managed Claude config directory. Both the CLI
  * Test lane and the ACP Test lane call this helper, so the two lanes probe
  * the same login state. The Claude CLI and the Claude ACP engine share the
  * same stored Claude login.

@@ -7,11 +7,11 @@ import {
   asNumber,
   asString,
   parseObject,
-  readPaperclipIssueWorkModeFromContext,
-  renderPaperclipWakePrompt,
-  isPaperclipRecoveryWakePayload,
-  selectPaperclipTaskMarkdown,
-  stringifyPaperclipWakePayload,
+  readPilotIssueWorkModeFromContext,
+  renderPilotWakePrompt,
+  isPilotRecoveryWakePayload,
+  selectPilotTaskMarkdown,
+  stringifyPilotWakePayload,
 } from "@paperclipai/adapter-utils/server-utils";
 import {
   ADAPTER_TYPE,
@@ -71,7 +71,7 @@ const SENSITIVE_KEY_PATTERN =
   /(^|[_-])(auth|authorization|token|secret|password|api[_-]?key|private[_-]?key)([_-]|$)/i;
 const BEARER_TOKEN_PATTERN = /Bearer\s+\S+/gi;
 const HERMES_SESSION_KEY_HEADER_PATTERN = /(X-Hermes-Session-Key\s*[:=]\s*)([^\s,;]+)/gi;
-const PAPERCLIP_SESSION_KEY_PATTERN =
+const PILOT_SESSION_KEY_PATTERN =
   /\bpaperclip:(?:company:[A-Za-z0-9-]+:agent:[A-Za-z0-9-]+(?::(?:issue|run):[A-Za-z0-9-]+)?|run:[A-Za-z0-9-]+)\b/gi;
 
 const TERMINAL_STATUSES = new Set([
@@ -175,7 +175,7 @@ function sanitizeSensitiveText(value: string): string {
   return value
     .replace(BEARER_TOKEN_PATTERN, "Bearer [redacted]")
     .replace(HERMES_SESSION_KEY_HEADER_PATTERN, "$1[redacted]")
-    .replace(PAPERCLIP_SESSION_KEY_PATTERN, "[redacted-session-key]");
+    .replace(PILOT_SESSION_KEY_PATTERN, "[redacted-session-key]");
 }
 
 function escapeRegExp(value: string): string {
@@ -263,7 +263,7 @@ function buildHeaders(input: {
   };
 }
 
-function buildInput(ctx: AdapterExecutionContext, paperclipApiUrl: string | null): string {
+function buildInput(ctx: AdapterExecutionContext, pilotApiUrl: string | null): string {
   // Stable session keys (issue/agent strategy) resume the same remote Hermes
   // conversation across runs; a stored session id from a prior run means that
   // conversation already received the task brief, so pick the compact
@@ -272,17 +272,17 @@ function buildInput(ctx: AdapterExecutionContext, paperclipApiUrl: string | null
   const resumedSession =
     (sessionKeyStrategy === "issue" || sessionKeyStrategy === "agent") &&
     Boolean(nonEmpty(ctx.runtime?.sessionId));
-  const taskMarkdown = nonEmpty(selectPaperclipTaskMarkdown(ctx.context, { resumedSession }));
-  const wakePrompt = renderPaperclipWakePrompt(ctx.context.paperclipWake, {
+  const taskMarkdown = nonEmpty(selectPilotTaskMarkdown(ctx.context, { resumedSession }));
+  const wakePrompt = renderPilotWakePrompt(ctx.context.paperclipWake, {
     // The task-context markdown is the authoritative brief on this lane; keep
     // the wake prompt's description copy out so the prompt carries it once.
     suppressIssueDescription: Boolean(taskMarkdown),
   });
-  const wakePayloadJson = stringifyPaperclipWakePayload(ctx.context.paperclipWake, {
+  const wakePayloadJson = stringifyPilotWakePayload(ctx.context.paperclipWake, {
     omitIssueDescription: Boolean(taskMarkdown),
   });
   const sessionHandoff = nonEmpty(ctx.context.paperclipSessionHandoffMarkdown);
-  const issueWorkMode = readPaperclipIssueWorkModeFromContext(ctx.context);
+  const issueWorkMode = readPilotIssueWorkModeFromContext(ctx.context);
   const lines = [
     `You are ${ctx.agent.name}, an AI agent employee in a Paperclip-managed company.`,
     "",
@@ -290,10 +290,10 @@ function buildInput(ctx: AdapterExecutionContext, paperclipApiUrl: string | null
     `- Agent ID: ${ctx.agent.id}`,
     `- Company ID: ${ctx.agent.companyId}`,
     `- Run ID: ${ctx.runId}`,
-    ...(paperclipApiUrl ? [`- Paperclip API URL: ${paperclipApiUrl}`] : []),
+    ...(pilotApiUrl ? [`- Paperclip API URL: ${pilotApiUrl}`] : []),
     ...(issueWorkMode ? [`- Issue work mode: ${issueWorkMode}`] : []),
     "",
-    ...(isPaperclipRecoveryWakePayload(ctx.context.paperclipWake)
+    ...(isPilotRecoveryWakePayload(ctx.context.paperclipWake)
       ? []
       : [
           "Execution contract:",
@@ -320,9 +320,9 @@ function buildInput(ctx: AdapterExecutionContext, paperclipApiUrl: string | null
 }
 
 function buildRunBody(ctx: AdapterExecutionContext, sessionKey: string | null): Record<string, unknown> {
-  const paperclipApiUrl = nonEmpty(ctx.config.paperclipApiUrl);
+  const pilotApiUrl = nonEmpty(ctx.config.paperclipApiUrl);
   const payloadTemplate = parseObject(ctx.config.payloadTemplate);
-  const input = nonEmpty(payloadTemplate.input) ?? buildInput(ctx, paperclipApiUrl);
+  const input = nonEmpty(payloadTemplate.input) ?? buildInput(ctx, pilotApiUrl);
   const instructions =
     nonEmpty(ctx.config.instructions) ??
     nonEmpty(payloadTemplate.instructions) ??

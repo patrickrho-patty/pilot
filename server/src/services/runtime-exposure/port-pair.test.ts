@@ -55,7 +55,7 @@ describe("allocateExposurePortPair", () => {
     });
 
     it("ignores a legacy pinned port outside the dedicated range", async () => {
-      // 45439 is the pre-feature Paperclip App port; the broker can never
+      // 45439 is the pre-feature Pilot App port; the broker can never
       // publish it, so the allocator must relocate rather than fail.
       const pair = await allocateExposurePortPair({
         isPortAvailable: async () => true,

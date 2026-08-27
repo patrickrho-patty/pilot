@@ -10,7 +10,7 @@ import {
   type ExternalObjectMentionSourceKind,
   type ExternalObjectStatusCategory,
   type ExternalObjectStatusTone,
-  type PaperclipPluginManifestV1,
+  type PilotPluginManifestV1,
 } from "@paperclipai/shared";
 import { extractExternalObjectCanonicalUrls } from "@paperclipai/shared/external-objects-server";
 import type { PluginExternalObjectRecordSnapshot, PluginExternalObjectResolveResult } from "@paperclipai/plugin-sdk";
@@ -207,7 +207,7 @@ export function createExternalObjectResolverRegistry(resolvers: ExternalObjectRe
 }
 
 function manifestProvidesObject(
-  manifest: PaperclipPluginManifestV1,
+  manifest: PilotPluginManifestV1,
   object: Pick<ExternalObjectRecord, "providerKey" | "objectType">,
 ) {
   return (manifest.objectReferences ?? []).some(

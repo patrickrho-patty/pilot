@@ -1,6 +1,6 @@
-# Installing Paperclip
+# Installing Pilot
 
-Paperclip supports a managed installation, an ephemeral `npx` tryout, a
+Pilot supports a managed installation, an ephemeral `npx` tryout, a
 traditional global npm installation, and development from a source checkout.
 The managed installation is recommended because it provides atomic updates,
 rollback, git-ref installs, and a stable entrypoint for the background service.
@@ -24,13 +24,13 @@ The bootstrap script:
 
 1. verifies that the platform is supported;
 2. ensures Node.js 24.11 or newer is available;
-3. delegates installation to `paperclipai install`;
+3. delegates installation to `pilotai install`;
 4. starts interactive onboarding when stdin and stdout are terminals.
 
 The script prints and confirms any command that requires elevated privileges.
 Third-party Node.js bootstrap scripts are pinned and SHA-256 verified before
 execution; the installer stops if a published script changes unexpectedly.
-The `paperclip.ing` checksum detects transfer or publishing mistakes, but it is
+The `pilot.ing` checksum detects transfer or publishing mistakes, but it is
 served from the same origin as the script and is not an independent
 authenticity proof. For an independently hosted source, download a release-tag
 or commit-pinned copy from GitHub, review it, and run that local file.
@@ -42,7 +42,7 @@ privileged commands are inspectable before execution:
 
 ```sh
 curl -fsSL https://paperclip.ing/install.sh | bash -s -- --no-prompt --no-onboard
-paperclipai onboard --yes
+pilotai onboard --yes
 ```
 
 If the vanity installer endpoint is unavailable, fetch the same
@@ -55,10 +55,10 @@ curl -fsSL "$raw_base/master/scripts/install.sh" | bash
 
 For audits or incident response, pin the raw URL to a release tag or commit SHA
 instead of `master` and download it first. That immutable GitHub URL provides a
-separate delivery path from `paperclip.ing`; do not treat a checksum served by
+separate delivery path from `pilot.ing`; do not treat a checksum served by
 the same origin as the artifact as an independent trust anchor.
 
-Each installer flag also has a `PAPERCLIP_INSTALL_*` environment-variable
+Each installer flag also has a `PILOT_INSTALL_*` environment-variable
 equivalent. This helps where passing arguments through a pipe is awkward.
 
 ## Managed Install Layout
@@ -77,7 +77,7 @@ Managed code is separate from instance data:
 ```
 
 The `paperclipai` shim remains stable while `current` switches atomically
-between complete payloads. Paperclip keeps the two previous managed payloads
+between complete payloads. Pilot keeps the two previous managed payloads
 for rollback. Configuration, databases, uploads, logs, secrets, and workspaces
 remain under `~/.paperclip/instances/` and are not stored inside CLI payloads.
 
@@ -90,28 +90,28 @@ the exact `export PATH` command instead of editing shell files silently.
 Install the current stable release:
 
 ```sh
-npx --registry https://registry.npmjs.org paperclipai install
+npx --registry https://registry.npmjs.org pilotai install
 ```
 
 Install canary or pin an exact published version:
 
 ```sh
-npx --registry https://registry.npmjs.org paperclipai install --canary
-npx --registry https://registry.npmjs.org paperclipai install --version 2026.720.0
+npx --registry https://registry.npmjs.org pilotai install --canary
+npx --registry https://registry.npmjs.org pilotai install --version 2026.720.0
 ```
 
 Install a branch, tag, or commit from GitHub:
 
 ```sh
-npx --registry https://registry.npmjs.org paperclipai install --ref master
-npx --registry https://registry.npmjs.org paperclipai install --ref v2026.720.0
-npx --registry https://registry.npmjs.org paperclipai install --ref <commit-sha>
+npx --registry https://registry.npmjs.org pilotai install --ref master
+npx --registry https://registry.npmjs.org pilotai install --ref v2026.720.0
+npx --registry https://registry.npmjs.org pilotai install --ref <commit-sha>
 ```
 
 Use a fork by adding `--repo owner/repository`:
 
 ```sh
-npx --registry https://registry.npmjs.org paperclipai install \
+npx --registry https://registry.npmjs.org pilotai install \
   --repo your-org/paperclip \
   --ref your-branch
 ```
@@ -125,34 +125,34 @@ revision's package installation and release build scripts on your machine.
 Run onboarding after a non-interactive installation:
 
 ```sh
-paperclipai onboard
+pilotai onboard
 ```
 
-Interactive onboarding asks whether Paperclip should run as a background
+Interactive onboarding asks whether Pilot should run as a background
 service when the platform supports one. Automated onboarding deliberately does
 not install a service unless explicitly requested:
 
 ```sh
-paperclipai onboard --yes                    # configure only; no service install
-paperclipai onboard --yes --install-service  # explicit automation opt-in
-paperclipai onboard --yes --no-install-service
+pilotai onboard --yes                    # configure only; no service install
+pilotai onboard --yes --install-service  # explicit automation opt-in
+pilotai onboard --yes --no-install-service
 ```
 
 Service commands are namespaced:
 
 ```sh
-paperclipai service install
-paperclipai service status
-paperclipai service start
-paperclipai service stop
-paperclipai service restart
-paperclipai service logs -f
-paperclipai service uninstall
+pilotai service install
+pilotai service status
+pilotai service start
+pilotai service stop
+pilotai service restart
+pilotai service logs -f
+pilotai service uninstall
 ```
 
-Paperclip uses a systemd user service on Linux and WSL2 systems with user
+Pilot uses a systemd user service on Linux and WSL2 systems with user
 systemd, and a LaunchAgent on macOS. Containers, WSL1, and systems without a
-supported user service manager receive foreground `paperclipai run` guidance
+supported user service manager receive foreground `pilotai run` guidance
 instead of a hard failure.
 
 The service uses the stable managed-install shim, restarts after crashes, and
@@ -160,7 +160,7 @@ can start on login. On Linux, service installation may offer to enable user
 lingering so it can continue without an active login session. The command
 explains and confirms that system-level action before running it.
 
-Use one server process per instance. `paperclipai run` refuses to start when
+Use one server process per instance. `pilotai run` refuses to start when
 the same instance is already supervised; stop the service first or use
 `--force` only when you intentionally accept the single-writer risk.
 
@@ -169,31 +169,31 @@ the same instance is already supervised; stop the service first or use
 Update according to the source and channel recorded in the install manifest:
 
 ```sh
-paperclipai update
+pilotai update
 ```
 
 Select a different release source explicitly:
 
 ```sh
-paperclipai update --latest
-paperclipai update --canary
-paperclipai update --version 2026.720.0
+pilotai update --latest
+pilotai update --canary
+pilotai update --version 2026.720.0
 ```
 
 Managed updates create a database backup before switching payloads, verify the
 new CLI, atomically flip `current`, and restart an installed service. A failed
 install or verification leaves the previous payload active.
 
-If the service is stopped, start it with `paperclipai service start` before
-updating so Paperclip can take the safety backup. Use
-`paperclipai update --no-backup` only when you intentionally accept updating
+If the service is stopped, start it with `pilotai service start` before
+updating so Pilot can take the safety backup. Use
+`pilotai update --no-backup` only when you intentionally accept updating
 without that rollback safeguard. A never-onboarded instance with no config or
 instance data skips the backup automatically because there is nothing to save.
 
 Roll back to the previous retained payload:
 
 ```sh
-paperclipai update --rollback
+pilotai update --rollback
 ```
 
 The `upgrade` command is an alias for `update`. Exact versions and commit SHAs
@@ -204,26 +204,26 @@ are pinned; provide a new target when you want them to move.
 Ephemeral tryout with no managed install:
 
 ```sh
-npx --registry https://registry.npmjs.org paperclipai onboard --yes
+npx --registry https://registry.npmjs.org pilotai onboard --yes
 ```
 
 Traditional global npm install:
 
 ```sh
-npm install --global --registry https://registry.npmjs.org paperclipai
-paperclipai onboard
+npm install --global --registry https://registry.npmjs.org pilotai
+pilotai onboard
 ```
 
 Source checkout for development:
 
 ```sh
 git clone https://github.com/paperclipai/paperclip.git
-cd paperclip
+cd pilot
 pnpm install
 pnpm dev
 ```
 
-The managed `paperclipai update` command can update managed and global npm
+The managed `pilotai update` command can update managed and global npm
 installs. For source checkouts it reports the appropriate git workflow instead
 of modifying the checkout automatically.
 
@@ -232,8 +232,8 @@ of modifying the checkout automatically.
 Run:
 
 ```sh
-paperclipai doctor
-paperclipai service status
+pilotai doctor
+pilotai service status
 ```
 
 `doctor` checks the managed install store, manifest, `current` link, shim,
@@ -252,11 +252,11 @@ before it starts.
 Remove the background service and managed CLI payloads:
 
 ```sh
-paperclipai service uninstall
-paperclipai uninstall
+pilotai service uninstall
+pilotai uninstall
 ```
 
-`paperclipai uninstall` removes the managed shim, manifest, and CLI payloads.
+`pilotai uninstall` removes the managed shim, manifest, and CLI payloads.
 It deliberately preserves `~/.paperclip/instances/`, including configuration,
 databases, uploads, logs, secrets, backups, and workspaces. Back up and remove
-that data separately only when you intend to delete the Paperclip instance.
+that data separately only when you intend to delete the Pilot instance.

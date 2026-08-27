@@ -38,7 +38,7 @@ const LIMIT_RANGE_NAME = "paperclip-limits";
  * reconciliation here.
  *
  * Particular gotcha: switching egressMode "standard" → "cilium" leaves the
- * old paperclip-egress-allow NetworkPolicy in place alongside the new
+ * old pilot-egress-allow NetworkPolicy in place alongside the new
  * CiliumNetworkPolicy. Both apply; the effective egress is the intersection.
  */
 export async function ensureTenant(clients: KubeClients, input: EnsureTenantInput): Promise<void> {

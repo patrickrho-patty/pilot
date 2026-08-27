@@ -16,7 +16,7 @@ import {
   pluginManagedResources,
   plugins,
 } from "@paperclipai/db";
-import type { PaperclipPluginManifestV1 } from "@paperclipai/shared";
+import type { PilotPluginManifestV1 } from "@paperclipai/shared";
 import {
   getEmbeddedPostgresTestSupport,
   startEmbeddedPostgresTestDatabase,
@@ -41,7 +41,7 @@ function issuePrefix(id: string) {
   return `T${id.replace(/-/g, "").slice(0, 6).toUpperCase()}`;
 }
 
-function manifest(): PaperclipPluginManifestV1 {
+function manifest(): PilotPluginManifestV1 {
   return {
     id: "paperclip.managed-agents-test",
     apiVersion: 1,
@@ -100,7 +100,7 @@ describeEmbeddedPostgres("plugin-managed agents", () => {
     await tempDb?.cleanup();
   });
 
-  async function seedCompanyAndPlugin(options: { requireApproval?: boolean; manifest?: PaperclipPluginManifestV1 } = {}) {
+  async function seedCompanyAndPlugin(options: { requireApproval?: boolean; manifest?: PilotPluginManifestV1 } = {}) {
     const companyId = randomUUID();
     const pluginId = randomUUID();
     const pluginManifest = options.manifest ?? manifest();
@@ -242,12 +242,12 @@ describeEmbeddedPostgres("plugin-managed agents", () => {
   });
 
   it("materializes declared managed agent instructions with local folder paths", async () => {
-    const previousHome = process.env.PAPERCLIP_HOME;
-    const previousInstance = process.env.PAPERCLIP_INSTANCE_ID;
+    const previousHome = process.env.PILOT_HOME;
+    const previousInstance = process.env.PILOT_INSTANCE_ID;
     const tempHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-managed-agent-home-"));
     const wikiRoot = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-managed-agent-wiki-")));
-    process.env.PAPERCLIP_HOME = tempHome;
-    process.env.PAPERCLIP_INSTANCE_ID = "test";
+    process.env.PILOT_HOME = tempHome;
+    process.env.PILOT_INSTANCE_ID = "test";
     try {
       const pluginManifest = manifest();
       pluginManifest.localFolders = [
@@ -302,10 +302,10 @@ describeEmbeddedPostgres("plugin-managed agents", () => {
       expect(content).toContain(`Wiki root: \`${wikiRoot}\``);
       expect(content).toContain(`Wiki schema: \`${path.join(wikiRoot, "AGENTS.md")}\``);
     } finally {
-      if (previousHome === undefined) delete process.env.PAPERCLIP_HOME;
-      else process.env.PAPERCLIP_HOME = previousHome;
-      if (previousInstance === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-      else process.env.PAPERCLIP_INSTANCE_ID = previousInstance;
+      if (previousHome === undefined) delete process.env.PILOT_HOME;
+      else process.env.PILOT_HOME = previousHome;
+      if (previousInstance === undefined) delete process.env.PILOT_INSTANCE_ID;
+      else process.env.PILOT_INSTANCE_ID = previousInstance;
       await fs.rm(tempHome, { recursive: true, force: true });
       await fs.rm(wikiRoot, { recursive: true, force: true });
     }

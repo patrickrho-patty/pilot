@@ -268,7 +268,7 @@ function buildPluginUiUrl(contribution: PluginUiContribution): string {
  * fighting import map timing constraints, we:
  * 1. Fetch the module source text
  * 2. Rewrite bare specifier imports to use blob URLs that re-export from the
- *    host's global bridge registry (`globalThis.__paperclipPluginBridge__`)
+ *    host's global bridge registry (`globalThis.__pilotPluginBridge__`)
  * 3. Import the rewritten module via a blob URL
  *
  * This approach is compatible with all modern browsers and avoids import map

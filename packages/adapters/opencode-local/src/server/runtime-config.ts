@@ -165,7 +165,7 @@ export async function prepareOpenCodeRuntimeConfig(input: {
   // hard-coded) so the gateway URL, key env, and model list stay declarative.
   const resolveEnv = (name: string): string | undefined => input.env[name] ?? process.env[name];
   const gatewayProviders = parseProviderConfig(
-    input.env.PAPERCLIP_OPENCODE_PROVIDERS ?? process.env.PAPERCLIP_OPENCODE_PROVIDERS,
+    input.env.PILOT_OPENCODE_PROVIDERS ?? process.env.PILOT_OPENCODE_PROVIDERS,
     resolveEnv,
     notes,
   );
@@ -222,7 +222,7 @@ export async function prepareOpenCodeRuntimeConfig(input: {
   // for the anthropic provider); when that provider is repointed at a gateway that
   // does not serve that exact model, the title-gen call fails and aborts the run.
   // Setting small_model to a gateway-served model keeps every call on supported models.
-  const smallModel = (input.env.PAPERCLIP_OPENCODE_SMALL_MODEL ?? process.env.PAPERCLIP_OPENCODE_SMALL_MODEL)?.trim();
+  const smallModel = (input.env.PILOT_OPENCODE_SMALL_MODEL ?? process.env.PILOT_OPENCODE_SMALL_MODEL)?.trim();
   if (smallModel) {
     nextConfig.small_model = smallModel;
     notes.push(`Pinned OpenCode small_model to ${smallModel}.`);

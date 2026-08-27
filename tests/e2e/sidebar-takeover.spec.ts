@@ -21,7 +21,7 @@ import { test, expect, request as pwRequest, type APIRequestContext } from "@pla
  * is delegated to the QA child issue.
  */
 
-const PORT = Number(process.env.PAPERCLIP_E2E_PORT ?? 3199);
+const PORT = Number(process.env.PILOT_E2E_PORT ?? 3199);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const COMPANY_NAME_PREFIX = "E2E-SidebarTakeover";
 const COLLAPSED_STORAGE_KEY = "paperclip.sidebar.collapsed";

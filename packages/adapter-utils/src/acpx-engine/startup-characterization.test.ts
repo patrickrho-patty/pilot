@@ -6,7 +6,7 @@ import type { AcpRuntimeOptions } from "acpx/runtime";
 import type { AdapterExecutionContext, AdapterRuntimeMcpAccess } from "@paperclipai/adapter-utils";
 import {
   prepareAdapterExecutionTargetRuntime,
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
   startAdapterExecutionTargetProcessSessionBridge,
 } from "@paperclipai/adapter-utils/execution-target";
 
@@ -19,7 +19,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", async (importActual) => {
   return {
     ...actual,
     prepareAdapterExecutionTargetRuntime: vi.fn(actual.prepareAdapterExecutionTargetRuntime),
-    startAdapterExecutionTargetPaperclipBridge: vi.fn(actual.startAdapterExecutionTargetPaperclipBridge),
+    startAdapterExecutionTargetPilotBridge: vi.fn(actual.startAdapterExecutionTargetPilotBridge),
     startAdapterExecutionTargetProcessSessionBridge: vi.fn(actual.startAdapterExecutionTargetProcessSessionBridge),
   };
 });
@@ -236,7 +236,7 @@ describe("ACPX engine startup characterization", () => {
       // in-sandbox process env rides there, not in the exec's own `env`.
       let launchPayload: Record<string, unknown> | null = null;
       (executionTarget as { runner: unknown }).runner = createLocalSandboxRunner((input) => {
-        if (input.env?.PAPERCLIP_SANDBOX_EXEC_CHANNEL === "bridge") {
+        if (input.env?.PILOT_SANDBOX_EXEC_CHANNEL === "bridge") {
           const script = input.args?.[1] ?? "";
           const match = script.match(/PAPERCLIP_PROCESS_SESSION_COMMAND_B64='([^']+)'/);
           if (match) {
@@ -253,17 +253,17 @@ describe("ACPX engine startup characterization", () => {
         { authToken: "real-run-jwt", executionTarget },
       );
 
-      // The launch payload carries the MERGED paperclip bridge env: the queue
+      // The launch payload carries the MERGED pilot bridge env: the queue
       // transport mode, a loopback bridge base URL, and a minted bridge token.
       const payloadEnv = ((launchPayload as Record<string, unknown> | null)?.env ?? {}) as Record<
         string,
         unknown
       >;
-      expect(payloadEnv).toMatchObject({ PAPERCLIP_API_BRIDGE_MODE: "queue_v1" });
-      expect(String(payloadEnv.PAPERCLIP_API_URL ?? "")).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(payloadEnv).toMatchObject({ PILOT_API_BRIDGE_MODE: "queue_v1" });
+      expect(String(payloadEnv.PILOT_API_URL ?? "")).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
       // The minted bridge token is present and is NOT the host run JWT.
-      expect(payloadEnv.PAPERCLIP_API_KEY).toBeTruthy();
-      expect(payloadEnv.PAPERCLIP_API_KEY).not.toBe("real-run-jwt");
+      expect(payloadEnv.PILOT_API_KEY).toBeTruthy();
+      expect(payloadEnv.PILOT_API_KEY).not.toBe("real-run-jwt");
     });
 
     it("finalizes the launch env at the bridge merge: the process env carries the merged bridge values", async () => {
@@ -272,7 +272,7 @@ describe("ACPX engine startup characterization", () => {
       let launchPayload: Record<string, unknown> | null = null;
       let bridgeExecEnv: Record<string, string> | undefined;
       (executionTarget as { runner: unknown }).runner = createLocalSandboxRunner((input) => {
-        if (input.env?.PAPERCLIP_SANDBOX_EXEC_CHANNEL === "bridge") {
+        if (input.env?.PILOT_SANDBOX_EXEC_CHANNEL === "bridge") {
           bridgeExecEnv = input.env;
           const script = input.args?.[1] ?? "";
           const match = script.match(/PAPERCLIP_PROCESS_SESSION_COMMAND_B64='([^']+)'/);
@@ -297,13 +297,13 @@ describe("ACPX engine startup characterization", () => {
         string,
         unknown
       >;
-      expect(payloadEnv.PAPERCLIP_API_BRIDGE_MODE).toBe("queue_v1");
-      expect(payloadEnv.PAPERCLIP_API_KEY).toBeTruthy();
+      expect(payloadEnv.PILOT_API_BRIDGE_MODE).toBe("queue_v1");
+      expect(payloadEnv.PILOT_API_KEY).toBeTruthy();
       // The bridge-channel exec's OWN env is the sandbox transport channel, not the
       // agent process env: it does not carry the minted agent bridge key. This pins
       // that the merged agent env lives only in the finalized launch payload.
-      expect(bridgeExecEnv?.PAPERCLIP_SANDBOX_EXEC_CHANNEL).toBe("bridge");
-      expect(bridgeExecEnv?.PAPERCLIP_API_KEY).toBeUndefined();
+      expect(bridgeExecEnv?.PILOT_SANDBOX_EXEC_CHANNEL).toBe("bridge");
+      expect(bridgeExecEnv?.PILOT_API_KEY).toBeUndefined();
     });
   });
 
@@ -529,15 +529,15 @@ describe("ACPX engine startup characterization", () => {
       );
 
       // The process-session bridge receives its launch env as a DEFERRED thunk, the
-      // seam that lets its env-independent setup overlap the paperclip bridge start.
+      // seam that lets its env-independent setup overlap the pilot bridge start.
       const processArgs = vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mock.calls[0]![0];
       expect(typeof processArgs.env).toBe("function");
 
       // Both bridges receive the SAME real (non-null) runtimeRootDir from staging.
-      const paperclipArgs = vi.mocked(startAdapterExecutionTargetPaperclipBridge).mock.calls[0]![0];
-      expect(paperclipArgs.runtimeRootDir).toBeTruthy();
-      expect(String(paperclipArgs.runtimeRootDir)).toContain(".paperclip-runtime");
-      expect(processArgs.runtimeRootDir).toBe(paperclipArgs.runtimeRootDir);
+      const pilotArgs = vi.mocked(startAdapterExecutionTargetPilotBridge).mock.calls[0]![0];
+      expect(pilotArgs.runtimeRootDir).toBeTruthy();
+      expect(String(pilotArgs.runtimeRootDir)).toContain(".paperclip-runtime");
+      expect(processArgs.runtimeRootDir).toBe(pilotArgs.runtimeRootDir);
 
       // The ACP runtime + session/new both bind to the in-sandbox workspace cwd,
       // which the run resolves only after the bridges bring the sandbox up.
@@ -554,10 +554,10 @@ describe("ACPX engine startup characterization", () => {
 
     it("create_runtime failure: settles an error result, stops both bridges, releases the lease", async () => {
       const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
-      const paperclipStop = vi.fn(async () => {});
+      const pilotStop = vi.fn(async () => {});
       const processStop = vi.fn(async () => {});
-      vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementationOnce(
-        async () => ({ env: {}, stop: paperclipStop }) as never,
+      vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementationOnce(
+        async () => ({ env: {}, stop: pilotStop }) as never,
       );
       vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementationOnce(
         async () => ({ agentCommand: null, stop: processStop }) as never,
@@ -589,7 +589,7 @@ describe("ACPX engine startup characterization", () => {
       expect(result.exitCode).toBe(1);
       expect(result.resultJson?.phase).toBe("create_runtime");
       // Both live bridges stop exactly once and the per-session lease releases.
-      expect(paperclipStop).toHaveBeenCalledTimes(1);
+      expect(pilotStop).toHaveBeenCalledTimes(1);
       expect(processStop).toHaveBeenCalledTimes(1);
       expect(stagingLocks.size).toBe(0);
     });
@@ -597,7 +597,7 @@ describe("ACPX engine startup characterization", () => {
     it("partial-bridge failure: throws and stops the concurrently-started bridge exactly once", async () => {
       const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
       const stop = vi.fn(async () => {});
-      vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementationOnce(async () => {
+      vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementationOnce(async () => {
         throw new Error("paperclip bridge boom");
       });
       vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementationOnce(
@@ -816,7 +816,7 @@ describe("ACPX engine startup characterization", () => {
       });
 
       expect(vi.mocked(prepareAdapterExecutionTargetRuntime)).not.toHaveBeenCalled();
-      expect(vi.mocked(startAdapterExecutionTargetPaperclipBridge)).not.toHaveBeenCalled();
+      expect(vi.mocked(startAdapterExecutionTargetPilotBridge)).not.toHaveBeenCalled();
       expect(vi.mocked(startAdapterExecutionTargetProcessSessionBridge)).not.toHaveBeenCalled();
       expect(sessionInputs[0]?.cwd).toBe(localCwd);
       expect(runtimeOptions[0]?.cwd).toBe(localCwd);

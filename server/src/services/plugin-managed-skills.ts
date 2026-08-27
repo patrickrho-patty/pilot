@@ -6,7 +6,7 @@ import {
 import { normalizeAgentUrlKey } from "@paperclipai/shared";
 import type {
   CompanySkill,
-  PaperclipPluginManifestV1,
+  PilotPluginManifestV1,
   PluginManagedSkillDeclaration,
   PluginManagedSkillResolution,
 } from "@paperclipai/shared";
@@ -19,7 +19,7 @@ const MANAGED_SKILL_RESOURCE_KIND = "skill";
 interface PluginManagedSkillServiceOptions {
   pluginId: string;
   pluginKey: string;
-  manifest?: PaperclipPluginManifestV1 | null;
+  manifest?: PilotPluginManifestV1 | null;
 }
 
 function pluginKeySlug(pluginKey: string) {

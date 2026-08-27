@@ -1,0 +1,21 @@
+id: decl-type-pascal-tsx
+language: TSX
+# TIER 2 — type/interface/class DECLARATIONS (type_identifier nodes) containing
+# 'Paperclip' -> 'Pilot'. Property/shorthand KEYS are deliberately excluded: they
+# are wire-format contracts (JSONB keys, package.json fields, protocol params)
+# and move under rules-deferred-keys/ as designed tier-2.5 dual-reads.
+severity: info
+rule:
+  all:
+    - pattern: $ID
+    - kind: type_identifier
+constraints:
+  ID:
+    regex: Paperclip
+transform:
+  NEW:
+    replace:
+      source: $ID
+      replace: Paperclip
+      by: Pilot
+fix: $NEW

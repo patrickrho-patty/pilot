@@ -171,7 +171,7 @@ describe("validateName", () => {
   });
 
   it("flags reserved prefixes as warnings", () => {
-    const issue = validateName("PAPERCLIP_HOME", new Set(), reserved);
+    const issue = validateName("PILOT_HOME", new Set(), reserved);
     expect(issue?.level).toBe("warn");
     expect(issue?.message).toMatch(/Reserved prefix/);
   });

@@ -1,7 +1,7 @@
 ---
 name: deal-with-security-advisory
 description: >
-  Handle confidential GitHub Security Advisory response for Paperclip. Use when
+  Handle confidential GitHub Security Advisory response for Pilot. Use when
   coordinating advisory triage, private-fork fixes, CVE/publication steps, and
   immediate security releases.
 ---
@@ -161,7 +161,7 @@ gh api --method PATCH \
     {
       "package": {
         "ecosystem": "npm",
-        "name": "paperclip"
+        "name": "pilot"
       },
       "vulnerable_version_range": "< {{patchedVersion}}",
       "patched_versions": "{{patchedVersion}}"

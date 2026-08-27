@@ -28,7 +28,7 @@ const MANAGED_ROUTINE_RESOURCE_KIND = "routine";
 interface PluginManagedRoutineServiceOptions {
   pluginId: string;
   pluginKey: string;
-  manifest?: import("@paperclipai/shared").PaperclipPluginManifestV1 | null;
+  manifest?: import("@paperclipai/shared").PilotPluginManifestV1 | null;
   pluginWorkerManager?: PluginWorkerManager;
 }
 

@@ -22,7 +22,7 @@ import { fork, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { createInterface, type Interface as ReadlineInterface } from "node:readline";
-import type { PaperclipPluginManifestV1 } from "@paperclipai/shared";
+import type { PilotPluginManifestV1 } from "@paperclipai/shared";
 import {
   JSONRPC_VERSION,
   JSONRPC_ERROR_CODES,
@@ -328,7 +328,7 @@ export interface WorkerStartOptions {
   /** Absolute path to the plugin worker entrypoint (CJS bundle). */
   entrypointPath: string;
   /** Plugin manifest. */
-  manifest: PaperclipPluginManifestV1;
+  manifest: PilotPluginManifestV1;
   /** Resolved plugin configuration. */
   config: Record<string, unknown>;
   /** Host instance information for the initialize call. */
@@ -857,7 +857,7 @@ export function createPluginWorkerHandle(
   // A proactive plugin (e.g. the chat gateway) does company-scoped work from
   // its own timers/loops — not inside a host-issued top-level invocation
   // (onEvent/performAction/executeTool/configChanged). Those worker→host calls
-  // carry no `paperclipInvocationId`, so the governed-access gate
+  // carry no `pilotInvocationId`, so the governed-access gate
   // (host-client-factory.ts) rejects any company-scoped request with
   // "company context is required" (regression class from #9557). The host
   // authorizes a bounded set of companies — the plugin's configured companies,
@@ -1115,7 +1115,7 @@ export function createPluginWorkerHandle(
   // Complete mediation: the host and the worker share one stdio pipe, and the
   // worker process sees every active invocation id. So the host cannot prove
   // which concurrent invocation produced a notification, and it must NOT treat
-  // the worker-supplied `paperclipInvocationId` alone as proof of origin. The
+  // the worker-supplied `pilotInvocationId` alone as proof of origin. The
   // host validates the exact company scope instead: it delivers only while every
   // active execute route on this worker belongs to ONE company. When a second
   // company's execute overlaps, the host fails closed — it latches the active
@@ -1125,7 +1125,8 @@ export function createPluginWorkerHandle(
   // stream pauses while two companies overlap.
   function routeExecuteLogNotification(notification: JsonRpcNotification): void {
     const invocationId = readNonEmptyString(
-      (notification as { paperclipInvocationId?: unknown }).paperclipInvocationId,
+      (notification as { pilotInvocationId?: unknown; paperclipInvocationId?: unknown }).pilotInvocationId
+        ?? (notification as { pilotInvocationId?: unknown; paperclipInvocationId?: unknown }).paperclipInvocationId,
     );
     const params = isRecord(notification.params) ? notification.params : {};
     const stream = params.stream;
@@ -1957,12 +1958,24 @@ export function createPluginWorkerHandle(
     if (method === "events.subscribe" && isRecord(params.filter)) {
       return readNonEmptyString(params.filter.companyId);
     }
+    if (method === "performAction" && isRecord(params.actorContext)) {
+      // The SDK passes the calling agent/board identity inside actorContext on
+      // performAction. If the plugin is authorized to act on that company
+      // proactively, resolve to it so nested worker→host calls inherit scope.
+      const actorCompanyId = readNonEmptyString(params.actorContext.companyId);
+      if (actorCompanyId) return actorCompanyId;
+    }
+    if (method === "executeTool" && isRecord(params.runContext)) {
+      const runCompanyId = readNonEmptyString(params.runContext.companyId);
+      if (runCompanyId) return runCompanyId;
+    }
     return null;
   }
 
   function contextForWorkerMessage(message: JsonRpcRequest | JsonRpcNotification): WorkerHostCallContext {
     const invocationId = readNonEmptyString(
-      (message as { paperclipInvocationId?: unknown }).paperclipInvocationId,
+      (message as { pilotInvocationId?: unknown; paperclipInvocationId?: unknown }).pilotInvocationId
+        ?? (message as { pilotInvocationId?: unknown; paperclipInvocationId?: unknown }).paperclipInvocationId,
     );
     if (!invocationId) {
       // No host-issued invocation is being echoed. This is a genuinely
@@ -2173,7 +2186,7 @@ export function createPluginWorkerHandle(
       ...options.env,
       PATH: process.env.PATH ?? "",
       NODE_PATH: process.env.NODE_PATH ?? "",
-      PAPERCLIP_PLUGIN_ID: pluginId,
+      PILOT_PLUGIN_ID: pluginId,
       NODE_ENV: process.env.NODE_ENV ?? "production",
       TZ: process.env.TZ ?? "UTC",
     };
@@ -2652,7 +2665,7 @@ export function createPluginWorkerHandle(
       try {
         const request = {
           ...createRequest(method, params, id),
-          ...(invocation ? { paperclipInvocation: invocation } : {}),
+          ...(invocation ? { pilotInvocation: invocation, paperclipInvocation: invocation } : {}),
         };
         sendMessage(request);
       } catch (err) {
@@ -2759,7 +2772,7 @@ export function createPluginWorkerHandle(
           jsonrpc: JSONRPC_VERSION,
           method,
           params,
-          ...(invocation ? { paperclipInvocation: invocation } : {}),
+          ...(invocation ? { pilotInvocation: invocation, paperclipInvocation: invocation } : {}),
         });
       } catch {
         clearInvocation(invocation);

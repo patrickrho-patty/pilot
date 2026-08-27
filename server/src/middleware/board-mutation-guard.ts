@@ -28,7 +28,7 @@ function trustedOriginsForRequest(req: Request) {
   // not match the public URL (for example when TLS terminates at the
   // edge and the inbound Host is an internal service name). Trust the
   // explicitly-configured PAPERCLIP_PUBLIC_URL when it's set.
-  const publicUrl = parseOrigin(process.env.PAPERCLIP_PUBLIC_URL?.trim());
+  const publicUrl = parseOrigin(process.env.PILOT_PUBLIC_URL?.trim());
   if (publicUrl) origins.add(publicUrl);
   return origins;
 }

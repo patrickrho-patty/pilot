@@ -74,7 +74,7 @@ describe("buildInviteOnboardingTextDocument", () => {
     expect(text).toContain("http://host.docker.internal:8642");
     expect(text).toContain("https://hermes-gateway.example");
     expect(text).toContain("set the first reachable candidate as agentDefaultsPayload.paperclipApiUrl");
-    expect(text).toContain("PAPERCLIP_API_KEY");
+    expect(text).toContain("PILOT_API_KEY");
     expect(text).toContain("Store the parsed token field from the raw HTTP JSON response");
     expect(text).toContain("A token value containing literal ... or [redacted]");
     expect(text).toContain("The response body includes the full token exactly once");

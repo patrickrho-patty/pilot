@@ -30,8 +30,8 @@ import { AgentSkillReleasePicker, releaseShortLabel } from "./AgentSkillReleaseP
 const MATERIALIZATION_NOTE =
   "Enabled skills are materialized into the stable Paperclip-managed prompt bundle on the agent's next run.";
 
-/** Company skill key of the Paperclip core skill that carries beta releases. */
-const PAPERCLIP_CORE_SKILL_KEY = "paperclipai/paperclip/paperclip";
+/** Company skill key of the Pilot core skill that carries beta releases. */
+const PILOT_CORE_SKILL_KEY = "paperclipai/paperclip/paperclip";
 
 /** Build the desired-skill sync payload, carrying any active version pins. */
 export function toDesiredSkillPayload(
@@ -93,21 +93,21 @@ export function AgentSkillsTab({ agent, companyId }: { agent: Agent; companyId?:
   });
   const betaSkillsEnabled = experimentalSettings?.enableBetaSkills === true;
 
-  const paperclipCoreSkill = useMemo(
-    () => (companySkills ?? []).find((skill) => skill.key === PAPERCLIP_CORE_SKILL_KEY) ?? null,
+  const pilotCoreSkill = useMemo(
+    () => (companySkills ?? []).find((skill) => skill.key === PILOT_CORE_SKILL_KEY) ?? null,
     [companySkills],
   );
 
-  // Seeded releases (release_id IS NOT NULL) for the paperclip core skill. Only
+  // Seeded releases (release_id IS NOT NULL) for the pilot core skill. Only
   // fetched when the flag is on and the skill is present in the library.
-  const { data: paperclipVersions } = useQuery({
-    queryKey: queryKeys.companySkills.versions(companyId ?? "", paperclipCoreSkill?.id ?? ""),
-    queryFn: () => companySkillsApi.versions(companyId!, paperclipCoreSkill!.id),
-    enabled: Boolean(companyId && betaSkillsEnabled && paperclipCoreSkill?.id),
+  const { data: pilotVersions } = useQuery({
+    queryKey: queryKeys.companySkills.versions(companyId ?? "", pilotCoreSkill?.id ?? ""),
+    queryFn: () => companySkillsApi.versions(companyId!, pilotCoreSkill!.id),
+    enabled: Boolean(companyId && betaSkillsEnabled && pilotCoreSkill?.id),
   });
-  const paperclipReleases = useMemo(
-    () => (paperclipVersions ?? []).filter((version) => version.releaseId != null),
-    [paperclipVersions],
+  const pilotReleases = useMemo(
+    () => (pilotVersions ?? []).filter((version) => version.releaseId != null),
+    [pilotVersions],
   );
 
   const syncSkills = useMutation({
@@ -340,16 +340,16 @@ export function AgentSkillsTab({ agent, companyId }: { agent: Agent; companyId?:
     syncSkills.mutate(toDesiredSkillPayload(skillDraft, nextPins));
   };
 
-  // The release picker only applies to the enabled paperclip core skill while the
+  // The release picker only applies to the enabled pilot core skill while the
   // beta-skills flag is on and seeded releases exist.
-  const releasePickerActive = betaSkillsEnabled && paperclipReleases.length > 0;
+  const releasePickerActive = betaSkillsEnabled && pilotReleases.length > 0;
 
   const renderRow = (row: AgentSkillRowData, variant: "enabled" | "available") => {
     const showReleasePicker =
-      releasePickerActive && variant === "enabled" && row.key === PAPERCLIP_CORE_SKILL_KEY;
+      releasePickerActive && variant === "enabled" && row.key === PILOT_CORE_SKILL_KEY;
     const pinnedVersionId = versionPins[row.key] ?? null;
     const pinnedRelease = pinnedVersionId
-      ? paperclipReleases.find((release) => release.id === pinnedVersionId) ?? null
+      ? pilotReleases.find((release) => release.id === pinnedVersionId) ?? null
       : null;
 
     return (
@@ -371,7 +371,7 @@ export function AgentSkillsTab({ agent, companyId }: { agent: Agent; companyId?:
         accessory={
           showReleasePicker ? (
             <AgentSkillReleasePicker
-              releases={paperclipReleases}
+              releases={pilotReleases}
               value={pinnedVersionId}
               disabled={unsupported || syncSkills.isPending}
               onChange={(versionId) => handleReleaseChange(row.key, versionId)}

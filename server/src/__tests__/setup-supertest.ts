@@ -32,10 +32,10 @@ if (!process.env.CODEX_HOME) {
 
 // The automatic Tailscale HTTPS default (PAP-17158) probes for a real host
 // broker socket, so leaving it enabled would make every test that starts a
-// service named `paperclip-dev` behave differently on a broker-capable host
+// service named `pilot-dev` behave differently on a broker-capable host
 // than on CI. Tests that exercise the default opt in explicitly.
-if (!process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS) {
-  process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS = "off";
+if (!process.env.PILOT_MANAGED_RUNTIME_HTTPS) {
+  process.env.PILOT_MANAGED_RUNTIME_HTTPS = "off";
 }
 
 if (!SupertestTest.prototype.__paperclipLoopbackPatched) {

@@ -197,8 +197,8 @@ describe("instance settings service", () => {
       {
         now: () => activatedAt,
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       },
     );
@@ -218,8 +218,8 @@ describe("instance settings service", () => {
       { enableWorktreeRunExecution: false },
       {
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       },
     );
@@ -236,8 +236,8 @@ describe("instance settings service", () => {
       {
         now: () => new Date("2026-07-10T12:00:00.000Z"),
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       },
     );
@@ -246,8 +246,8 @@ describe("instance settings service", () => {
       { enableWorktreeRunExecution: false },
       {
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       },
     );
@@ -258,8 +258,8 @@ describe("instance settings service", () => {
       {
         now: () => new Date("2026-07-10T12:05:00.000Z"),
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       },
     );
@@ -280,8 +280,8 @@ describe("instance settings service", () => {
       },
       {
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       },
     );
@@ -301,8 +301,8 @@ describe("instance settings service", () => {
       resolveWorktreeRunExecutionActivationState({
         getExperimental: async () => experimental,
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       }),
     ).resolves.toEqual({
@@ -323,8 +323,8 @@ describe("instance settings service", () => {
       resolveWorktreeRunExecutionActivationState({
         getExperimental: async () => experimental,
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       }),
     ).resolves.toMatchObject({
@@ -345,8 +345,8 @@ describe("instance settings service", () => {
       resolveWorktreeRunExecutionActivationState({
         getExperimental: async () => experimental,
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "target-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "target-instance",
         },
       }),
     ).resolves.toMatchObject({
@@ -364,8 +364,8 @@ describe("instance settings service", () => {
           throw new Error("settings unavailable");
         },
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       }),
     ).resolves.toMatchObject({
@@ -379,8 +379,8 @@ describe("instance settings service", () => {
       resolveWorktreeRunExecutionActivationState({
         getExperimental,
         runtimeEnv: {
-          PAPERCLIP_IN_WORKTREE: "false",
-          PAPERCLIP_INSTANCE_ID: "worktree-instance",
+          PILOT_IN_WORKTREE: "false",
+          PILOT_INSTANCE_ID: "worktree-instance",
         },
       }),
     ).resolves.toMatchObject({

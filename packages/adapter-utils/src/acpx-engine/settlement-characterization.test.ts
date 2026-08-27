@@ -18,7 +18,7 @@ import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AdapterExecutionContext, AdapterRuntimeMcpAccess } from "@paperclipai/adapter-utils";
 import {
-  startAdapterExecutionTargetPaperclipBridge,
+  startAdapterExecutionTargetPilotBridge,
   startAdapterExecutionTargetProcessSessionBridge,
 } from "@paperclipai/adapter-utils/execution-target";
 
@@ -31,7 +31,7 @@ vi.mock("@paperclipai/adapter-utils/execution-target", async (importActual) => {
   return {
     ...actual,
     prepareAdapterExecutionTargetRuntime: vi.fn(actual.prepareAdapterExecutionTargetRuntime),
-    startAdapterExecutionTargetPaperclipBridge: vi.fn(actual.startAdapterExecutionTargetPaperclipBridge),
+    startAdapterExecutionTargetPilotBridge: vi.fn(actual.startAdapterExecutionTargetPilotBridge),
     startAdapterExecutionTargetProcessSessionBridge: vi.fn(actual.startAdapterExecutionTargetProcessSessionBridge),
   };
 });
@@ -218,11 +218,11 @@ async function setupRemoteSandbox() {
 // Stub both sandbox bridges with stop spies collected per start, so a test can
 // assert the bridges stopped without running the real bridge transport.
 function stubBridges() {
-  const paperclipStops: Array<ReturnType<typeof vi.fn>> = [];
+  const pilotStops: Array<ReturnType<typeof vi.fn>> = [];
   const processStops: Array<ReturnType<typeof vi.fn>> = [];
-  vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementation(async () => {
+  vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementation(async () => {
     const stop = vi.fn(async () => {});
-    paperclipStops.push(stop);
+    pilotStops.push(stop);
     return { env: {}, stop } as never;
   });
   vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mockImplementation(async () => {
@@ -232,7 +232,7 @@ function stubBridges() {
   });
   const anyStopped = (stops: Array<ReturnType<typeof vi.fn>>) =>
     stops.some((stop) => stop.mock.calls.length > 0);
-  return { paperclipStops, processStops, anyStopped };
+  return { paperclipStops: pilotStops, processStops, anyStopped };
 }
 
 function throwingHandoffContext(): Record<string, unknown> {
@@ -300,7 +300,7 @@ describe("ACP settlement — Layer A: engine teardown orchestration", () => {
     // and the seam teardown, and read the still-held lease during the sync-back.
     const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
     const order: string[] = [];
-    vi.mocked(startAdapterExecutionTargetPaperclipBridge).mockImplementation(async () => ({
+    vi.mocked(startAdapterExecutionTargetPilotBridge).mockImplementation(async () => ({
       env: {},
       stop: vi.fn(async () => {
         order.push("bridge-stop");
@@ -672,7 +672,7 @@ describe("ACP settlement — Layer A: engine teardown orchestration", () => {
     // Corrected F3 policy (execute.ts:3374-3393): a failing teardown step is
     // recorded and swallowed; later steps still run and the lease still releases.
     const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
-    const { paperclipStops, processStops, anyStopped } = stubBridges();
+    const { paperclipStops: pilotStops, processStops, anyStopped } = stubBridges();
     const stagingLocks = new Map<string, Promise<unknown>>();
     const logs: Array<{ stream: string; text: string }> = [];
     const execute = createAcpxEngineExecutor({
@@ -699,7 +699,7 @@ describe("ACP settlement — Layer A: engine teardown orchestration", () => {
     } as never);
 
     expect(result.exitCode).toBe(1);
-    expect(anyStopped(paperclipStops)).toBe(true);
+    expect(anyStopped(pilotStops)).toBe(true);
     expect(anyStopped(processStops)).toBe(true);
     expect(stagingLocks.size).toBe(0);
     expect(

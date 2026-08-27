@@ -12,8 +12,10 @@
  *   ast-grep scan        # report only — never modifies files
  *   ast-grep scan -U     # apply all rewrites (git-clean tree first!)
  *
- * __TARGET___ is stamped as <NAME>_ (with the trailing underscore), so
- * `PAPERCLIP_HOME` -> `ACME_HOME`. The generated dir is gitignored.
+ * __TARGET___ is stamped as <NAME>_ (env var prefix: PILOT_HOME ->
+ * PILOT_HOME). __TARGET__ is PascalCase (PilotConfig -> PilotConfig)
+ * and __target__ lowercase (buildPilotEnv -> buildPilotEnv) for
+ * identifier rules. The generated dir is gitignored.
  */
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -33,9 +35,17 @@ if (!name || !/^[A-Z][A-Z0-9]*$/.test(name)) {
 rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
+const pascal = name[0] + name.slice(1).toLowerCase();
+const stamp = [
+  ["__TARGET___", `${name}_`], // longest token first to avoid partial overlap
+  ["__TARGET__", pascal],
+  ["__target__", name.toLowerCase()],
+];
+
 let count = 0;
 for (const file of readdirSync(templatesDir).filter((f) => f.endsWith(".yml"))) {
-  const rendered = readFileSync(path.join(templatesDir, file), "utf8").replaceAll("__TARGET___", `${name}_`);
+  let rendered = readFileSync(path.join(templatesDir, file), "utf8");
+  for (const [token, value] of stamp) rendered = rendered.replaceAll(token, value);
   writeFileSync(path.join(outDir, file), rendered);
   count += 1;
 }

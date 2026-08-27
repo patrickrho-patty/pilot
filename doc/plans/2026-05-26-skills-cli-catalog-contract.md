@@ -2,21 +2,21 @@
 
 Status: Phase A engineering contract
 Date: 2026-05-26
-Source plan: approved Paperclip skills CLI and catalog plan
+Source plan: approved Pilot skills CLI and catalog plan
 
-This document freezes the first implementation contract for the `paperclipai skills`
+This document freezes the first implementation contract for the `pilotai skills`
 command group and the app-shipped skills catalog. It is intentionally a build
 contract, not a full product spec.
 
 ## Decisions
 
-- `paperclipai skills` manages Paperclip company skills. It does not manage
+- `pilotai skills` manages Pilot company skills. It does not manage
   local adapter homes directly.
 - Installing a skill means adding or updating a company-scoped
   `company_skills` record.
 - Attaching a skill to an agent is a separate agent desired-state operation.
 - Adapter runtime sync is a third step handled through adapter skill APIs.
-- Root `skills/` remains reserved for Paperclip runtime and operational skills.
+- Root `skills/` remains reserved for Pilot runtime and operational skills.
 - App-shipped catalog skills live in `packages/skills-catalog`, not root
   `skills/`.
 - Catalog skills are inspectable before install. Inspection never mutates company
@@ -25,7 +25,7 @@ contract, not a full product spec.
   first release. No separate marketplace, tap, or source registry is part of this
   phase.
 - Agent desired skills continue to live in
-  `adapterConfig.paperclipSkillSync.desiredSkills` for the first release. Do not
+  `adapterConfig.pilotSkillSync.desiredSkills` for the first release. Do not
   add a normalized `agent_skills` table unless later implementation evidence
   requires it.
 
@@ -48,7 +48,7 @@ All skills commands use the existing client command stack:
 - Global client options: `--data-dir`, `--config`, `--context`, `--profile`,
   `--api-base`, `--api-key`, and `--json`.
 - Company-scoped commands also accept `-C, --company-id <id>` and otherwise use
-  `PAPERCLIP_COMPANY_ID` or the active context profile.
+  `PILOT_COMPANY_ID` or the active context profile.
 - Human output goes to stdout. Errors go to stderr.
 - `--json` prints pretty JSON and no decorative labels.
 - Successful commands exit `0`. Validation, API, or conflict errors exit `1`.
@@ -103,7 +103,7 @@ These commands are Phase B and use existing agent skill APIs.
 | Command | Behavior | JSON output |
 |---|---|---|
 | `skills agent list <agent-ref>` | Resolves the agent using existing agent reference behavior, then prints the adapter `AgentSkillSnapshot`. Human rows include `key`, `runtimeName`, `desired`, `managed`, `required`, `state`, `origin`, and `detail`. | `AgentSkillSnapshot` |
-| `skills agent sync <agent-ref> --skill <skill-ref>...` | Replaces the agent's non-required desired skill set with the supplied refs and triggers adapter sync. Required Paperclip skills remain enforced by the server. | `AgentSkillSnapshot` |
+| `skills agent sync <agent-ref> --skill <skill-ref>...` | Replaces the agent's non-required desired skill set with the supplied refs and triggers adapter sync. Required Pilot skills remain enforced by the server. | `AgentSkillSnapshot` |
 | `skills agent clear <agent-ref> [--yes]` | Clears non-required desired skills by sending an empty desired list, then returns the adapter snapshot. | `AgentSkillSnapshot` |
 
 The word `sync` is deliberate: it is a desired-state replacement, not an append.
@@ -120,7 +120,7 @@ These commands are Phase E and depend on the catalog APIs from Phase D.
 | `skills inspect <catalog-ref>` | Shows app-shipped catalog detail and file inventory. Does not mutate company state. | `CatalogSkillDetail` |
 | `skills install <catalog-ref> [--as <slug>] [--force]` | Installs a catalog skill into a company library. `--as` overrides the company skill slug. `--force` may replace a same-key catalog skill but must not bypass hard validation or dangerous security findings. | `CompanySkillInstallCatalogResult` |
 
-Catalog commands are for the app-shipped Paperclip catalog only. External GitHub,
+Catalog commands are for the app-shipped Pilot catalog only. External GitHub,
 skills.sh, local path, and URL installs remain under `skills import <source>` in
 the first release.
 
@@ -215,21 +215,21 @@ interface CatalogSkillFile {
 `id` is path-safe:
 
 ```text
-paperclipai:<kind>:<category>:<slug>
+pilotai:<kind>:<category>:<slug>
 ```
 
 `key` is the canonical company skill key installed into `company_skills`:
 
 ```text
-paperclipai/<kind>/<category>/<slug>
+pilotai/<kind>/<category>/<slug>
 ```
 
 Example:
 
 ```json
 {
-  "id": "paperclipai:bundled:software-development:github-pr-workflow",
-  "key": "paperclipai/bundled/software-development/github-pr-workflow",
+  "id": "pilotai:bundled:software-development:github-pr-workflow",
+  "key": "pilotai/bundled/software-development/github-pr-workflow",
   "kind": "bundled",
   "category": "software-development",
   "slug": "github-pr-workflow",
@@ -263,7 +263,7 @@ Each catalog `SKILL.md` must include:
 ---
 name: github-pr-workflow
 description: Prepare pull requests, review responses, and verification notes.
-key: paperclipai/bundled/software-development/github-pr-workflow
+key: pilotai/bundled/software-development/github-pr-workflow
 recommendedForRoles:
   - engineer
 tags:
@@ -393,7 +393,7 @@ Use existing HTTP semantics:
 CLI messages should name the next useful correction, for example:
 
 - `Skill slug "review" is ambiguous. Use an id or key.`
-- `Company ID is required. Pass --company-id, set PAPERCLIP_COMPANY_ID, or set a context profile.`
+- `Company ID is required. Pass --company-id, set PILOT_COMPANY_ID, or set a context profile.`
 - `Catalog skill contains executable scripts and cannot be force-installed until security review semantics allow it.`
 
 ## Phase Acceptance Criteria
@@ -403,7 +403,7 @@ thread links it.
 
 Phase B, CLI MVP:
 
-- `paperclipai skills --help` exposes the Phase B command group.
+- `pilotai skills --help` exposes the Phase B command group.
 - All Phase B commands work against existing company skills and agent skills
   APIs without schema or server changes.
 - Skill refs resolve by id, key, or unique slug.

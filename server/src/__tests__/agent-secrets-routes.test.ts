@@ -34,12 +34,12 @@ const describeEmbeddedPostgres = embeddedPostgresSupport.supported ? describe : 
 describeEmbeddedPostgres("agent secret routes", () => {
   let stopDb: (() => Promise<void>) | null = null;
   let db!: ReturnType<typeof createDb>;
-  const previousKeyFile = process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE;
+  const previousKeyFile = process.env.PILOT_SECRETS_MASTER_KEY_FILE;
   const secretsTmpDir = path.join(os.tmpdir(), `paperclip-agent-secret-routes-${randomUUID()}`);
 
   beforeAll(async () => {
     mkdirSync(secretsTmpDir, { recursive: true });
-    process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE = path.join(secretsTmpDir, "master.key");
+    process.env.PILOT_SECRETS_MASTER_KEY_FILE = path.join(secretsTmpDir, "master.key");
     const started = await startEmbeddedPostgresTestDatabase("agent-secret-routes");
     stopDb = started.cleanup;
     db = createDb(started.connectionString);
@@ -59,8 +59,8 @@ describeEmbeddedPostgres("agent secret routes", () => {
 
   afterAll(async () => {
     await stopDb?.();
-    if (previousKeyFile === undefined) delete process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE;
-    else process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE = previousKeyFile;
+    if (previousKeyFile === undefined) delete process.env.PILOT_SECRETS_MASTER_KEY_FILE;
+    else process.env.PILOT_SECRETS_MASTER_KEY_FILE = previousKeyFile;
     rmSync(secretsTmpDir, { recursive: true, force: true });
   });
 

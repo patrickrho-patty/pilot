@@ -146,7 +146,7 @@ async function checkApiKeys(
   }
 
   // Also read ~/.hermes/.env — Hermes stores API keys there by default and does
-  // not export them to the parent process, so Paperclip's process.env won't
+  // not export them to the parent process, so Pilot's process.env won't
   // contain them.  Parsing this file ensures the environment test reports
   // accurate results for keys that Hermes already knows about.
   const hermesEnvKeys: Record<string, string> = {};

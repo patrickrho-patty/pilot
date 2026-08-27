@@ -305,7 +305,7 @@ export type WorkspaceRuntimeExposureDeps = ExposureManagerDeps & {
   isPortAvailable: (port: number) => Promise<boolean>;
   /**
    * Whether this host can actually broker HTTPS exposures right now. Gating the
-   * automatic default on broker availability is what keeps a Paperclip install
+   * automatic default on broker availability is what keeps a Pilot install
    * without the host broker from failing every managed runtime start closed.
    * An explicit opt-in still bypasses this and fails loudly.
    */
@@ -324,7 +324,7 @@ async function isLoopbackPortAvailable(port: number): Promise<boolean> {
 }
 
 function resolveTailscaleBrokerSocketPath(): string {
-  return process.env.PAPERCLIP_TAILSCALE_BROKER_SOCKET?.trim() || DEFAULT_TAILSCALE_BROKER_SOCKET;
+  return process.env.PILOT_TAILSCALE_BROKER_SOCKET?.trim() || DEFAULT_TAILSCALE_BROKER_SOCKET;
 }
 
 function defaultWorkspaceRuntimeExposureDeps(): WorkspaceRuntimeExposureDeps {
@@ -371,7 +371,7 @@ export function setWorkspaceRuntimeExposureDepsForTests(deps: WorkspaceRuntimeEx
 /**
  * Deployment-level switch for the automatic default (PAP-17158).
  *
- *  - `auto` (default): eligible Paperclip-managed worktree runtimes get
+ *  - `auto` (default): eligible Pilot-managed worktree runtimes get
  *    `tailscale_https` without any project template or UI caller supplying an
  *    exposure block, provided the host broker is available.
  *  - `off`: no automatic default. Explicit opt-ins still work.
@@ -382,7 +382,7 @@ export function setWorkspaceRuntimeExposureDepsForTests(deps: WorkspaceRuntimeEx
 export type ManagedRuntimeHttpsMode = "auto" | "off" | "force";
 
 export function resolveManagedRuntimeHttpsMode(): ManagedRuntimeHttpsMode {
-  const raw = process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS?.trim().toLowerCase();
+  const raw = process.env.PILOT_MANAGED_RUNTIME_HTTPS?.trim().toLowerCase();
   if (raw === "off" || raw === "false" || raw === "0") return "off";
   if (raw === "force") return "force";
   return "auto";
@@ -391,12 +391,12 @@ export function resolveManagedRuntimeHttpsMode(): ManagedRuntimeHttpsMode {
 /**
  * Whether a service would be defaulted to HTTPS if it declared nothing.
  *
- * Intentionally narrow: only the Paperclip-managed dev runtime. Unmanaged and
+ * Intentionally narrow: only the Pilot-managed dev runtime. Unmanaged and
  * custom external services are left exactly as they are, because the broker
- * only publishes allowlisted loopback ports it can prove Paperclip owns and we
+ * only publishes allowlisted loopback ports it can prove Pilot owns and we
  * do not want to relocate a service somebody else addresses by port.
  *
- * A *pinned* port is still a candidate. The pre-feature Paperclip App template
+ * A *pinned* port is still a candidate. The pre-feature Pilot App template
  * hard-codes `port: 45439`, which the broker's dedicated allowlist can never
  * publish, so defaulting it to HTTPS necessarily relocates it into the
  * dedicated range. "Keep existing runtime ports when safe" is honored one layer
@@ -407,7 +407,7 @@ function isManagedHttpsDefaultCandidate(input: {
   serviceName: string;
   command: string | null;
 }): boolean {
-  return isPaperclipDevRuntimeService(input);
+  return isPilotDevRuntimeService(input);
 }
 
 export type ResolvedRuntimeServiceExposure = {
@@ -460,7 +460,7 @@ async function resolveRuntimeServiceExposure(input: {
  *
  * Reads the service name and command straight off the raw config entry rather
  * than resolving the full reuse identity: templates never rewrite a service
- * name, and the substrings `isPaperclipDevRuntimeService` matches survive
+ * name, and the substrings `isPilotDevRuntimeService` matches survive
  * rendering, so this agrees with the per-service decision made during spawn.
  */
 async function anyRuntimeServiceUsesHttpsExposure(
@@ -492,7 +492,7 @@ type ProcessOutputAccumulator = {
  * Drops in-memory runtime state between tests.
  *
  * By default the spawned backend processes are deliberately left running: the
- * startup-reconciliation suites use this to simulate a Paperclip restart, where
+ * startup-reconciliation suites use this to simulate a Pilot restart, where
  * the point is that a live backend survives and has to be adopted.
  *
  * Suites that spawn real backends and do *not* need that must pass
@@ -514,7 +514,7 @@ export async function resetRuntimeServicesForTests(
     if (opts.simulateSupervisorExit) {
       // A real supervisor exit closes its side of every inherited pipe. Tests
       // use this to prove surviving request-logging services do not depend on
-      // Paperclip keeping an anonymous stdio peer alive.
+      // Pilot keeping an anonymous stdio peer alive.
       record.child?.stdout?.destroy();
       record.child?.stderr?.destroy();
     }
@@ -677,7 +677,7 @@ export async function ensureServerWorkspaceLinksCurrent(
 export function sanitizeRuntimeServiceBaseEnv(baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...baseEnv };
   for (const key of Object.keys(env)) {
-    if (key.startsWith("PAPERCLIP_")) {
+    if (key.startsWith("PAPERCLIP_") || key.startsWith("PILOT_")) {
       delete env[key];
     }
   }
@@ -2875,25 +2875,34 @@ function buildWorkspaceCommandEnv(input: {
   created: boolean;
 }) {
   const env: NodeJS.ProcessEnv = { ...process.env };
-  env.PAPERCLIP_WORKSPACE_CWD = input.worktreePath;
-  env.PAPERCLIP_WORKSPACE_PATH = input.worktreePath;
-  env.PAPERCLIP_WORKSPACE_WORKTREE_PATH = input.worktreePath;
-  env.PAPERCLIP_WORKSPACE_BRANCH = input.branchName;
-  env.PAPERCLIP_WORKSPACE_BASE_CWD = input.base.baseCwd;
-  env.PAPERCLIP_WORKSPACE_REPO_ROOT = input.repoRoot;
-  env.PAPERCLIP_WORKSPACE_SOURCE = input.base.source;
-  env.PAPERCLIP_WORKSPACE_REPO_REF = input.base.repoRef ?? "";
-  env.PAPERCLIP_WORKSPACE_REPO_URL = input.base.repoUrl ?? "";
-  env.PAPERCLIP_WORKSPACE_CREATED = input.created ? "true" : "false";
-  env.PAPERCLIP_PROJECT_ID = input.base.projectId ?? "";
-  env.PAPERCLIP_PROJECT_WORKSPACE_ID = input.base.workspaceId ?? "";
-  env.PAPERCLIP_AGENT_ID = input.agent.id ?? "";
-  env.PAPERCLIP_AGENT_NAME = input.agent.name;
-  env.PAPERCLIP_COMPANY_ID = input.agent.companyId;
-  env.PAPERCLIP_ISSUE_ID = input.issue?.id ?? "";
-  env.PAPERCLIP_ISSUE_IDENTIFIER = input.issue?.identifier ?? "";
-  env.PAPERCLIP_ISSUE_TITLE = input.issue?.title ?? "";
-  env.PAPERCLIP_ISSUE_WORK_MODE = input.issue?.workMode ?? "";
+  env.PILOT_WORKSPACE_CWD = input.worktreePath;
+  env.PILOT_WORKSPACE_PATH = input.worktreePath;
+  env.PILOT_WORKSPACE_WORKTREE_PATH = input.worktreePath;
+  env.PILOT_WORKSPACE_BRANCH = input.branchName;
+  env.PILOT_WORKSPACE_BASE_CWD = input.base.baseCwd;
+  env.PILOT_WORKSPACE_REPO_ROOT = input.repoRoot;
+  env.PILOT_WORKSPACE_SOURCE = input.base.source;
+  env.PILOT_WORKSPACE_REPO_REF = input.base.repoRef ?? "";
+  env.PILOT_WORKSPACE_REPO_URL = input.base.repoUrl ?? "";
+  env.PILOT_WORKSPACE_CREATED = input.created ? "true" : "false";
+  env.PILOT_PROJECT_ID = input.base.projectId ?? "";
+  env.PILOT_PROJECT_WORKSPACE_ID = input.base.workspaceId ?? "";
+  env.PILOT_AGENT_ID = input.agent.id ?? "";
+  env.PILOT_AGENT_NAME = input.agent.name;
+  env.PILOT_COMPANY_ID = input.agent.companyId;
+  env.PILOT_ISSUE_ID = input.issue?.id ?? "";
+  env.PILOT_ISSUE_IDENTIFIER = input.issue?.identifier ?? "";
+  env.PILOT_ISSUE_TITLE = input.issue?.title ?? "";
+  env.PILOT_ISSUE_WORK_MODE = input.issue?.workMode ?? "";
+  // Workspace scripts can predate the brand rename (a worktree checkout may
+  // be arbitrarily old), so emit a legacy PAPERCLIP_ twin for every injected
+  // PILOT_* key through the alias window.
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("PILOT_")) {
+      const legacy = "PAPERCLIP_" + key.slice("PILOT_".length);
+      if (env[legacy] === undefined) env[legacy] = env[key];
+    }
+  }
   return env;
 }
 
@@ -3155,18 +3164,25 @@ function buildExecutionWorkspaceCleanupEnv(input: {
   projectWorkspaceCwd?: string | null;
 }) {
   const env: NodeJS.ProcessEnv = sanitizeRuntimeServiceBaseEnv(process.env);
-  env.PAPERCLIP_WORKSPACE_CWD = input.workspace.cwd ?? "";
-  env.PAPERCLIP_WORKSPACE_PATH = input.workspace.cwd ?? "";
-  env.PAPERCLIP_WORKSPACE_WORKTREE_PATH =
+  env.PILOT_WORKSPACE_CWD = input.workspace.cwd ?? "";
+  env.PILOT_WORKSPACE_PATH = input.workspace.cwd ?? "";
+  env.PILOT_WORKSPACE_WORKTREE_PATH =
     input.workspace.providerRef ?? input.workspace.cwd ?? "";
-  env.PAPERCLIP_WORKSPACE_BRANCH = input.workspace.branchName ?? "";
-  env.PAPERCLIP_WORKSPACE_BASE_CWD = input.projectWorkspaceCwd ?? "";
-  env.PAPERCLIP_WORKSPACE_REPO_ROOT = input.projectWorkspaceCwd ?? "";
-  env.PAPERCLIP_WORKSPACE_REPO_URL = input.workspace.repoUrl ?? "";
-  env.PAPERCLIP_WORKSPACE_REPO_REF = input.workspace.baseRef ?? "";
-  env.PAPERCLIP_PROJECT_ID = input.workspace.projectId ?? "";
-  env.PAPERCLIP_PROJECT_WORKSPACE_ID = input.workspace.projectWorkspaceId ?? "";
-  env.PAPERCLIP_ISSUE_ID = input.workspace.sourceIssueId ?? "";
+  env.PILOT_WORKSPACE_BRANCH = input.workspace.branchName ?? "";
+  env.PILOT_WORKSPACE_BASE_CWD = input.projectWorkspaceCwd ?? "";
+  env.PILOT_WORKSPACE_REPO_ROOT = input.projectWorkspaceCwd ?? "";
+  env.PILOT_WORKSPACE_REPO_URL = input.workspace.repoUrl ?? "";
+  env.PILOT_WORKSPACE_REPO_REF = input.workspace.baseRef ?? "";
+  env.PILOT_PROJECT_ID = input.workspace.projectId ?? "";
+  env.PILOT_PROJECT_WORKSPACE_ID = input.workspace.projectWorkspaceId ?? "";
+  env.PILOT_ISSUE_ID = input.workspace.sourceIssueId ?? "";
+  // Same alias-window policy as the provision env: legacy twins for old scripts.
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("PILOT_")) {
+      const legacy = "PAPERCLIP_" + key.slice("PILOT_".length);
+      if (env[legacy] === undefined) env[legacy] = env[key];
+    }
+  }
   return env;
 }
 
@@ -4371,7 +4387,7 @@ async function buildCompanyExposureReservationLedger(input: {
 }
 
 /**
- * Rows Paperclip reports stopped/removed whose reserved pair is still live on
+ * Rows Pilot reports stopped/removed whose reserved pair is still live on
  * the host or still mapped to someone else (PAP-17419 regression #3).
  *
  * The point is visibility. A false `stopped`/`removed` row used to be
@@ -4430,7 +4446,7 @@ async function detectPersistedExposureReservationDrift(input: {
   });
 }
 
-/** Paperclip-owned Serve mappings, or null when the broker cannot be read. */
+/** Pilot-owned Serve mappings, or null when the broker cannot be read. */
 async function readBrokerExposureMappings(): Promise<BrokerMappingSnapshot[] | null> {
   try {
     const owned = await workspaceRuntimeExposureDeps.broker.list();
@@ -5167,7 +5183,7 @@ async function waitForAllocatedPortBind(input: {
   throw new Error(`Runtime service did not bind allocated port ${input.port} before timeout`);
 }
 
-function isPaperclipDevRuntimeService(input: { serviceName?: string | null; command?: string | null }) {
+function isPilotDevRuntimeService(input: { serviceName?: string | null; command?: string | null }) {
   const serviceName = (input.serviceName ?? "").trim().toLowerCase();
   const command = (input.command ?? "").trim().toLowerCase();
   return (
@@ -5181,7 +5197,7 @@ function resolveRuntimeServiceHealthUrl(
   url: string | null,
   input?: { serviceName?: string | null; command?: string | null },
 ) {
-  if (!url || !isPaperclipDevRuntimeService(input ?? {})) return url;
+  if (!url || !isPilotDevRuntimeService(input ?? {})) return url;
   try {
     const parsed = new URL(url);
     if (parsed.pathname === "/" || parsed.pathname === "") {
@@ -5231,7 +5247,7 @@ async function probeManagedWorkspaceRuntimeReadiness(
   healthUrl: string,
   input: RuntimeServiceHealthProbeInput,
 ): Promise<boolean | null> {
-  if (!isPaperclipDevRuntimeService(input)) return null;
+  if (!isPilotDevRuntimeService(input)) return null;
   const identity = resolveManagedWorkspaceIdentity({
     workspaceCwd: input.cwd ?? null,
     executionWorkspaceId: input.executionWorkspaceId ?? null,
@@ -5265,7 +5281,7 @@ async function isRuntimeServiceUrlHealthy(
   url: string | null,
   input?: RuntimeServiceHealthProbeInput,
 ) {
-  const localProbeUrl = input?.provider === "local_process" && input.port && isPaperclipDevRuntimeService(input)
+  const localProbeUrl = input?.provider === "local_process" && input.port && isPilotDevRuntimeService(input)
     ? `http://127.0.0.1:${input.port}`
     : null;
   const probeUrl = localProbeUrl ?? url;
@@ -5279,7 +5295,7 @@ async function isRuntimeServiceUrlHealthy(
   try {
     const response = await fetch(healthUrl, { signal: AbortSignal.timeout(2_000) });
     if (!response.ok) return false;
-    if (!isPaperclipDevRuntimeService(input ?? {})) return true;
+    if (!isPilotDevRuntimeService(input ?? {})) return true;
     const payload = await response.json().catch(() => null) as { status?: unknown } | null;
     return payload?.status === "ok";
   } catch {
@@ -5843,7 +5859,7 @@ async function spawnLocalRuntimeService(input: StartLocalRuntimeServiceInput): P
   // is honored when it is already an allowlisted app port whose HMR companion is
   // free — that keeps a restart on the same port and keeps a backfilled service
   // stable across deploys — and quietly relocated when it is not, which is the
-  // only way a legacy pinned port (the Paperclip App template's 45439) can be
+  // only way a legacy pinned port (the Pilot App template's 45439) can be
   // published at all. If the backend then fails to listen where we allocated,
   // the broker's /proc ownership proof refuses the mapping and the start fails
   // closed; it never falls back to HTTP.
@@ -5964,10 +5980,10 @@ async function spawnLocalRuntimeService(input: StartLocalRuntimeServiceInput): P
   }
 
   // Per-workspace handoff key, readiness token, and workspace id. Injected for
-  // the Paperclip dev runtime whether or not it is HTTPS-exposed, because the
+  // the Pilot dev runtime whether or not it is HTTPS-exposed, because the
   // password-independent login handoff and the protected readiness probe are
   // both needed for a plain-HTTP loopback workspace too (PAP-17572).
-  const managedWorkspaceIdentity = isPaperclipDevRuntimeService({ serviceName, command })
+  const managedWorkspaceIdentity = isPilotDevRuntimeService({ serviceName, command })
     ? resolveManagedWorkspaceIdentity({
         workspaceCwd: input.workspace.cwd,
         executionWorkspaceId: input.executionWorkspaceId ?? null,
@@ -5979,22 +5995,22 @@ async function spawnLocalRuntimeService(input: StartLocalRuntimeServiceInput): P
   }
 
   if (exposureConfig) {
-    // Paperclip dev-runtime-specific hardening. Other managed processes are
+    // Pilot dev-runtime-specific hardening. Other managed processes are
     // still rejected by the broker unless /proc proves loopback-only listeners.
     //
     // Three independent layers force the loopback bind, because a guest checkout
     // can be arbitrarily old (PAP-17256): the `--bind loopback` argv
     // added above, these env vars for a runner that reads them, and HOST for one
     // old enough to ignore both and infer its bind mode from HOST alone.
-    env.PAPERCLIP_BIND = RUNTIME_EXPOSURE_BIND_MODE;
-    env.PAPERCLIP_BIND_HOST = RUNTIME_EXPOSURE_BIND_HOST;
+    env.PILOT_BIND = RUNTIME_EXPOSURE_BIND_MODE;
+    env.PILOT_BIND_HOST = RUNTIME_EXPOSURE_BIND_HOST;
     env.HOST = RUNTIME_EXPOSURE_BIND_HOST;
-    env.PAPERCLIP_VITE_HMR_PROTOCOL = "wss";
-    env.PAPERCLIP_MANAGED_RUNTIME_EXPOSURE = "tailscale_https";
-    env.PAPERCLIP_ALLOWED_HOSTNAMES = exposureHostname!;
-    env.PAPERCLIP_AUTH_BASE_URL_MODE = "explicit";
-    env.PAPERCLIP_AUTH_PUBLIC_BASE_URL = `https://${exposureHostname}:${port}`;
-    env.PAPERCLIP_PUBLIC_URL = `https://${exposureHostname}:${port}`;
+    env.PILOT_VITE_HMR_PROTOCOL = "wss";
+    env.PILOT_MANAGED_RUNTIME_EXPOSURE = "tailscale_https";
+    env.PILOT_ALLOWED_HOSTNAMES = exposureHostname!;
+    env.PILOT_AUTH_BASE_URL_MODE = "explicit";
+    env.PILOT_AUTH_PUBLIC_BASE_URL = `https://${exposureHostname}:${port}`;
+    env.PILOT_PUBLIC_URL = `https://${exposureHostname}:${port}`;
   }
 
   const expose = parseObject(input.service.expose);
@@ -6204,7 +6220,7 @@ async function spawnLocalRuntimeService(input: StartLocalRuntimeServiceInput): P
       env,
       detached: process.platform !== "win32",
       // The service receives duplicate append-only file descriptors. Closing
-      // Paperclip (or this parent handle below) cannot strand a request logger
+      // Pilot (or this parent handle below) cannot strand a request logger
       // on an orphaned socketpair during startup reconciliation.
       stdio: ["ignore", serviceLog.handle.fd, serviceLog.handle.fd],
     });

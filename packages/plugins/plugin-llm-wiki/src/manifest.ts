@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import type { PaperclipPluginManifestV1 } from "@paperclipai/plugin-sdk";
+import type { PilotPluginManifestV1 } from "@paperclipai/plugin-sdk";
 import { DEFAULT_AGENT_INSTRUCTION_FILES, DEFAULT_AGENT_INSTRUCTIONS } from "./templates.js";
 
 export const PLUGIN_ID = "paperclipai.plugin-llm-wiki";
@@ -9,17 +9,17 @@ export const WIKI_MAINTAINER_SKILL_KEY = "wiki-maintainer";
 export const WIKI_INGEST_SKILL_KEY = "wiki-ingest";
 export const WIKI_QUERY_SKILL_KEY = "wiki-query";
 export const WIKI_LINT_SKILL_KEY = "wiki-lint";
-export const PAPERCLIP_DISTILL_SKILL_KEY = "paperclip-distill";
+export const PILOT_DISTILL_SKILL_KEY = "paperclip-distill";
 export const INDEX_REFRESH_SKILL_KEY = "index-refresh";
 export const WIKI_PROJECT_KEY = "llm-wiki";
 export const CURSOR_WINDOW_ROUTINE_KEY = "cursor-window-processing";
 export const NIGHTLY_LINT_ROUTINE_KEY = "nightly-wiki-lint";
 export const INDEX_REFRESH_ROUTINE_KEY = "index-refresh";
 export const DEFAULT_MAX_SOURCE_BYTES = 250000;
-export const DEFAULT_MAX_PAPERCLIP_ISSUE_SOURCE_CHARS = 12000;
-export const DEFAULT_MAX_PAPERCLIP_CURSOR_WINDOW_CHARS = 60000;
-export const DEFAULT_MAX_PAPERCLIP_ROUTINE_RUN_CHARS = 120000;
-export const DEFAULT_PAPERCLIP_COST_CENTS_PER_1K_CHARS = 1;
+export const DEFAULT_MAX_PILOT_ISSUE_SOURCE_CHARS = 12000;
+export const DEFAULT_MAX_PILOT_CURSOR_WINDOW_CHARS = 60000;
+export const DEFAULT_MAX_PILOT_ROUTINE_RUN_CHARS = 120000;
+export const DEFAULT_PILOT_COST_CENTS_PER_1K_CHARS = 1;
 export const WIKI_MAINTENANCE_ROUTINE_KEYS = [
   CURSOR_WINDOW_ROUTINE_KEY,
   NIGHTLY_LINT_ROUTINE_KEY,
@@ -30,7 +30,7 @@ export const WIKI_MANAGED_SKILL_KEYS = [
   WIKI_INGEST_SKILL_KEY,
   WIKI_QUERY_SKILL_KEY,
   WIKI_LINT_SKILL_KEY,
-  PAPERCLIP_DISTILL_SKILL_KEY,
+  PILOT_DISTILL_SKILL_KEY,
   INDEX_REFRESH_SKILL_KEY,
 ] as const;
 
@@ -78,7 +78,7 @@ Target space: default (slug: default). Paperclip-derived indexing currently writ
 5. Append a wiki/log.md entry with the index refresh time, page counts by category, and any unresolved indexing problems.
 6. Close the routine issue with the index changes and any follow-up needed.`;
 
-const manifest: PaperclipPluginManifestV1 = {
+const manifest: PilotPluginManifestV1 = {
   id: PLUGIN_ID,
   apiVersion: 1,
   version: "0.1.0",
@@ -226,11 +226,11 @@ const manifest: PaperclipPluginManifestV1 = {
       markdown: skillMarkdown(WIKI_LINT_SKILL_KEY)
     },
     {
-      skillKey: PAPERCLIP_DISTILL_SKILL_KEY,
+      skillKey: PILOT_DISTILL_SKILL_KEY,
       displayName: "Paperclip Distill",
-      slug: PAPERCLIP_DISTILL_SKILL_KEY,
+      slug: PILOT_DISTILL_SKILL_KEY,
       description: "Turn Paperclip cursor-window, distill, or backfill source bundles into wiki-insightful project knowledge.",
-      markdown: skillMarkdown(PAPERCLIP_DISTILL_SKILL_KEY)
+      markdown: skillMarkdown(PILOT_DISTILL_SKILL_KEY)
     },
     {
       skillKey: INDEX_REFRESH_SKILL_KEY,

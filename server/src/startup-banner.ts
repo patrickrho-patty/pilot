@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolvePaperclipConfigPath, resolvePaperclipEnvPath } from "./paths.js";
+import { resolvePilotConfigPath, resolvePilotEnvPath } from "./paths.js";
 import type { BindMode, DeploymentExposure, DeploymentMode } from "@paperclipai/shared";
 
 import { parse as parseEnvFileContents } from "dotenv";
@@ -72,7 +72,7 @@ function resolveAgentJwtSecretStatus(
   status: "pass" | "warn";
   message: string;
 } {
-  const envValue = process.env.PAPERCLIP_AGENT_JWT_SECRET?.trim();
+  const envValue = process.env.PILOT_AGENT_JWT_SECRET?.trim();
   if (envValue) {
     return {
       status: "pass",
@@ -82,7 +82,7 @@ function resolveAgentJwtSecretStatus(
 
   if (existsSync(envFilePath)) {
     const parsed = parseEnvFileContents(readFileSync(envFilePath, "utf-8"));
-    const fileValue = typeof parsed.PAPERCLIP_AGENT_JWT_SECRET === "string" ? parsed.PAPERCLIP_AGENT_JWT_SECRET.trim() : "";
+    const fileValue = typeof parsed.PILOT_AGENT_JWT_SECRET === "string" ? parsed.PILOT_AGENT_JWT_SECRET.trim() : "";
     if (fileValue) {
       return {
         status: "warn",
@@ -102,8 +102,8 @@ export function printStartupBanner(opts: StartupBannerOptions): void {
   const baseUrl = `http://${baseHost}:${opts.listenPort}`;
   const apiUrl = `${baseUrl}/api`;
   const uiUrl = opts.uiMode === "none" ? "disabled" : baseUrl;
-  const configPath = resolvePaperclipConfigPath();
-  const envFilePath = resolvePaperclipEnvPath();
+  const configPath = resolvePilotConfigPath();
+  const envFilePath = resolvePilotEnvPath();
   const agentJwtSecret = resolveAgentJwtSecretStatus(envFilePath);
 
   const dbMode =

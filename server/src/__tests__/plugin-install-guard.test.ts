@@ -16,14 +16,14 @@ describe("isCloudManagedInstance", () => {
 
   it("returns true when PAPERCLIP_MANAGED_CONFIG is set to a cloud document", () => {
     const doc = JSON.stringify({ v: 1, mode: "cloud", catalogVersion: "1", features: {}, plugins: { autoInstall: [] } });
-    expect(isCloudManagedInstance({ PAPERCLIP_MANAGED_CONFIG: doc })).toBe(true);
+    expect(isCloudManagedInstance({ PILOT_MANAGED_CONFIG: doc })).toBe(true);
   });
 
   it("fails closed: blank or corrupted documents still count as cloud-managed", () => {
-    expect(isCloudManagedInstance({ PAPERCLIP_MANAGED_CONFIG: "" })).toBe(true);
-    expect(isCloudManagedInstance({ PAPERCLIP_MANAGED_CONFIG: "   " })).toBe(true);
-    expect(isCloudManagedInstance({ PAPERCLIP_MANAGED_CONFIG: "{not json" })).toBe(true);
-    expect(isCloudManagedInstance({ PAPERCLIP_MANAGED_CONFIG: JSON.stringify({ mode: "self-hosted" }) })).toBe(true);
+    expect(isCloudManagedInstance({ PILOT_MANAGED_CONFIG: "" })).toBe(true);
+    expect(isCloudManagedInstance({ PILOT_MANAGED_CONFIG: "   " })).toBe(true);
+    expect(isCloudManagedInstance({ PILOT_MANAGED_CONFIG: "{not json" })).toBe(true);
+    expect(isCloudManagedInstance({ PILOT_MANAGED_CONFIG: JSON.stringify({ mode: "self-hosted" }) })).toBe(true);
   });
 });
 

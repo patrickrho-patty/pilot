@@ -2,7 +2,7 @@ import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { notFound } from "../errors.js";
-import { resolvePaperclipInstanceRoot } from "../home-paths.js";
+import { resolvePilotInstanceRoot } from "../home-paths.js";
 import { createS3StorageProvider } from "../storage/s3-provider.js";
 import type { StorageProvider } from "../storage/types.js";
 
@@ -415,7 +415,7 @@ let cachedStore: RunLogStore | null = null;
 
 export function getRunLogStore() {
   if (cachedStore) return cachedStore;
-  const basePath = process.env.RUN_LOG_BASE_PATH ?? path.resolve(resolvePaperclipInstanceRoot(), "data", "run-logs");
+  const basePath = process.env.RUN_LOG_BASE_PATH ?? path.resolve(resolvePilotInstanceRoot(), "data", "run-logs");
   cachedStore = createDurableRunLogStore({ basePath, s3: resolveRunLogS3() });
   return cachedStore;
 }

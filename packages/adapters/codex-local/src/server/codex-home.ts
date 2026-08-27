@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { AdapterExecutionContext } from "@paperclipai/adapter-utils";
-import { resolvePaperclipInstanceRootForAdapter } from "@paperclipai/adapter-utils/server-utils";
+import { resolvePilotInstanceRootForAdapter } from "@paperclipai/adapter-utils/server-utils";
 import { readSubscriptionAccountId } from "./codex-auth-cache.js";
 
 const TRUTHY_ENV_RE = /^(1|true|yes|on)$/i;
@@ -100,16 +100,16 @@ export function resolveSharedCodexHomeDir(
 }
 
 function isWorktreeMode(env: NodeJS.ProcessEnv): boolean {
-  return TRUTHY_ENV_RE.test(env.PAPERCLIP_IN_WORKTREE ?? "");
+  return TRUTHY_ENV_RE.test(env.PILOT_IN_WORKTREE ?? "");
 }
 
 export function resolveManagedCodexHomeDir(
   env: NodeJS.ProcessEnv,
   companyId?: string,
 ): string {
-  const instanceRoot = resolvePaperclipInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+  const instanceRoot = resolvePilotInstanceRootForAdapter({
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   return companyId
@@ -118,11 +118,11 @@ export function resolveManagedCodexHomeDir(
 }
 
 /**
- * True when `homePath` lives under the Paperclip-managed company tree
+ * True when `homePath` lives under the Pilot-managed company tree
  * (`<instanceRoot>/companies/<companyId>/...`). This covers both the shared
  * company `codex-home` and the per-agent `agents/<agentId>/codex-home` set by
  * the server-side isolation guard. A path outside that tree is a genuine
- * external/user-supplied override that Paperclip must not seed or overwrite.
+ * external/user-supplied override that Pilot must not seed or overwrite.
  */
 export function isManagedCodexHomePath(
   env: NodeJS.ProcessEnv,
@@ -130,9 +130,9 @@ export function isManagedCodexHomePath(
   homePath: string,
 ): boolean {
   if (!companyId) return false;
-  const instanceRoot = resolvePaperclipInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+  const instanceRoot = resolvePilotInstanceRootForAdapter({
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   const companyRoot = path.resolve(instanceRoot, "companies", companyId);
@@ -203,15 +203,15 @@ export async function ensureSymlink(target: string, source: string): Promise<voi
   }
 
   if (!existing.isSymbolicLink()) {
-    // A previous Paperclip version copied this file into the managed home
+    // A previous Pilot version copied this file into the managed home
     // instead of symlinking it. Codex refresh tokens rotate and are
     // single-use, so a stale copy fails with refresh_token_reused on the next
     // run (#5028). Replace the regular file with a symlink so the CLI follows
     // the live source. Safe to delete: target is always under the
-    // Paperclip-managed company home, never the user's real ~/.codex.
+    // Pilot-managed company home, never the user's real ~/.codex.
     // Directories are left alone — `fs.unlink` would throw EISDIR on Unix
     // (and behave inconsistently on Windows). A directory at this path is not
-    // a Paperclip-written stale copy and warrants operator inspection rather
+    // a Pilot-written stale copy and warrants operator inspection rather
     // than silent removal.
     if (existing.isDirectory()) return;
     await fs.unlink(target);
@@ -431,7 +431,7 @@ async function stageContainedSubtree(
  * leaving `0644` documents and `0755` scripts group/other-readable in the staged
  * asset; here all regular files are normalized to `0600` regardless of source mode.
  *
- * `sourceDir`'s *direct* children are the Paperclip-injected skill symlinks that
+ * `sourceDir`'s *direct* children are the Pilot-injected skill symlinks that
  * intentionally point into a shared skill store *outside* `CODEX_HOME/skills/`,
  * so each child is allowed to resolve anywhere — and when it resolves to a
  * directory it becomes the containment root for its own subtree. Everything
@@ -569,7 +569,7 @@ export async function stageCodexHomeForSync(
 }
 
 /**
- * Seeds auth/config into an explicit Paperclip-managed `targetHome`. Symlinks
+ * Seeds auth/config into an explicit Pilot-managed `targetHome`. Symlinks
  * `auth.json` from the shared source home (so ChatGPT-subscription credentials
  * stay live and single-use refresh tokens are not copied), copies the static
  * shared config files, and — when an API key is supplied — writes an API-key
@@ -799,7 +799,7 @@ export interface CodexCredentialReadinessInput {
 }
 
 export interface CodexCredentialReadiness {
-  /** True when Paperclip owns the effective home and is responsible for its auth. */
+  /** True when Pilot owns the effective home and is responsible for its auth. */
   managed: boolean;
   authMode: CodexCredentialAuthMode;
   /** True when a run launched now would be able to authenticate. */
@@ -817,7 +817,7 @@ export interface CodexCredentialReadiness {
  * of dispatching a run that is guaranteed to fail with "no Codex credentials".
  *
  * - An external/user-supplied `CODEX_HOME` override manages its own auth, so it
- *   is always treated as ready (Paperclip must not seed or inspect it).
+ *   is always treated as ready (Pilot must not seed or inspect it).
  * - A non-empty resolved `OPENAI_API_KEY` means API-key auth, always ready.
  * - Otherwise (subscription mode) the run needs a usable `auth.json`. Because a
  *   managed home symlinks `auth.json` from the shared source home at seed time,
@@ -839,7 +839,7 @@ export async function evaluateCodexCredentialReadiness(
   const effectiveHome = configuredCodexHome ?? resolveManagedCodexHomeDir(env, input.companyId);
 
   if (!effectiveHomeIsManaged) {
-    // Genuine external override: Paperclip never seeds or inspects it.
+    // Genuine external override: Pilot never seeds or inspects it.
     return {
       managed: false,
       authMode: configuredApiKey ? "api" : "subscription",

@@ -1,6 +1,6 @@
 # CLI Reference
 
-Paperclip CLI now supports both:
+Pilot CLI now supports both:
 
 - installation and lifecycle management (`install`, `uninstall`, `update`, `upgrade`, `service`)
 - instance setup/diagnostics (`onboard`, `doctor`, `configure`, `env`, `allowed-hostname`, `env-lab`)
@@ -16,7 +16,7 @@ value. `npx paperclipai` works on any machine with Node: it runs a local install
 of the `paperclipai` package, and it fetches the published package when no local
 install is present.
 
-Do not use `pnpm paperclipai` for a content-bearing argument. `pnpm paperclipai`
+Do not use `pnpm pilotai` for a content-bearing argument. `pnpm pilotai`
 is a `package.json` script. `pnpm` builds a `/bin/sh` command string and appends
 the argument to it, so the shell reads the argument first. The shell interprets
 these spans before the CLI starts:
@@ -36,19 +36,19 @@ Safe forms:
   `argv` value and runs on any machine.
 - `node cli/node_modules/tsx/dist/cli.mjs cli/src/index.ts <command> <args>` —
   the safe form to run the local source from a monorepo checkout. It is the exact
-  command that the `pnpm paperclipai` script wraps, but it runs directly, so no
+  command that the `pnpm pilotai` script wraps, but it runs directly, so no
   shell reads the argument. Use it when you must test your local `cli/src`
   changes with a content-bearing argument.
 
 Unsafe or broken forms:
 
-- `pnpm paperclipai <command> <args>` — unsafe. `pnpm` runs the argument through a
+- `pnpm pilotai <command> <args>` — unsafe. `pnpm` runs the argument through a
   shell first.
 - `pnpm run <script> -- <args>`, or any `package.json` script that wraps the CLI —
   unsafe for the same reason.
-- `pnpm exec paperclipai <command> <args>` — broken. The root workspace does not
+- `pnpm exec pilotai <command> <args>` — broken. The root workspace does not
   depend on the `paperclipai` package, so `pnpm` does not link its binary into
-  `node_modules/.bin`. The command fails with `Command "paperclipai" not found`,
+  `node_modules/.bin`. The command fails with `Command "pilotai" not found`,
   even after a build. Do not use it.
 
 Static placeholders only: a document must show a static placeholder such as
@@ -56,7 +56,7 @@ Static placeholders only: a document must show a static placeholder such as
 own shell expands such a span on paste, before any CLI or `npx` receives argv, so
 a direct-exec form does not stop it.
 
-`pnpm paperclipai` stays acceptable only for a fully literal local lifecycle or
+`pnpm pilotai` stays acceptable only for a fully literal local lifecycle or
 setup command. A fully literal command carries no substitutable value. It has no
 placeholder, no example value the reader replaces, no interpolation, no path, no
 ref, no id, and no name. It holds the subcommand and, at most, flags that take no
@@ -64,7 +64,7 @@ value.
 
 The allowlist of literal commands lives in one place:
 `server/src/__tests__/cli-invocation-safety.test.ts`. A guard test enforces it
-fail-closed. Any `pnpm paperclipai` line whose command string is not an exact
+fail-closed. Any `pnpm pilotai` line whose command string is not an exact
 allowlist entry is an offender. The allowlist holds commands such as `run`,
 `onboard`, `onboard --yes`, `doctor`, `configure --section <name>`, `connect`,
 `env-lab up`, `env-lab down`, `context show`, `context list`,
@@ -94,19 +94,19 @@ local install or in the npm cache. It reaches the network only when the package
 is in neither place.
 
 To force cache-only resolution and block any network attempt, run
-`npx --offline paperclipai <command> <args>`. Use `npx --prefer-offline
-paperclipai` when you accept a fetch only for a missing package.
+`npx --offline pilotai <command> <args>`. Use `npx --prefer-offline
+pilotai` when you accept a fetch only for a missing package.
 
 To prepare an air-gapped host, install the package one time while the host is
-online. Run `npm install -g paperclipai`, or run the documented `install.sh`
+online. Run `npm install -g pilotai`, or run the documented `install.sh`
 path. After that step, both `npx paperclipai` and the installed `paperclipai`
 binary run offline. Both pass an inert `argv` value.
 
-To move the package without a registry, run `npm pack paperclipai` on an online
+To move the package without a registry, run `npm pack pilotai` on an online
 host. Copy the tarball to the air-gapped host. Run `npm install -g
 ./paperclipai-<version>.tgz`.
 
-Do not use `pnpm paperclipai` as an offline fallback for a content-bearing
+Do not use `pnpm pilotai` as an offline fallback for a content-bearing
 argument. It runs the argument through a shell first, offline or online. It also
 resolves only inside a monorepo checkout.
 
@@ -120,7 +120,7 @@ local source.
 Use repo script in development:
 
 ```sh
-pnpm paperclipai --help
+pnpm pilotai --help
 ```
 
 Recommended installation and interactive onboarding:
@@ -145,7 +145,7 @@ allowing it to bootstrap Node.js with privileged package-manager commands.
 First-time local bootstrap from a source checkout:
 
 ```sh
-pnpm paperclipai run
+pnpm pilotai run
 ```
 
 Choose local instance:
@@ -161,15 +161,15 @@ Managed installs keep CLI payloads under `~/.paperclip/cli`, expose a stable
 previous payloads for rollback.
 
 ```sh
-paperclipai install
-paperclipai install --canary
-paperclipai install --version <version>
-paperclipai install --ref <branch|tag|sha> [--repo owner/repo]
-paperclipai update
-paperclipai update --latest|--canary|--version <version>
-paperclipai update --rollback
-paperclipai upgrade
-paperclipai uninstall
+pilotai install
+pilotai install --canary
+pilotai install --version <version>
+pilotai install --ref <branch|tag|sha> [--repo owner/repo]
+pilotai update
+pilotai update --latest|--canary|--version <version>
+pilotai update --rollback
+pilotai upgrade
+pilotai uninstall
 ```
 
 `upgrade` aliases `update`. `uninstall` removes managed code and the shim but
@@ -183,29 +183,29 @@ Interactive onboarding offers to install a background service on supported
 platforms. `--yes` never installs it implicitly; automation must opt in.
 
 ```sh
-paperclipai onboard
-paperclipai onboard --yes
-paperclipai onboard --yes --install-service
-paperclipai onboard --yes --no-install-service
+pilotai onboard
+pilotai onboard --yes
+pilotai onboard --yes --install-service
+pilotai onboard --yes --no-install-service
 ```
 
 Service lifecycle commands remain under the `service` namespace:
 
 ```sh
-paperclipai service install [--no-start-now] [--no-start-on-login]
-paperclipai service uninstall
-paperclipai service start
-paperclipai service stop
-paperclipai service restart [--wait]
-paperclipai service status [--json]
-paperclipai service logs [-f]
+pilotai service install [--no-start-now] [--no-start-on-login]
+pilotai service uninstall
+pilotai service start
+pilotai service stop
+pilotai service restart [--wait]
+pilotai service status [--json]
+pilotai service logs [-f]
 ```
 
 Every service verb supports `--instance <id>` and `--json`. Linux and WSL2 use
 a systemd user unit when available; macOS uses a LaunchAgent. Unsupported
-environments receive foreground `paperclipai run` guidance.
+environments receive foreground `pilotai run` guidance.
 
-`paperclipai doctor` includes managed-install and service-health diagnostics in
+`pilotai doctor` includes managed-install and service-health diagnostics in
 addition to configuration, storage, database, logging, and port checks.
 
 ## Deployment Modes
@@ -214,11 +214,11 @@ Mode taxonomy and design intent are documented in `doc/DEPLOYMENT-MODES.md`.
 
 Current CLI behavior:
 
-- `paperclipai onboard` and `paperclipai configure --section server` set deployment mode in config
+- `pilotai onboard` and `pilotai configure --section server` set deployment mode in config
 - server onboarding/configure ask for reachability intent and write `server.bind`
-- `paperclipai run --bind <loopback|lan|tailnet>` passes a quickstart bind preset into first-run onboarding when config is missing
-- runtime can override mode with `PAPERCLIP_DEPLOYMENT_MODE`
-- `paperclipai run` and `paperclipai doctor` still do not expose a direct low-level `--mode` flag
+- `pilotai run --bind <loopback|lan|tailnet>` passes a quickstart bind preset into first-run onboarding when config is missing
+- runtime can override mode with `PILOT_DEPLOYMENT_MODE`
+- `pilotai run` and `pilotai doctor` still do not expose a direct low-level `--mode` flag
 
 Canonical behavior is documented in `doc/DEPLOYMENT-MODES.md`.
 
@@ -231,10 +231,10 @@ npx paperclipai allowed-hostname dotta-macbook-pro
 Bring up the default local SSH fixture for environment testing:
 
 ```sh
-pnpm paperclipai env-lab up
-pnpm paperclipai env-lab doctor
-pnpm paperclipai env-lab status --json
-pnpm paperclipai env-lab down
+pnpm pilotai env-lab up
+pnpm pilotai env-lab doctor
+pnpm pilotai env-lab status --json
+pnpm pilotai env-lab down
 ```
 
 All client commands support:
@@ -251,9 +251,9 @@ Company-scoped commands also support `--company-id <id>`.
 API base resolution order:
 
 1. `--api-base <url>`
-2. `PAPERCLIP_API_URL`
+2. `PILOT_API_URL`
 3. selected context profile `apiBase`
-4. local Paperclip config server port
+4. local Pilot config server port
 5. `http://localhost:3100`
 
 Connection failures include the attempted URL and a `GET /api/health` check hint.
@@ -261,7 +261,7 @@ Connection failures include the attempted URL and a `GET /api/health` check hint
 ## Connect Wizard
 
 ```sh
-pnpm paperclipai connect
+pnpm pilotai connect
 ```
 
 `connect` confirms the resolved API base, verifies `GET /api/health`, authenticates board access when needed, and saves a persona-aware profile:
@@ -284,17 +284,17 @@ Store local defaults in `~/.paperclip/context.json`:
 
 ```sh
 npx paperclipai context set --api-base http://localhost:3100 --company-id <company-id>
-npx paperclipai context set --persona agent --agent-id <agent-id> --api-key-env-var-name PAPERCLIP_API_KEY
-pnpm paperclipai context show
-pnpm paperclipai context list
+npx paperclipai context set --persona agent --agent-id <agent-id> --api-key-env-var-name PILOT_API_KEY
+pnpm pilotai context show
+pnpm pilotai context list
 npx paperclipai context use default
 ```
 
 To avoid storing secrets in context, set `apiKeyEnvVarName` and keep the key in env:
 
 ```sh
-npx paperclipai context set --api-key-env-var-name PAPERCLIP_API_KEY
-export PAPERCLIP_API_KEY=...
+npx paperclipai context set --api-key-env-var-name PILOT_API_KEY
+export PILOT_API_KEY=...
 ```
 
 ## Company Commands
@@ -328,12 +328,12 @@ Notes:
 
 - With agent authentication, `company list` and `company current` are
   agent-safe company selectors. `company list` first tries the board-wide list;
-  if that is forbidden, it uses `--company-id`, `PAPERCLIP_COMPANY_ID`, context,
+  if that is forbidden, it uses `--company-id`, `PILOT_COMPANY_ID`, context,
   or `/api/agents/me` and then reads only that scoped company.
 - `company create` requires board/instance-admin authentication because it is
   an instance-wide setup command.
-- Deletion is server-gated by `PAPERCLIP_ENABLE_COMPANY_DELETION`.
-- With agent authentication, company deletion is company-scoped. Use the current company ID/prefix (for example via `--company-id` or `PAPERCLIP_COMPANY_ID`), not another company.
+- Deletion is server-gated by `PILOT_ENABLE_COMPANY_DELETION`.
+- With agent authentication, company deletion is company-scoped. Use the current company ID/prefix (for example via `--company-id` or `PILOT_COMPANY_ID`), not another company.
 
 ## Issue Commands
 
@@ -356,7 +356,7 @@ npx paperclipai issue release <issue-id>
 npx paperclipai issue force-release <issue-id>
 ```
 
-Issue subresources are exposed as Paperclip API wrappers. Commands that map to broad server schemas accept JSON payloads and validate them with shared schemas before sending.
+Issue subresources are exposed as Pilot API wrappers. Commands that map to broad server schemas accept JSON payloads and validate them with shared schemas before sending.
 
 ```sh
 npx paperclipai issue child:create <issue-id> --payload-json '{"title":"Child task"}'
@@ -474,7 +474,7 @@ npx paperclipai agent runtime-state <agent-id>
 npx paperclipai agent runtime-state:reset-session <agent-id> [--task-key <key>]
 npx paperclipai agent task-sessions <agent-id>
 npx paperclipai agent skills <agent-id>
-npx paperclipai agent skills:sync <agent-id> --desired-skills paperclip,github --mode add
+npx paperclipai agent skills:sync <agent-id> --desired-skills pilot,github --mode add
 npx paperclipai agent instructions-path:update <agent-id> --payload-json '{"path":"/path/to/AGENTS.md"}'
 npx paperclipai agent instructions-bundle <agent-id>
 npx paperclipai agent instructions-bundle:update <agent-id> --payload-json '{"mode":"managed"}'
@@ -483,13 +483,13 @@ npx paperclipai agent instructions-file:put <agent-id> --path AGENTS.md --conten
 npx paperclipai agent instructions-file:delete <agent-id> --path AGENTS.md
 ```
 
-Agent config, instructions, skills, project env, environment, secret, and workspace edits affect the next run. Active runs finish with the config they started with. When a saved session, reused workspace, or sandbox lease no longer matches the effective next-run config, Paperclip may start fresh execution and records non-sensitive freshness categories in run result JSON and workspace operation logs.
+Agent config, instructions, skills, project env, environment, secret, and workspace edits affect the next run. Active runs finish with the config they started with. When a saved session, reused workspace, or sandbox lease no longer matches the effective next-run config, Pilot may start fresh execution and records non-sensitive freshness categories in run result JSON and workspace operation logs.
 
-`agent local-cli` is the quickest way to run local Claude/Codex manually as a Paperclip agent:
+`agent local-cli` is the quickest way to run local Claude/Codex manually as a Pilot agent:
 
 - creates a new long-lived agent API key
-- installs missing Paperclip skills into `~/.codex/skills` and `~/.claude/skills`
-- prints `export ...` lines for `PAPERCLIP_API_URL`, `PAPERCLIP_COMPANY_ID`, `PAPERCLIP_AGENT_ID`, and `PAPERCLIP_API_KEY`
+- installs missing Pilot skills into `~/.codex/skills` and `~/.claude/skills`
+- prints `export ...` lines for `PILOT_API_URL`, `PILOT_COMPANY_ID`, `PILOT_AGENT_ID`, and `PILOT_API_KEY`
 
 Example for shortname-based local setup:
 
@@ -519,7 +519,7 @@ npx paperclipai token board revoke <key-id>
 
 ## Run Commands
 
-`paperclipai run` without a subcommand still bootstraps and starts a local Paperclip instance. The subcommands below inspect and control API heartbeat runs.
+`pilotai run` without a subcommand still bootstraps and starts a local Pilot instance. The subcommands below inspect and control API heartbeat runs.
 
 ```sh
 npx paperclipai run list --company-id <company-id> [--agent-id <agent-id>] [--limit 50]
@@ -536,7 +536,7 @@ npx paperclipai run watchdog-decision <run-id> --decision continue [--reason "..
 
 ## Routine Commands
 
-`paperclipai routines disable-all` remains the local maintenance command. The singular `routine` group maps to the REST API.
+`pilotai routines disable-all` remains the local maintenance command. The singular `routine` group maps to the REST API.
 
 ```sh
 npx paperclipai routine list --company-id <company-id> [--project-id <project-id>]
@@ -556,11 +556,11 @@ npx paperclipai routine trigger:fire <public-id> [--payload-json '{...}']
 
 ## Prompt Handoff
 
-Prompt handoff creates Paperclip work. It does not create a chat session.
+Prompt handoff creates Pilot work. It does not create a chat session.
 
 ```sh
 npx paperclipai agent-prompt <agent-name-or-id> <agent-api-key> "Prompt here"
-npx paperclipai agent prompt --agent <agent-name-or-id> --api-key-env PAPERCLIP_API_KEY "Prompt here"
+npx paperclipai agent prompt --agent <agent-name-or-id> --api-key-env PILOT_API_KEY "Prompt here"
 npx paperclipai agent prompt --profile my-agent "Prompt here"
 npx paperclipai board prompt --company-id <company-id> --agent <agent-name-or-id> "Prompt here"
 ```
@@ -569,7 +569,7 @@ By default the command creates a `todo` issue assigned to the target agent and w
 
 ## Skills Commands
 
-`paperclipai skills` covers three distinct operations:
+`pilotai skills` covers three distinct operations:
 
 1. **Company install** — adds or updates a row in `company_skills` for the
    whole company. This is what `skills install`, `skills import`, `skills create`,
@@ -582,7 +582,7 @@ By default the command creates a `todo` issue assigned to the target agent and w
    with files on disk and reports an `AgentSkillSnapshot` (`skills agent list`).
    `skills agent sync` triggers this automatically after updating desired state.
 
-Required Paperclip runtime skills (heartbeat, etc.) remain server-enforced and
+Required Pilot runtime skills (heartbeat, etc.) remain server-enforced and
 are added on top of whatever the desired set names.
 
 Company skill mutations (`skills install`, `skills import`, `skills create`, and
@@ -594,7 +594,7 @@ also creates agents.
 
 ### Catalog (app-shipped skills)
 
-The Paperclip app ships a curated catalog under `@paperclipai/skills-catalog`.
+The Pilot app ships a curated catalog under `@paperclipai/skills-catalog`.
 Browse and inspect commands never mutate company state; `install` adds a catalog
 skill to the company library.
 
@@ -609,7 +609,7 @@ Catalog semantics:
 
 - **Bundled** skills live in `packages/skills-catalog/catalog/bundled/<category>/<slug>`
   and are recommended defaults for most companies. They use canonical key
-  `paperclipai/bundled/<category>/<slug>`.
+  `pilotai/bundled/<category>/<slug>`.
 - **Optional** skills live in `packages/skills-catalog/catalog/optional/<category>/<slug>`
   and are role-specific or domain-specific (browser, AWS ops, etc.). Same key
   shape with `optional` in place of `bundled`.
@@ -627,7 +627,7 @@ npx paperclipai skills browse --kind bundled --company-id <company-id>
 npx paperclipai skills search "pull request" --kind bundled
 npx paperclipai skills inspect github-pr-workflow
 npx paperclipai skills install github-pr-workflow --company-id <company-id>
-npx paperclipai skills install paperclipai:optional:browser:agent-browser --company-id <company-id>
+npx paperclipai skills install pilotai:optional:browser:agent-browser --company-id <company-id>
 ```
 
 External GitHub, skills.sh, local-path, and URL sources still go through
@@ -682,7 +682,7 @@ npx paperclipai skills agent clear <agent-id-or-shortname> --yes --company-id <c
 `AgentSkillSnapshot`. `add` preserves all unnamed assignments, `remove` deletes
 only named assignments, and `replace` destructively overwrites the complete
 non-required desired skill set.
-`skills agent clear` sends an empty desired list. Required Paperclip skills are
+`skills agent clear` sends an empty desired list. Required Pilot skills are
 still enforced by the server in both cases.
 
 ### Notes
@@ -697,7 +697,7 @@ still enforced by the server in both cases.
 
 ## Teams Commands
 
-`paperclipai teams` works with the app-shipped team catalog in
+`pilotai teams` works with the app-shipped team catalog in
 `@paperclipai/teams-catalog`. Browse, search, inspect, and file reads do not
 change company state. `preview` runs the company import planner, and `install`
 imports the catalog team into an existing company.
@@ -712,16 +712,16 @@ npx paperclipai teams install <catalog-id-or-key-or-slug> --company-id <company-
 
 Preview/install options:
 
-- Under agent authentication, use `paperclipai company list --json`,
-  `paperclipai company current --json`, or `PAPERCLIP_COMPANY_ID` to select the
+- Under agent authentication, use `pilotai company list --json`,
+  `pilotai company current --json`, or `PILOT_COMPANY_ID` to select the
   target company. `company list` falls back to the scoped current company when
   board-wide listing is forbidden. `teams install` creates agents and therefore
   requires board authentication, an `agents:create` grant, or an agent with
   explicit `canCreateAgents` permission.
 - `--request-approval-on-forbidden` turns a 403 install denial into a linked
   board approval request instead of a raw failed command; use
-  `--approval-issue-id <id>` to attach it to a specific issue. During Paperclip
-  task runs with `PAPERCLIP_TASK_ID` set, this fallback is automatic so
+  `--approval-issue-id <id>` to attach it to a specific issue. During Pilot
+  task runs with `PILOT_TASK_ID` set, this fallback is automatic so
   agent-run walkthroughs leave a pending approval path instead of a raw 403.
 - `--target-manager-agent-id <id>` or `--target-manager-slug <slug>` reparents
   catalog root agents under an existing manager.
@@ -755,10 +755,10 @@ npx paperclipai secrets migrate-inline-env --company-id <company-id> [--apply]
 
 Secret listing and declarations never print secret values. `create` accepts
 `--value-env` so shell history does not capture the value. `link` records
-provider-owned references without copying the secret value into Paperclip.
+provider-owned references without copying the secret value into Pilot.
 For AWS-backed secrets, `secrets doctor` reports missing non-secret provider
 env and the expected AWS SDK runtime credential source; do not store AWS
-bootstrap credentials in Paperclip secrets.
+bootstrap credentials in Pilot secrets.
 
 Per-company provider vaults (multiple vault instances per provider, default
 vault selection, coming-soon GCP/Vault) can be configured from the board UI under
@@ -838,9 +838,9 @@ CLI auth challenge endpoints are also exposed for tooling that needs the raw cha
 
 ```sh
 npx paperclipai auth challenge create --payload-json '{...}'
-PAPERCLIP_CHALLENGE_SECRET=<challenge-secret> npx paperclipai auth challenge get <challenge-id> --token-env PAPERCLIP_CHALLENGE_SECRET
-PAPERCLIP_CHALLENGE_SECRET=<challenge-secret> npx paperclipai auth challenge approve <challenge-id> --token-env PAPERCLIP_CHALLENGE_SECRET
-PAPERCLIP_CHALLENGE_SECRET=<challenge-secret> npx paperclipai auth challenge cancel <challenge-id> --token-env PAPERCLIP_CHALLENGE_SECRET
+PILOT_CHALLENGE_SECRET=<challenge-secret> npx paperclipai auth challenge get <challenge-id> --token-env PILOT_CHALLENGE_SECRET
+PILOT_CHALLENGE_SECRET=<challenge-secret> npx paperclipai auth challenge approve <challenge-id> --token-env PILOT_CHALLENGE_SECRET
+PILOT_CHALLENGE_SECRET=<challenge-secret> npx paperclipai auth challenge cancel <challenge-id> --token-env PILOT_CHALLENGE_SECRET
 npx paperclipai auth revoke-current
 ```
 
@@ -1032,12 +1032,12 @@ npx paperclipai heartbeat run --agent-id <agent-id> [--api-base http://localhost
 
 ## Local Storage Defaults
 
-Local Paperclip data lives under the selected instance root. `PAPERCLIP_HOME` chooses the home directory and `PAPERCLIP_INSTANCE_ID` chooses the instance.
+Local Pilot data lives under the selected instance root. `PILOT_HOME` chooses the home directory and `PILOT_INSTANCE_ID` chooses the instance.
 
 ```text
-~/.paperclip/                                     # PAPERCLIP_HOME
+~/.paperclip/                                     # PILOT_HOME
 └── instances/
-    └── default/                                  # instance root (PAPERCLIP_INSTANCE_ID)
+    └── default/                                  # instance root (PILOT_INSTANCE_ID)
         ├── config.json                           # runtime config
         ├── .env                                  # instance env file
         ├── db/                                   # embedded PostgreSQL data
@@ -1064,7 +1064,7 @@ Default paths for the canonical install:
 Override base home or instance with env vars:
 
 ```sh
-PAPERCLIP_HOME=/custom/home PAPERCLIP_INSTANCE_ID=dev pnpm paperclipai run
+PILOT_HOME=/custom/home PILOT_INSTANCE_ID=dev pnpm pilotai run
 ```
 
 ## Storage Configuration
@@ -1072,7 +1072,7 @@ PAPERCLIP_HOME=/custom/home PAPERCLIP_INSTANCE_ID=dev pnpm paperclipai run
 Configure storage provider and settings:
 
 ```sh
-pnpm paperclipai configure --section storage
+pnpm pilotai configure --section storage
 ```
 
 Supported providers:

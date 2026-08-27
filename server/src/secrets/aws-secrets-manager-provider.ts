@@ -19,7 +19,7 @@ const AWS_SECRETS_MANAGER_SCHEME = "aws_secrets_manager_v1";
 const DEFAULT_PREFIX = "paperclip";
 const DEFAULT_OWNER_TAG = "paperclip";
 const DEFAULT_VERSION_STAGE = "AWSCURRENT";
-const PAPERCLIP_PENDING_VERSION_STAGE = "PAPERCLIP_PENDING";
+const PILOT_PENDING_VERSION_STAGE = "PILOT_PENDING";
 const DEFAULT_DELETE_RECOVERY_WINDOW_DAYS = 30;
 const AWS_SECRETS_MANAGER_REQUEST_TIMEOUT_MS = 30_000;
 const AWS_CREDENTIAL_CACHE_TTL_MS = 5 * 60_000;
@@ -293,7 +293,7 @@ function readProviderVaultConfig(input: SecretProviderVaultRuntimeConfig): AwsSe
   if (!region) {
     throw unprocessable("AWS Secrets Manager provider vault requires non-secret config: region");
   }
-  const recoveryWindowRaw = process.env.PAPERCLIP_SECRETS_AWS_DELETE_RECOVERY_DAYS?.trim();
+  const recoveryWindowRaw = process.env.PILOT_SECRETS_AWS_DELETE_RECOVERY_DAYS?.trim();
   const recoveryWindow = recoveryWindowRaw ? Number(recoveryWindowRaw) : DEFAULT_DELETE_RECOVERY_WINDOW_DAYS;
   if (!Number.isFinite(recoveryWindow) || recoveryWindow < 7 || recoveryWindow > 30) {
     throw unprocessable(
@@ -304,7 +304,7 @@ function readProviderVaultConfig(input: SecretProviderVaultRuntimeConfig): AwsSe
   return {
     region,
     endpoint:
-      process.env.PAPERCLIP_SECRETS_AWS_ENDPOINT?.trim() ||
+      process.env.PILOT_SECRETS_AWS_ENDPOINT?.trim() ||
       `https://secretsmanager.${region}.amazonaws.com`,
     deploymentId: sanitizePathSegment(
       asOptionalNonEmptyString(input.config.namespace) ?? input.id,
@@ -325,22 +325,22 @@ function readProviderVaultConfig(input: SecretProviderVaultRuntimeConfig): AwsSe
 
 function getAwsConfigReadiness() {
   const region = (
-    process.env.PAPERCLIP_SECRETS_AWS_REGION ??
+    process.env.PILOT_SECRETS_AWS_REGION ??
     process.env.AWS_REGION ??
     process.env.AWS_DEFAULT_REGION
   )?.trim();
-  const deploymentId = process.env.PAPERCLIP_SECRETS_AWS_DEPLOYMENT_ID?.trim();
-  const kmsKeyId = process.env.PAPERCLIP_SECRETS_AWS_KMS_KEY_ID?.trim();
+  const deploymentId = process.env.PILOT_SECRETS_AWS_DEPLOYMENT_ID?.trim();
+  const kmsKeyId = process.env.PILOT_SECRETS_AWS_KMS_KEY_ID?.trim();
   const missingConfig: string[] = [];
 
   if (!region) {
     missingConfig.push("PAPERCLIP_SECRETS_AWS_REGION or AWS_REGION/AWS_DEFAULT_REGION");
   }
   if (!deploymentId) {
-    missingConfig.push("PAPERCLIP_SECRETS_AWS_DEPLOYMENT_ID");
+    missingConfig.push("PILOT_SECRETS_AWS_DEPLOYMENT_ID");
   }
   if (!kmsKeyId) {
-    missingConfig.push("PAPERCLIP_SECRETS_AWS_KMS_KEY_ID");
+    missingConfig.push("PILOT_SECRETS_AWS_KMS_KEY_ID");
   }
 
   return {
@@ -376,11 +376,11 @@ function describeDetectedAwsCredentialSources() {
 function loadAwsSecretsManagerConfig(): AwsSecretsManagerConfig {
   const readiness = getAwsConfigReadiness();
   const region =
-    process.env.PAPERCLIP_SECRETS_AWS_REGION?.trim() ||
+    process.env.PILOT_SECRETS_AWS_REGION?.trim() ||
     process.env.AWS_REGION?.trim() ||
     process.env.AWS_DEFAULT_REGION?.trim();
-  const deploymentId = process.env.PAPERCLIP_SECRETS_AWS_DEPLOYMENT_ID?.trim();
-  const kmsKeyId = process.env.PAPERCLIP_SECRETS_AWS_KMS_KEY_ID?.trim();
+  const deploymentId = process.env.PILOT_SECRETS_AWS_DEPLOYMENT_ID?.trim();
+  const kmsKeyId = process.env.PILOT_SECRETS_AWS_KMS_KEY_ID?.trim();
 
   if (readiness.missingConfig.length > 0) {
     throw unprocessable(
@@ -403,7 +403,7 @@ function loadAwsSecretsManagerConfig(): AwsSecretsManagerConfig {
     );
   }
 
-  const recoveryWindowRaw = process.env.PAPERCLIP_SECRETS_AWS_DELETE_RECOVERY_DAYS?.trim();
+  const recoveryWindowRaw = process.env.PILOT_SECRETS_AWS_DELETE_RECOVERY_DAYS?.trim();
   const recoveryWindow = recoveryWindowRaw ? Number(recoveryWindowRaw) : DEFAULT_DELETE_RECOVERY_WINDOW_DAYS;
   if (!Number.isFinite(recoveryWindow) || recoveryWindow < 7 || recoveryWindow > 30) {
     throw unprocessable(
@@ -414,17 +414,17 @@ function loadAwsSecretsManagerConfig(): AwsSecretsManagerConfig {
   return {
     region,
     endpoint:
-      process.env.PAPERCLIP_SECRETS_AWS_ENDPOINT?.trim() ||
+      process.env.PILOT_SECRETS_AWS_ENDPOINT?.trim() ||
       `https://secretsmanager.${region}.amazonaws.com`,
     deploymentId,
-    prefix: sanitizePathSegment(process.env.PAPERCLIP_SECRETS_AWS_PREFIX?.trim() || DEFAULT_PREFIX),
+    prefix: sanitizePathSegment(process.env.PILOT_SECRETS_AWS_PREFIX?.trim() || DEFAULT_PREFIX),
     kmsKeyId,
     environmentTag:
-      process.env.PAPERCLIP_SECRETS_AWS_ENVIRONMENT?.trim() ||
+      process.env.PILOT_SECRETS_AWS_ENVIRONMENT?.trim() ||
       process.env.NODE_ENV?.trim() ||
       "unknown",
     providerOwnerTag:
-      process.env.PAPERCLIP_SECRETS_AWS_PROVIDER_OWNER?.trim() || DEFAULT_OWNER_TAG,
+      process.env.PILOT_SECRETS_AWS_PROVIDER_OWNER?.trim() || DEFAULT_OWNER_TAG,
     deleteRecoveryWindowDays: recoveryWindow,
   };
 }
@@ -631,13 +631,13 @@ function pathSegments(name: string) {
 function inferPathSignals(entry: AwsSecretsManagerListSecretEntry, tags: Map<string, string>) {
   const name = entry.Name?.trim() || entry.ARN?.trim() || "";
   const segments = pathSegments(name);
-  const paperclipDeploymentId = tagValue(tags, ["paperclip:deployment-id"]);
-  const paperclipManaged = tagValue(tags, ["paperclip:managed-by"])?.toLowerCase() === "paperclip";
+  const pilotDeploymentId = tagValue(tags, ["paperclip:deployment-id"]);
+  const pilotManaged = tagValue(tags, ["paperclip:managed-by"])?.toLowerCase() === "paperclip";
 
-  if (paperclipDeploymentId || paperclipManaged) {
+  if (pilotDeploymentId || pilotManaged) {
     return {
       prefix: segments[0] ?? DEFAULT_PREFIX,
-      namespace: paperclipDeploymentId ?? segments[1] ?? null,
+      namespace: pilotDeploymentId ?? segments[1] ?? null,
     };
   }
 
@@ -690,17 +690,17 @@ function discoverAwsProviderConfigCandidates(input: {
   };
 
   const skippedWarnings: string[] = [];
-  let skippedForeignPaperclipSampleCount = 0;
+  let skippedForeignPilotSampleCount = 0;
   const samples: DiscoverySample[] = [];
 
   for (const entry of input.entries) {
     const name = entry.Name?.trim() || entry.ARN?.trim();
     if (!name) continue;
     const tags = normalizeAwsTags(entry.Tags);
-    const paperclipManaged = tagValue(tags, ["paperclip:managed-by"])?.toLowerCase() === "paperclip";
-    const paperclipCompanyId = tagValue(tags, ["paperclip:company-id"]);
-    if (paperclipManaged && paperclipCompanyId !== input.companyId) {
-      skippedForeignPaperclipSampleCount += 1;
+    const pilotManaged = tagValue(tags, ["paperclip:managed-by"])?.toLowerCase() === "paperclip";
+    const pilotCompanyId = tagValue(tags, ["paperclip:company-id"]);
+    if (pilotManaged && pilotCompanyId !== input.companyId) {
+      skippedForeignPilotSampleCount += 1;
       continue;
     }
     const path = inferPathSignals(entry, tags);
@@ -713,14 +713,14 @@ function discoverAwsProviderConfigCandidates(input: {
       environmentTag: tagValue(tags, ["paperclip:environment", "environment", "env", "stage"]),
       ownerTag: tagValue(tags, ["paperclip:provider-owner", "owner", "team", "service", "application"]),
       kmsKeyId: asOptionalNonEmptyString(entry.KmsKeyId),
-      paperclipManaged,
-      paperclipCompanyId,
+      paperclipManaged: pilotManaged,
+      paperclipCompanyId: pilotCompanyId,
     });
   }
 
-  if (skippedForeignPaperclipSampleCount > 0) {
+  if (skippedForeignPilotSampleCount > 0) {
     skippedWarnings.push(
-      `Skipped ${skippedForeignPaperclipSampleCount} Paperclip-managed AWS secret sample(s) that were not tagged for this company.`,
+      `Skipped ${skippedForeignPilotSampleCount} Paperclip-managed AWS secret sample(s) that were not tagged for this company.`,
     );
   }
 
@@ -799,7 +799,7 @@ function discoverAwsProviderConfigCandidates(input: {
           hasKmsKey: kmsKeys.length > 0,
           sampleCount: group.length,
           paperclipManagedSampleCount: group.filter((sample) => sample.paperclipManaged).length,
-          skippedForeignPaperclipSampleCount,
+          skippedForeignPaperclipSampleCount: skippedForeignPilotSampleCount,
         },
         warnings: candidateWarnings,
       };
@@ -817,7 +817,7 @@ function discoverAwsProviderConfigCandidates(input: {
     provider: "aws_secrets_manager",
     nextToken: input.nextToken,
     sampledSecretCount: samples.length,
-    skippedForeignPaperclipSampleCount,
+    skippedForeignPaperclipSampleCount: skippedForeignPilotSampleCount,
     candidates,
     warnings,
   };
@@ -1097,15 +1097,15 @@ export function createAwsSecretsManagerProvider(
             ? ["region"]
             : [
                 "PAPERCLIP_SECRETS_AWS_REGION or AWS_REGION/AWS_DEFAULT_REGION",
-                "PAPERCLIP_SECRETS_AWS_DEPLOYMENT_ID",
-                "PAPERCLIP_SECRETS_AWS_KMS_KEY_ID",
+                "PILOT_SECRETS_AWS_DEPLOYMENT_ID",
+                "PILOT_SECRETS_AWS_KMS_KEY_ID",
               ],
           optionalProviderConfig: [
-            "PAPERCLIP_SECRETS_AWS_PREFIX",
-            "PAPERCLIP_SECRETS_AWS_ENVIRONMENT",
-            "PAPERCLIP_SECRETS_AWS_PROVIDER_OWNER",
-            "PAPERCLIP_SECRETS_AWS_ENDPOINT",
-            "PAPERCLIP_SECRETS_AWS_DELETE_RECOVERY_DAYS",
+            "PILOT_SECRETS_AWS_PREFIX",
+            "PILOT_SECRETS_AWS_ENVIRONMENT",
+            "PILOT_SECRETS_AWS_PROVIDER_OWNER",
+            "PILOT_SECRETS_AWS_ENDPOINT",
+            "PILOT_SECRETS_AWS_DELETE_RECOVERY_DAYS",
           ],
           credentialSource: "AWS SDK default credential provider chain",
           detectedCredentialSources: readiness.credentialSources,
@@ -1163,7 +1163,7 @@ export function createAwsSecretsManagerProvider(
         const created = await gateway.putSecretValue({
           SecretId: secretId,
           SecretString: input.value,
-          VersionStages: [PAPERCLIP_PENDING_VERSION_STAGE],
+          VersionStages: [PILOT_PENDING_VERSION_STAGE],
         });
         const normalizedSecretId = created.ARN ?? created.Name ?? secretId;
         return {
@@ -1194,7 +1194,7 @@ export function createAwsSecretsManagerProvider(
           VersionStage: DEFAULT_VERSION_STAGE,
         });
         // No VersionStages: the new version becomes AWSCURRENT so every consumer of the
-        // referenced secret (not just Paperclip) picks up the new value.
+        // referenced secret (not just Pilot) picks up the new value.
         const created = await gateway.putSecretValue({
           SecretId: secretId,
           SecretString: input.value,
@@ -1352,7 +1352,7 @@ export function createAwsSecretsManagerProvider(
           if (material.versionId && gateway.updateSecretVersionStage) {
             await gateway.updateSecretVersionStage({
               SecretId: secretId,
-              VersionStage: PAPERCLIP_PENDING_VERSION_STAGE,
+              VersionStage: PILOT_PENDING_VERSION_STAGE,
               RemoveFromVersionId: material.versionId,
             });
           }

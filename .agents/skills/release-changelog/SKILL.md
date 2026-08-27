@@ -1,17 +1,17 @@
 ---
 name: release-changelog
 description: >
-  Generate the stable Paperclip release changelog at releases/vYYYY.MDD.P.md by
+  Generate the stable Pilot release changelog at releases/vYYYY.MDD.P.md by
   reading commits, changesets, and merged PR context since the last stable tag.
 ---
 
 # Release Changelog Skill
 
-Generate the user-facing changelog for the **stable** Paperclip release.
+Generate the user-facing changelog for the **stable** Pilot release.
 
 ## Versioning Model
 
-Paperclip uses **calendar versioning (calver)**:
+Pilot uses **calendar versioning (calver)**:
 
 - Stable releases: `YYYY.MDD.P` (e.g. `2026.318.0`)
 - Canary releases: `YYYY.MDD.P-canary.N` (e.g. `2026.318.1-canary.0`)
@@ -42,7 +42,7 @@ source commit, not the tip of `master`:
 
   ```bash
   git fetch origin --tags
-  npm view paperclipai dist-tags   # the beta dist-tag names the version
+  npm view pilotai dist-tags   # the beta dist-tag names the version
   git rev-parse 'beta/v{beta-version}^{commit}'
   ```
 
@@ -206,14 +206,14 @@ the planned stable version. Resolve it with
 promotion date slips, the version re-resolves at dispatch — the beta-keyed
 filename makes that harmless; refresh the title when it happens.
 
-The opening line of the changelog must be an H1 of the format `# Paperclip {version}`
-(no braces), e.g. `# Paperclip v2026.618.0`. Always include the `Paperclip ` prefix and
+The opening line of the changelog must be an H1 of the format `# Pilot {version}`
+(no braces), e.g. `# Pilot v2026.618.0`. Always include the `Pilot ` prefix and
 the `v` on the version.
 
 Template:
 
 ```markdown
-# Paperclip vYYYY.MDD.P
+# Pilot vYYYY.MDD.P
 
 > Released: YYYY-MM-DD
 
@@ -260,7 +260,7 @@ If there are no contributors left after exclusions, then just skip this section 
 ## Step 5b — Upsert The Release Case
 
 After writing `releases/vYYYY.MDD.P.md`, emit or refresh the top-level release
-case when the run has Paperclip API context. Use `skills/paperclip/references/cases.md`
+case when the run has Pilot API context. Use `skills/paperclip/references/cases.md`
 as the API contract. If the API returns `403 Cases are disabled`, report that
 Cases must be enabled and continue with the changelog file only.
 
@@ -270,9 +270,9 @@ Request:
 POST /api/companies/:companyId/cases
 {
   "caseType": "release",
-  "key": "paperclip-release:vYYYY.MDD.P",
-  "title": "Paperclip vYYYY.MDD.P release",
-  "summary": "Stable Paperclip release notes for vYYYY.MDD.P.",
+  "key": "pilot-release:vYYYY.MDD.P",
+  "title": "Pilot vYYYY.MDD.P release",
+  "summary": "Stable Pilot release notes for vYYYY.MDD.P.",
   "status": "in_progress",
   "fields": {
     "schema_version": 1,
@@ -306,7 +306,7 @@ Then write the changelog into the case body document:
 ```http
 PUT /api/cases/:releaseCaseId/documents/body
 {
-  "title": "Paperclip vYYYY.MDD.P changelog",
+  "title": "Pilot vYYYY.MDD.P changelog",
   "format": "markdown",
   "body": "<contents of releases/vYYYY.MDD.P.md>",
   "changeSummary": "Initial stable changelog"
@@ -321,7 +321,7 @@ and retry once.
 
 Before handing it off:
 
-1. confirm the H1 heading is `# Paperclip {version}` (e.g. `# Paperclip v2026.618.0`) with the stable version only
+1. confirm the H1 heading is `# Pilot {version}` (e.g. `# Pilot v2026.618.0`) with the stable version only
 2. confirm there is no `-canary` language in the title or filename
 3. confirm any breaking changes have an upgrade path
 4. confirm the `release` case exists or explain why Cases were unavailable

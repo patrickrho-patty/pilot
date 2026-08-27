@@ -469,8 +469,8 @@ type ResponsibleUserActorWithMemo = AuthorizationActor & {
 };
 
 export function responsibleUserAuthzShadowMode() {
-  const mode = process.env.PAPERCLIP_RESPONSIBLE_USER_AUTHZ_MODE?.trim().toLowerCase();
-  const shadow = process.env.PAPERCLIP_RESPONSIBLE_USER_AUTHZ_SHADOW?.trim().toLowerCase();
+  const mode = process.env.PILOT_RESPONSIBLE_USER_AUTHZ_MODE?.trim().toLowerCase();
+  const shadow = process.env.PILOT_RESPONSIBLE_USER_AUTHZ_SHADOW?.trim().toLowerCase();
   return mode === "shadow" || shadow === "1" || shadow === "true" || shadow === "yes";
 }
 

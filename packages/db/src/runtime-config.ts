@@ -3,8 +3,8 @@ import path from "node:path";
 import {
   expandHomePrefix,
   resolveDefaultEmbeddedPostgresDir,
-  resolvePaperclipConfigPathForInstance,
-  resolvePaperclipEnvPathForConfig,
+  resolvePilotConfigPathForInstance,
+  resolvePilotEnvPathForConfig,
 } from "@paperclipai/shared/home-paths";
 
 const CONFIG_BASENAME = "config.json";
@@ -54,15 +54,15 @@ function findConfigFileFromAncestors(startDir: string): string | null {
   }
 }
 
-function resolvePaperclipConfigPath(): string {
-  if (process.env.PAPERCLIP_CONFIG?.trim()) {
-    return path.resolve(process.env.PAPERCLIP_CONFIG.trim());
+function resolvePilotConfigPath(): string {
+  if (process.env.PILOT_CONFIG?.trim()) {
+    return path.resolve(process.env.PILOT_CONFIG.trim());
   }
-  return findConfigFileFromAncestors(process.cwd()) ?? resolvePaperclipConfigPathForInstance();
+  return findConfigFileFromAncestors(process.cwd()) ?? resolvePilotConfigPathForInstance();
 }
 
-function resolvePaperclipEnvPath(configPath: string): string {
-  return resolvePaperclipEnvPathForConfig(configPath);
+function resolvePilotEnvPath(configPath: string): string {
+  return resolvePilotEnvPathForConfig(configPath);
 }
 
 function parseEnvFile(contents: string): Record<string, string> {
@@ -182,8 +182,8 @@ function readConfig(configPath: string): PartialConfig | null {
 }
 
 export function resolveDatabaseTarget(): ResolvedDatabaseTarget {
-  const configPath = resolvePaperclipConfigPath();
-  const envPath = resolvePaperclipEnvPath(configPath);
+  const configPath = resolvePilotConfigPath();
+  const envPath = resolvePilotEnvPath(configPath);
   const envEntries = readEnvEntries(envPath);
 
   const envUrl = process.env.DATABASE_URL?.trim();

@@ -2,16 +2,16 @@
  * Builds a kubernetes-sigs/agent-sandbox Sandbox CR manifest.
  *
  * The Sandbox CR creates a long-lived pod (sleep infinity entrypoint) into
- * which paperclip-server can exec arbitrary commands. This solves the
+ * which pilot-server can exec arbitrary commands. This solves the
  * architectural mismatch with the batch/v1 Job backend, which only supports
  * a single one-shot entrypoint — not the multi-command adapter-install pattern
- * used by paperclip-server.
+ * used by pilot-server.
  *
  * Security baseline is identical to buildJobManifest (pod-spec-builder.ts):
  * non-root, drop ALL caps, read-only rootFS, Tini PID 1, seccomp
  * RuntimeDefault, fsGroupChangePolicy OnRootMismatch, automountSAToken=false.
  *
- * NOTE: paperclip-server runs OUTSIDE the cluster, so we cannot set ownerReferences
+ * NOTE: pilot-server runs OUTSIDE the cluster, so we cannot set ownerReferences
  * on the Sandbox CR (the owner would need to be an in-cluster resource). The
  * release path is explicit delete via sandboxCrOrchestrator.release().
  */
@@ -46,7 +46,7 @@ export function buildSandboxCrManifest(
       name: input.sandboxName,
       namespace: input.namespace,
       labels: { ...input.labels },
-      // No ownerReferences: paperclip-server is out-of-cluster. Release is
+      // No ownerReferences: pilot-server is out-of-cluster. Release is
       // explicit delete.
     },
     spec: {
@@ -56,7 +56,7 @@ export function buildSandboxCrManifest(
         },
         spec: {
           serviceAccountName: input.serviceAccountName,
-          // Agent containers call back to paperclip-server via HTTPS egress;
+          // Agent containers call back to pilot-server via HTTPS egress;
           // they never call the Kubernetes API, so mounting an SA token is
           // unnecessary attack surface.
           automountServiceAccountToken: false,
@@ -86,7 +86,7 @@ export function buildSandboxCrManifest(
               name: "agent",
               image: input.image,
               imagePullPolicy: "IfNotPresent",
-              // sleep infinity keeps the pod running; paperclip-server execs
+              // sleep infinity keeps the pod running; pilot-server execs
               // commands into it via Kubernetes exec API. Tini as PID 1 for
               // proper signal forwarding and zombie reaping.
               command: [

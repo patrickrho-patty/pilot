@@ -27,7 +27,7 @@ test("release package list only contains CI-enrolled packages", () => {
 test("release package list publishes the installable channel entrypoint last", () => {
   const enabledPackages = getReleasePackages();
 
-  assert.equal(enabledPackages.at(-1)?.name, "paperclipai");
+  assert.equal(enabledPackages.at(-1)?.name, "pilotai");
   assert.ok(enabledPackages.slice(0, -1).some((pkg) => pkg.name === "@paperclipai/server"));
 });
 
@@ -53,7 +53,7 @@ test("release package list keeps runtime workspace dependencies ahead of consume
 
 test("Hermes release surface publishes the unified built-in package and keeps gateway as a shim", () => {
   const packages = buildReleasePackagePlan();
-  const hermes = packages.find((pkg) => pkg.name === "@paperclipai/hermes-paperclip-adapter");
+  const hermes = packages.find((pkg) => pkg.name === "@paperclipai/hermes-pilot-adapter");
   const gatewayShim = packages.find((pkg) => pkg.name === "@paperclipai/adapter-hermes-gateway");
 
   assert.equal(hermes?.dir, "packages/adapters/hermes");

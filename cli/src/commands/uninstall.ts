@@ -9,7 +9,7 @@ import {
   resolveInstallStorePaths,
   withInstallStoreLock,
 } from "../install-store.js";
-import { resolvePaperclipInstanceId } from "../config/home.js";
+import { resolvePilotInstanceId } from "../config/home.js";
 import { detectServiceManager, launchdServiceName, systemdServiceName } from "../services/service-manager.js";
 
 type UninstallDependencies = {
@@ -39,7 +39,7 @@ function otherServiceDefinitions(platform: NodeJS.Platform, userHomeDir: string,
 export async function uninstallCommand(
   dependencies: Partial<UninstallDependencies> = {},
 ): Promise<void> {
-  const instanceId = resolvePaperclipInstanceId();
+  const instanceId = resolvePilotInstanceId();
   const detect = dependencies.detectServiceManager ?? detectServiceManager;
   const platform = dependencies.platform ?? process.platform;
   const userHomeDir = dependencies.userHomeDir ?? os.homedir();

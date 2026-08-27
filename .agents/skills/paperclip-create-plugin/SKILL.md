@@ -1,24 +1,24 @@
 ---
 name: paperclip-create-plugin
 description: >
-  Create and develop external Paperclip plugins with the CLI-first workflow. Use
+  Create and develop external Pilot plugins with the CLI-first workflow. Use
   when scaffolding a plugin, iterating on a local plugin, installing it into
-  Paperclip, or updating plugin authoring docs.
+  Pilot, or updating plugin authoring docs.
 ---
 
-# Create and develop a Paperclip plugin
+# Create and develop a Pilot plugin
 
-Use this skill when the task is to create, scaffold, or iterate on a Paperclip plugin against a local Paperclip instance.
+Use this skill when the task is to create, scaffold, or iterate on a Pilot plugin against a local Pilot instance.
 
-## 1. Default: build the plugin OUTSIDE Paperclip core
+## 1. Default: build the plugin OUTSIDE Pilot core
 
 Plugins are their own packages. Unless the task **explicitly** asks for a bundled in-repo example, do not add plugin source under `packages/plugins/` in this repo.
 
-- Scaffold the plugin into a directory outside the Paperclip checkout (e.g. `~/dev/paperclip-plugins/<name>`).
-- Install it into the running Paperclip instance by local absolute path.
-- Edit code in the external package; let Paperclip pick up rebuilt output.
+- Scaffold the plugin into a directory outside the Pilot checkout (e.g. `~/dev/paperclip-plugins/<name>`).
+- Install it into the running Pilot instance by local absolute path.
+- Edit code in the external package; let Pilot pick up rebuilt output.
 
-Only edit Paperclip core itself when the user asks to surface a plugin as a bundled example (`server/src/routes/plugins.ts`, in-repo example lists, docs).
+Only edit Pilot core itself when the user asks to surface a plugin as a bundled example (`server/src/routes/plugins.ts`, in-repo example lists, docs).
 
 ## 2. Ground rules
 
@@ -39,10 +39,10 @@ Current runtime assumptions:
 
 ## 3. CLI-first scaffold workflow
 
-Use `paperclipai plugin init`. Do not invoke the scaffold package node entrypoint by hand unless the CLI command is unavailable in the environment.
+Use `pilotai plugin init`. Do not invoke the scaffold package node entrypoint by hand unless the CLI command is unavailable in the environment.
 
 ```bash
-paperclipai plugin init @acme/my-plugin --output ~/dev/paperclip-plugins
+pilotai plugin init @acme/my-plugin --output ~/dev/paperclip-plugins
 ```
 
 Useful flags (all optional):
@@ -51,9 +51,9 @@ Useful flags (all optional):
 - `--template <default|connector|workspace|environment>` — starter template.
 - `--category <connector|workspace|automation|ui|environment>` — manifest category.
 - `--display-name <name>`, `--description <text>`, `--author <name>` — manifest metadata.
-- `--sdk-path <path>` — snapshot the local SDK from a Paperclip checkout into `.paperclip-sdk/` (useful when developing against an unreleased SDK).
+- `--sdk-path <path>` — snapshot the local SDK from a Pilot checkout into `.paperclip-sdk/` (useful when developing against an unreleased SDK).
 
-On success the command prints the exact next commands (`cd`, `pnpm install`, `pnpm dev`, `paperclipai plugin install <abs-path>`). Run them in order.
+On success the command prints the exact next commands (`cd`, `pnpm install`, `pnpm dev`, `pilotai plugin install <abs-path>`). Run them in order.
 
 If `paperclipai` is not on PATH in your environment, fall back to:
 
@@ -71,12 +71,12 @@ In the scaffolded plugin folder:
 ```bash
 pnpm install
 pnpm dev            # esbuild --watch: rebuilds dist/manifest.js, dist/worker.js, dist/ui/
-paperclipai plugin install /absolute/path/to/my-plugin
+pilotai plugin install /absolute/path/to/my-plugin
 ```
 
 Notes:
 
-- `paperclipai plugin install` auto-detects local paths (absolute, `./`, `../`, `~`, or an existing relative folder) and forwards `isLocalPath: true` to the server. Pass `--local` to force local mode if the heuristic is ambiguous.
+- `pilotai plugin install` auto-detects local paths (absolute, `./`, `../`, `~`, or an existing relative folder) and forwards `isLocalPath: true` to the server. Pass `--local` to force local mode if the heuristic is ambiguous.
 - Paths are resolved to absolute paths before being sent to the server.
 - The server watches built outputs (`dist/`) for local-path plugins and restarts the plugin worker on rebuild — you do not need to reinstall after every edit.
 - UI hot reload via the SDK dev server (`pnpm dev:ui`, port `4177`) is optional and template-dependent; only mention it if the template wires `devUiUrl` and you verified it works end to end.
@@ -85,8 +85,8 @@ Notes:
 After install, inspect with:
 
 ```bash
-paperclipai plugin list
-paperclipai plugin inspect <plugin-key>
+pilotai plugin list
+pilotai plugin inspect <plugin-key>
 ```
 
 ## 5. After scaffolding, sanity-check the package
@@ -97,7 +97,7 @@ Open and confirm:
 - `src/worker.ts` — worker entry
 - `src/ui/index.tsx` — UI entry (if applicable)
 - `tests/plugin.spec.ts` — placeholder test
-- `package.json` — `paperclipPlugin` block points at `dist/manifest.js`, `dist/worker.js`, `dist/ui/`
+- `package.json` — `pilotPlugin` block points at `dist/manifest.js`, `dist/worker.js`, `dist/ui/`
 
 Make sure the plugin:
 
@@ -119,21 +119,21 @@ pnpm build
 
 If the plugin is already running under `pnpm dev`, you can keep the watcher up and run `pnpm typecheck` and `pnpm test` in a separate shell.
 
-If you changed Paperclip SDK/host/plugin runtime code in addition to the plugin, also run the relevant Paperclip workspace checks.
+If you changed Pilot SDK/host/plugin runtime code in addition to the plugin, also run the relevant Pilot workspace checks.
 
 ## 7. Success checklist (report this back)
 
 When you finish a local plugin task, report:
 
 - **Scaffold path** — absolute path of the created plugin folder.
-- **Commands run** — the exact `paperclipai plugin init`, `pnpm install`, `pnpm dev`, `paperclipai plugin install <path>` invocations (and any verification commands).
-- **Install status** — output of `paperclipai plugin list` / `plugin inspect` (plugin key, version, status). Note if `status` is anything other than `ready` and include `lastError`.
+- **Commands run** — the exact `pilotai plugin init`, `pnpm install`, `pnpm dev`, `pilotai plugin install <path>` invocations (and any verification commands).
+- **Install status** — output of `pilotai plugin list` / `plugin inspect` (plugin key, version, status). Note if `status` is anything other than `ready` and include `lastError`.
 - **Tests / build result** — `pnpm typecheck`, `pnpm test`, `pnpm build` pass/fail with the failing output if any.
 - **Reload limitations** — call out anything that did not hot-reload (e.g. manifest changes required a reinstall, UI dev server was not wired, etc.).
 
 If any item is missing, mark it as such — do not silently skip.
 
-## 8. When NOT to edit Paperclip core
+## 8. When NOT to edit Pilot core
 
 Do not add the plugin under `packages/plugins/` or update bundled-example wiring unless the user explicitly asks for a bundled example. Local-path installs are the supported development model; npm packages are the production deployment path.
 

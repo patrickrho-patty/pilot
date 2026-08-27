@@ -493,7 +493,7 @@ export async function resolveCloudTenantActor(
   db: Db,
   req: CloudActorHeaderSource,
 ): Promise<Express.Request["actor"] | null> {
-  const expectedToken = process.env.PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN?.trim();
+  const expectedToken = process.env.PILOT_CLOUD_TENANT_SERVER_TOKEN?.trim();
   if (!expectedToken) return null;
 
   const token = req.header("x-paperclip-cloud-tenant-token")?.trim();
@@ -504,15 +504,15 @@ export async function resolveCloudTenantActor(
   const stackId = requiredCloudHeader(req, "x-paperclip-cloud-stack-id");
   const stackRole = stackMembershipRole(req.header("x-paperclip-cloud-stack-role"));
   const userName = req.header("x-paperclip-cloud-user-name")?.trim() || userEmail;
-  const paperclipCompanyId = req.header("x-paperclip-cloud-paperclip-company-id")?.trim();
-  const paperclipCompanyName = req
+  const pilotCompanyId = req.header("x-paperclip-cloud-paperclip-company-id")?.trim();
+  const pilotCompanyName = req
     .header("x-paperclip-cloud-paperclip-company-name")
     ?.trim();
   const companyId = cloudTenantCompanyId(stackId);
-  const companyName = paperclipCompanyName || humanizeCloudStackSlug(stackId);
+  const companyName = pilotCompanyName || humanizeCloudStackSlug(stackId);
   const now = new Date();
   const membershipRole = stackRole === "owner" || stackRole === "admin" ? "owner" : stackRole;
-  const syncFingerprint = [userEmail, userName, stackId, stackRole, paperclipCompanyId ?? ""].join(":");
+  const syncFingerprint = [userEmail, userName, stackId, stackRole, pilotCompanyId ?? ""].join(":");
   const cloudTenantWriteDebounce = cloudTenantWriteDebounceFor(db);
   pruneCloudTenantWriteDebounce(cloudTenantWriteDebounce, now.getTime());
   const previousSync = cloudTenantWriteDebounce.get(userId);
@@ -568,11 +568,11 @@ export async function resolveCloudTenantActor(
       target: companies.id,
     });
 
-  if (shouldSync && paperclipCompanyName) {
+  if (shouldSync && pilotCompanyName) {
     await repairCloudTenantCompanyName(db, {
       companyId,
-      paperclipCompanyId,
-      paperclipCompanyName,
+      paperclipCompanyId: pilotCompanyId,
+      paperclipCompanyName: pilotCompanyName,
       now,
     });
   }
