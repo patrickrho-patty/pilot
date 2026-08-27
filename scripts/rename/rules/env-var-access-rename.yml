@@ -1,0 +1,15 @@
+id: env-var-access-rename
+language: TypeScript
+# Rewrites process.env.PAPERCLIP_X member accesses only. Generated — do not edit.
+severity: info
+rule:
+  pattern: process.env.$VAR
+constraints:
+  VAR:
+    regex: ^PAPERCLIP_[A-Z0-9_]+$
+transform:
+  SUFFIX:
+    substring:
+      source: $VAR
+      startChar: 10 # len("PAPERCLIP_")
+fix: process.env.__TARGET___$SUFFIX
