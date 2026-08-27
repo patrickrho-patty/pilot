@@ -1,12 +1,12 @@
 ---
 name: status-card-query
-description: Create and maintain agent-authored Paperclip status cards, or compile a prose interest prompt into bounded CompanySearchQuery objects and write the first summary from the assigned Summarizer run.
-key: paperclipai/bundled/paperclip-operations/status-card-query
+description: Create and maintain agent-authored Pilot status cards, or compile a prose interest prompt into bounded CompanySearchQuery objects and write the first summary from the assigned Summarizer run.
+key: pilotai/bundled/paperclip-operations/status-card-query
 recommendedForRoles:
   - general
   - manager
 tags:
-  - paperclip
+  - pilot
   - status
   - search
   - reporting
@@ -27,37 +27,37 @@ Agent-authored cards require `tasks:assign`, remain company-scoped, and are avai
 Normalize the run-provided API base and create a manual card:
 
 ```bash
-PAPERCLIP_API_BASE="${PAPERCLIP_API_URL%/}"
-PAPERCLIP_API_BASE="${PAPERCLIP_API_BASE%/api}"
+PILOT_API_BASE="${PILOT_API_URL%/}"
+PILOT_API_BASE="${PILOT_API_BASE%/api}"
 
 curl -sS -X POST \
-  -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+  -H "Authorization: Bearer $PILOT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"interestPrompt":"Blocked or in-review launch work updated this week"}' \
-  "$PAPERCLIP_API_BASE/api/companies/$PAPERCLIP_COMPANY_ID/status-cards"
+  "$PILOT_API_BASE/api/companies/$PILOT_COMPANY_ID/status-cards"
 ```
 
 Creation returns `201` and queues compilation automatically. Save the returned card id. To refine an owned card or request a refresh:
 
 ```bash
 curl -sS -X PATCH \
-  -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+  -H "Authorization: Bearer $PILOT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"interestPrompt":"Blocked or in-review launch work updated this week. Call out the single next decision."}' \
-  "$PAPERCLIP_API_BASE/api/status-cards/$STATUS_CARD_ID"
+  "$PILOT_API_BASE/api/status-cards/$STATUS_CARD_ID"
 
 curl -sS -X POST \
-  -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
+  -H "Authorization: Bearer $PILOT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"full":false}' \
-  "$PAPERCLIP_API_BASE/api/status-cards/$STATUS_CARD_ID/refresh"
+  "$PILOT_API_BASE/api/status-cards/$STATUS_CARD_ID/refresh"
 ```
 
 Do not call `/query` or `/summary` while authoring. Those write-back routes are reserved for the assigned Summarizer generation issue and run.
 
 ## Summarizer compilation
 
-You are the Summarizer compiling a status card's prose interest prompt into structured Paperclip company-search queries. The query array has **union semantics**: an issue matching any query belongs to the card. Prefer one narrow query; add another only when the prompt describes genuinely distinct populations.
+You are the Summarizer compiling a status card's prose interest prompt into structured Pilot company-search queries. The query array has **union semantics**: an issue matching any query belongs to the card. Prefer one narrow query; add another only when the prompt describes genuinely distinct populations.
 
 ## CompanySearchQuery
 

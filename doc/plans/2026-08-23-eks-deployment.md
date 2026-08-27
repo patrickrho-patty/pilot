@@ -2,13 +2,13 @@
 
 **Date:** 2026-08-23
 **Status:** Approved design, ready for implementation
-**Scope:** Custom fork deployment pipeline for the Patty-branded Pilot build (formerly `paperclip` fork at `patrickrho-patty/pilot`)
+**Scope:** Custom fork deployment pipeline for the Patty-branded Pilot build (formerly `pilot` fork at `patrickrho-patty/pilot`)
 
 ---
 
 ## 1. Goal
 
-Give this custom build of Paperclip ("Pilot") its own deployment process, mirroring the established house pattern used by Buzz/Griddle:
+Give this custom build of Pilot ("Pilot") its own deployment process, mirroring the established house pattern used by Buzz/Griddle:
 
 1. **GitHub Actions** builds a Docker image and pushes it to **ECR**.
 2. **GitHub Actions** deploys it to **EKS** (`rho-cluster`) via **Helm**, into a dedicated `pilot` namespace.
@@ -66,7 +66,7 @@ Key properties (mirroring buzz's `ecr-build.yml`):
 - **Build:** `docker/build-push-action` with:
   - `context: .`, `target: production` (the Dockerfile has a later `cloud` stage; explicit target required)
   - `platforms: linux/amd64` only — matches rho-cluster nodes
-  - `build-args:` `PAPERCLIP_BUILD_VERSION=${{ inputs.tag }}`, `PAPERCLIP_BUILD_COMMIT=${{ github.sha }}`, `CLI_TOOLS_CACHE_EPOCH=$(date -u +%G-W%V)` (ISO week so the CLI-tools layer refreshes weekly)
+  - `build-args:` `PILOT_BUILD_VERSION=${{ inputs.tag }}`, `PILOT_BUILD_COMMIT=${{ github.sha }}`, `CLI_TOOLS_CACHE_EPOCH=$(date -u +%G-W%V)` (ISO week so the CLI-tools layer refreshes weekly)
   - tags: `${{ inputs.tag }}` and `sha-${{ github.sha }}`
   - `cache-from/cache-to: type=gha,mode=max`
 - **Lockfile refresh step** before build (copy from upstream docker.yml): `pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile` — keeps the Docker build context consistent.
@@ -161,9 +161,9 @@ resources:
 - **Env (non-secret):**
   - `HOST=0.0.0.0`, `PORT=3100`, `SERVE_UI=true`
   - `NODE_ENV=production`
-  - `PAPERCLIP_HOME=/paperclip`
-  - `PAPERCLIP_PUBLIC_URL=https://<ingress-host>` (auth flows depend on this)
-  - `PAPERCLIP_DEPLOYMENT_MODE=authenticated`
+  - `PILOT_HOME=/paperclip`
+  - `PILOT_PUBLIC_URL=https://<ingress-host>` (auth flows depend on this)
+  - `PILOT_DEPLOYMENT_MODE=authenticated`
 - **Probes:**
   - liveness/readiness: HTTP GET `/api/health` on port 3100 (endpoint exists per AGENTS.md quick checks)
   - startup probe allowed generous window (server + embedded PG cold start)
@@ -191,7 +191,7 @@ Required runtime secrets (created out-of-band, not committed):
 
 ```text
 BETTER_AUTH_SECRET                    # openssl rand -hex 32
-PAPERCLIP_TOOL_ACTION_SIGNING_SECRET  # openssl rand -hex 32
+PILOT_TOOL_ACTION_SIGNING_SECRET  # openssl rand -hex 32
 # DATABASE_URL — unset initially (embedded PG); set when migrating to RDS
 ```
 
@@ -207,7 +207,7 @@ One-time bootstrap (documented in plan, executed manually):
 kubectl create namespace pilot
 kubectl create secret generic pilot-secrets -n pilot \
   --from-literal=BETTER_AUTH_SECRET=$(openssl rand -hex 32) \
-  --from-literal=PAPERCLIP_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32)
+  --from-literal=PILOT_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32)
 aws ecr create-repository --repository-name pilot \
   --image-scanning-configuration scanOnPush=true \
   --image-tag-mutability MUTABLE

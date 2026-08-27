@@ -4,7 +4,7 @@ description: Bundled engineering team that pairs a CTO with a senior coder and a
 schema: agentcompanies/v1
 slug: product-engineering
 category: software-development
-key: paperclipai/bundled/software-development/product-engineering
+key: pilotai/bundled/software-development/product-engineering
 manager: agents/cto/AGENTS.md
 includes:
   - agents/senior-coder/AGENTS.md
@@ -21,10 +21,10 @@ tags:
   - qa
   - code-review
 requiredSkills:
-  - paperclipai/bundled/software-development/github-pr-workflow
-  - paperclipai/bundled/quality/qa-acceptance
-  - paperclipai/bundled/paperclip-operations/task-planning
-  - paperclipai/bundled/docs/doc-maintenance
+  - pilotai/bundled/software-development/github-pr-workflow
+  - pilotai/bundled/quality/qa-acceptance
+  - pilotai/bundled/paperclip-operations/task-planning
+  - pilotai/bundled/docs/doc-maintenance
 ---
 
 # Product Engineering

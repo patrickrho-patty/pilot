@@ -2,10 +2,10 @@
 name: prepare-mcp-integration
 description: >
   Prepare MCP/vendor integrations through cited research, a content PR,
-  exact-revision human approval, and one governed Paperclip connector PR per
+  exact-revision human approval, and one governed Pilot connector PR per
   approved connection. Use for new integration research and delivery; not for
   ad hoc connector coding that bypasses the playbooks.
-key: paperclipai/optional/software-development/prepare-mcp-integration
+key: pilotai/optional/software-development/prepare-mcp-integration
 recommendedForRoles:
   - engineer
   - product-manager
@@ -26,23 +26,23 @@ requires:
 # Prepare MCP Integration
 
 Take an input link or vendor brief through two separate phases: a reviewable
-research PR in `paperclip-content`, then connector implementation in Paperclip
+research PR in `pilot-content`, then connector implementation in Pilot
 App only after a human accepts the exact research revision and connection set.
 
 ## Preserve These Boundaries
 
-- Treat `paperclip-content/integrations/README.md` as the research contract and
-  `paperclip-content/integrations/skills/integration-harness/SKILL.md` as its
+- Treat `pilot-content/integrations/README.md` as the research contract and
+  `pilot-content/integrations/skills/integration-harness/SKILL.md` as its
   entrypoint. Reference and run them; do not copy their schemas, templates,
   state machines, reconciliation rules, or internal gates into this skill.
-- Treat `paperclip/doc/connections/CONNECTOR-PLAYBOOK.md` on the implementation
+- Treat `pilot/doc/connections/CONNECTOR-PLAYBOOK.md` on the implementation
   target branch as the connector contract. Follow it end to end; do not
   substitute remembered behavior or the examples in this skill.
 - Finish Phase A with a research-only PR. Do not create an App implementation
   branch, task, or code change before the research gate is accepted.
 - Bind acceptance to one research PR head SHA and an explicit connection set.
   Acceptance does not cover later commits or additional connections.
-- Create one Paperclip App PR per approved connection. Shared prerequisite
+- Create one Pilot App PR per approved connection. Shared prerequisite
   infrastructure or broad playbook corrections may use separate prerequisite
   PRs; never combine distinct connections into one connector PR.
 - Keep vendor credentials in approved secret storage. Never put secrets in
@@ -51,11 +51,11 @@ App only after a human accepts the exact research revision and connection set.
 
 ## Preflight
 
-1. Load the current Paperclip skill for checkout, comments, interactions,
+1. Load the current Pilot skill for checkout, comments, interactions,
    durable state, and final disposition. Load the standard PR-preparation skill
-   (`prepare-paperclip-pr` for Paperclip agents) before opening any PR.
+   (`prepare-pilot-pr` for Pilot agents) before opening any PR.
 2. Resolve the input URL(s), vendor/platform, intended MCP endpoint or API,
-   target repositories and branches, and the Paperclip issue that owns the
+   target repositories and branches, and the Pilot issue that owns the
    work. Ask only when these cannot be determined safely from the brief.
 3. Fetch both repositories and record the target commit hashes. Read the
    canonical files from those target commits, not from a possibly stale working
@@ -68,7 +68,7 @@ App only after a human accepts the exact research revision and connection set.
    boundary, and independently reviewable action catalog. Record the proposed
    split early and refine it as evidence arrives.
 6. Prefer official vendor documentation, protocol/RFC sources, safe live
-   probes, and current Paperclip code. Use third-party sources only to find or
+   probes, and current Pilot code. Use third-party sources only to find or
    qualify primary evidence. Record every factual claim with URL and access
    date; mark unresolved facts explicitly instead of guessing.
 
@@ -80,7 +80,7 @@ necessary.
 
 ## Keep The Run Resumable
 
-Maintain one concise checkpoint in the Paperclip issue or an issue document:
+Maintain one concise checkpoint in the Pilot issue or an issue document:
 
 - current phase and owning next action;
 - input links and target repository commits;
@@ -95,7 +95,7 @@ interactions before creating anything. Reuse semantic matches. Never duplicate
 catalog entities, regress terminal pipeline phases, reuse stale acceptance, or
 open a second PR for the same connection accidentally.
 
-## Phase A: Research In paperclip-content
+## Phase A: Research In pilot-content
 
 1. Create an isolated worktree and branch from the refreshed content target.
    Preserve unrelated local changes.
@@ -113,14 +113,14 @@ open a second PR for the same connection accidentally.
    - token lifetime, rotation, refresh, revocation, and re-auth behavior;
    - tool inventory, action risk, resource filters, account/tier/pricing
      constraints, administrator setup, and validation needs;
-   - exact service involvement and system boundaries in Paperclip.
-4. Ground every Paperclip-surface claim in the maintained surface map and
+   - exact service involvement and system boundaries in Pilot.
+4. Ground every Pilot-surface claim in the maintained surface map and
    current App code. Reconcile before creating, update required indexes/logs,
    and preserve lineage, timestamps, immutable slugs, and absorbing phases as
    required by the research contract.
-5. Open one research-only PR to `paperclip-content`. Include the full planning
+5. Open one research-only PR to `pilot-content`. Include the full planning
    package and any tightly coupled content-playbook correction, but no
-   Paperclip App implementation.
+   Pilot App implementation.
 6. Run focused validation and the required PR workflow. Do not present the gate
    until checks are green, Greptile is 5/5, all actionable review comments are
    resolved, and the recorded PR head still matches the reviewed head.
@@ -132,7 +132,7 @@ open a second PR for the same connection accidentally.
    - the content and App source commits used for research;
    - the proposed connection set and why each item is independent;
    - known limitations, prerequisites, and deferred questions.
-2. Create a Paperclip `request_confirmation` interaction targeted at that issue
+2. Create a Pilot `request_confirmation` interaction targeted at that issue
    document's latest revision. Use a revision-specific idempotency key and a
    `wake_assignee` continuation policy so either acceptance or rejection wakes
    the assignee. Ask the reviewer to include revision notes when rejecting.
@@ -145,7 +145,7 @@ open a second PR for the same connection accidentally.
 5. On acceptance, verify that the response still targets the latest gate
    revision and recorded PR head. Implement only the accepted connections.
 
-## Phase B: Implement In Paperclip App
+## Phase B: Implement In Pilot App
 
 Refresh the App target branch, reread the current Connector Playbook, and record
 its commit before writing code. For each accepted connection:

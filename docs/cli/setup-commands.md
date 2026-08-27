@@ -5,35 +5,35 @@ summary: Onboard, run, doctor, and configure
 
 Instance setup and diagnostics commands.
 
-## `paperclipai run`
+## `pilotai run`
 
 One-command bootstrap and start:
 
 ```sh
-pnpm paperclipai run
+pnpm pilotai run
 ```
 
 Does:
 
 1. Auto-onboards if config is missing
-2. Runs `paperclipai doctor` with repair enabled
+2. Runs `pilotai doctor` with repair enabled
 3. Starts the server when checks pass
 
 Choose a specific instance:
 
 ```sh
-npx paperclipai run --instance dev
+npx pilotai run --instance dev
 ```
 
-## `paperclipai onboard`
+## `pilotai onboard`
 
 Interactive first-time setup:
 
 ```sh
-pnpm paperclipai onboard
+pnpm pilotai onboard
 ```
 
-If Paperclip is already configured, rerunning `onboard` keeps the existing config in place. Use `paperclipai configure` to change settings on an existing install.
+If Pilot is already configured, rerunning `onboard` keeps the existing config in place. Use `pilotai configure` to change settings on an existing install.
 
 First prompt:
 
@@ -43,24 +43,24 @@ First prompt:
 Start immediately after onboarding:
 
 ```sh
-pnpm paperclipai onboard --run
+pnpm pilotai onboard --run
 ```
 
 Non-interactive defaults + immediate start (opens browser on server listen):
 
 ```sh
-pnpm paperclipai onboard --yes
+pnpm pilotai onboard --yes
 ```
 
-On an existing install, `--yes` now preserves the current config and just starts Paperclip with that setup.
+On an existing install, `--yes` now preserves the current config and just starts Pilot with that setup.
 
-## `paperclipai doctor`
+## `pilotai doctor`
 
 Health checks with optional auto-repair:
 
 ```sh
-pnpm paperclipai doctor
-pnpm paperclipai doctor --repair
+pnpm pilotai doctor
+pnpm pilotai doctor --repair
 ```
 
 Validates:
@@ -72,14 +72,14 @@ Validates:
 - Storage configuration
 - Missing key files
 
-## `paperclipai configure`
+## `pilotai configure`
 
 Update configuration sections:
 
 ```sh
-pnpm paperclipai configure --section server
-pnpm paperclipai configure --section secrets
-pnpm paperclipai configure --section storage
+pnpm pilotai configure --section server
+pnpm pilotai configure --section secrets
+pnpm pilotai configure --section storage
 ```
 
 `--section secrets` updates the deployment-level provider used as the fallback
@@ -89,22 +89,22 @@ coming-soon GCP/Vault) live in the board UI under
 `Company Settings → Secrets → Provider vaults` and the
 `/api/companies/{companyId}/secret-provider-configs` API.
 
-## `paperclipai env`
+## `pilotai env`
 
 Show resolved environment configuration:
 
 ```sh
-pnpm paperclipai env
+pnpm pilotai env
 ```
 
-This now includes bind-oriented deployment settings such as `PAPERCLIP_BIND` and `PAPERCLIP_BIND_HOST` when configured.
+This now includes bind-oriented deployment settings such as `PILOT_BIND` and `PILOT_BIND_HOST` when configured.
 
-## `paperclipai allowed-hostname`
+## `pilotai allowed-hostname`
 
 Allow a private hostname for authenticated/private mode:
 
 ```sh
-npx paperclipai allowed-hostname my-tailscale-host
+npx pilotai allowed-hostname my-tailscale-host
 ```
 
 ## Local Storage Paths
@@ -120,12 +120,12 @@ npx paperclipai allowed-hostname my-tailscale-host
 Override with:
 
 ```sh
-PAPERCLIP_HOME=/custom/home PAPERCLIP_INSTANCE_ID=dev pnpm paperclipai run
+PILOT_HOME=/custom/home PILOT_INSTANCE_ID=dev pnpm pilotai run
 ```
 
 Or pass `--data-dir` directly on any command:
 
 ```sh
-npx paperclipai run --data-dir ./tmp/paperclip-dev
-npx paperclipai doctor --data-dir ./tmp/paperclip-dev
+npx pilotai run --data-dir ./tmp/paperclip-dev
+npx pilotai doctor --data-dir ./tmp/paperclip-dev
 ```

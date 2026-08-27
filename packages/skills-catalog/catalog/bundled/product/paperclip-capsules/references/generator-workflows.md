@@ -1,17 +1,17 @@
 # Generator Workflows
 
-Use this reference when the request is to generate Paperclip capsule graphics, capsule identicons, or reusable visual assets.
+Use this reference when the request is to generate Pilot capsule graphics, capsule identicons, or reusable visual assets.
 
 ## Source Precedence
 
 1. Brand authority: app, website brand guide, feature-video references, and hero-bank spec.
 2. Deterministic identicon/profile-pill prototype:
-   - `paperclip-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/README.md`
+   - `pilot-content/design/PAP-11825/paperclip-capsule-identicon-prototyper/README.md`
    - `src/identicon.ts`
    - `src/App.tsx`
 3. Website embedded generator:
-   - `paperclip-website/public/brand/generator.js`
-   - `paperclip-website/src/components/brand/sections/08-imagery.html`
+   - `pilot-website/public/brand/generator.js`
+   - `pilot-website/src/components/brand/sections/08-imagery.html`
 4. Mirrored graphic-generator contract in this file.
 
 The mirrored contract below was source-mined from the external prototype at commit `36a8a092c6ea6aa85bd0862bafb35ff9b9fab852`, but this skill must not depend on that personal repository being reachable. Treat the mode, palette, and control lists in this reference as the durable workflow contract.
@@ -55,7 +55,7 @@ Behavior:
 
 ## Mirrored Graphic Generator Contract
 
-Use this when the task needs reproducible generated capsule art beyond the small embedded website tool. The contract here is intentionally mirrored into Paperclip so agents can proceed if the original prototype repository is renamed, deleted, or private.
+Use this when the task needs reproducible generated capsule art beyond the small embedded website tool. The contract here is intentionally mirrored into Pilot so agents can proceed if the original prototype repository is renamed, deleted, or private.
 
 Known modes/templates:
 
@@ -78,13 +78,13 @@ Useful controls:
 - Background controls including images.
 - PNG and SVG export.
 
-If an implementation needs source code, prefer the Paperclip website embedded generator or a Paperclip-owned tool. Use any external prototype link only as optional historical context, not as required task input.
+If an implementation needs source code, prefer the Pilot website embedded generator or a Pilot-owned tool. Use any external prototype link only as optional historical context, not as required task input.
 
 Palette caution:
 
 - The `duotones` palette matches the website 12-preset capsule palette.
-- Experimental palettes such as vaporwave, cyberpunk, ocean, and jewel are generator options, not canonical Paperclip brand palettes.
-- Do not use experimental palettes when the request asks for strict Paperclip brand work.
+- Experimental palettes such as vaporwave, cyberpunk, ocean, and jewel are generator options, not canonical Pilot brand palettes.
+- Do not use experimental palettes when the request asks for strict Pilot brand work.
 
 ## Deterministic Identicon / Profile Pill
 
@@ -107,7 +107,7 @@ Capsule artifact
 - Density / count / dimensions:
 - Motion / gradient angle:
 - Output: SVG | PNG | HTML | MP4 | WebM
-- Divergence from canonical Paperclip rendering:
+- Divergence from canonical Pilot rendering:
 ```
 
 ## Review Checklist

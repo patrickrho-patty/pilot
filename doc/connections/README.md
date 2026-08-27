@@ -2,7 +2,7 @@
 
 Audience: internal engineers and product contributors working on integrations.
 
-Post-read action: classify a new integration request, pick the right Paperclip
+Post-read action: classify a new integration request, pick the right Pilot
 layer to change, and avoid creating a parallel connection framework.
 
 ## Decision Record
@@ -24,8 +24,8 @@ substrate on the PAP-10341 branch canonical:
 - **D4: unification lands on PAP-10341.** Pages, CircleBack-style harness MCP
   OAuth, provider gallery work, and plugin-provided integrations converge on
   this branch instead of spawning new integration substrates.
-- **D5: inbound stays thin.** External clients that call Paperclip use scoped
-  Paperclip tokens and existing profiles/rules. They do not get a separate
+- **D5: inbound stays thin.** External clients that call Pilot use scoped
+  Pilot tokens and existing profiles/rules. They do not get a separate
   permission model.
 
 ## Canonical Object Model
@@ -66,7 +66,7 @@ solves the problem:
 | Transport | how the external system is reached | remote HTTP MCP, local stdio, REST/OpenAPI, webhook |
 
 The agent should not hold a durable provider credential. It should hold a
-Paperclip run/session token; the server or broker resolves the connection,
+Pilot run/session token; the server or broker resolves the connection,
 checks governance, invokes the provider, and writes audit.
 
 ## Identity vs. connections
@@ -79,9 +79,9 @@ identity-service documentation or re-deriving it.
 
 | Plane | Question | Lives where | Token profile |
 | --- | --- | --- | --- |
-| **P1. Sign-in methods** | *Who are you?* | `paperclip-id` (id.paperclip.ing → Account) | Minimal-scope provider tokens (`openid email profile`), used once to authenticate, encrypted at rest, never exported |
-| **P2. Connections (Apps)** | *What may your agents touch?* | Paperclip App instances (`tool_connections`), acquired via the **connect broker** for hosted + self-hosted | Rich-scope, long-lived resource tokens in the **instance's** encrypted vault; per-agent grants; ask-first on writes |
-| **P3. Login with Paperclip** | *Who may authenticate against us?* | `paperclip-id` OIDC provider + DB-backed client registry | Our ES256 ID/access tokens issued *by* us to registered RPs (instances, the broker, future third parties) |
+| **P1. Sign-in methods** | *Who are you?* | `pilot-id` (id.paperclip.ing → Account) | Minimal-scope provider tokens (`openid email profile`), used once to authenticate, encrypted at rest, never exported |
+| **P2. Connections (Apps)** | *What may your agents touch?* | Pilot App instances (`tool_connections`), acquired via the **connect broker** for hosted + self-hosted | Rich-scope, long-lived resource tokens in the **instance's** encrypted vault; per-agent grants; ask-first on writes |
+| **P3. Login with Pilot** | *Who may authenticate against us?* | `pilot-id` OIDC provider + DB-backed client registry | Our ES256 ID/access tokens issued *by* us to registered RPs (instances, the broker, future third parties) |
 
 Everything in `doc/connections/` — the [First-30 matrix](./FIRST-30-MATRIX.md),
 the [connector playbook](./CONNECTOR-PLAYBOOK.md), and the connect-broker work —
@@ -118,7 +118,7 @@ Use the surface-correct name for each plane; they intentionally differ:
 
 | Surface | Plane | Name to use |
 | --- | --- | --- |
-| Paperclip App instances | P2 | **"Connections"** |
+| Pilot App instances | P2 | **"Connections"** |
 | id.paperclip.ing Account | P1 | **"Ways to sign in"** |
 | id.paperclip.ing admin | P3 | **"OIDC clients"** (until the app store productizes it) |
 

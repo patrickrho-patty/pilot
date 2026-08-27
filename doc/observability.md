@@ -1,6 +1,6 @@
 # Observability
 
-Paperclip ships with **opt-in** OpenTelemetry auto-instrumentation for the
+Pilot ships with **opt-in** OpenTelemetry auto-instrumentation for the
 server process. When activated it produces **traces only** — no metrics and no
 logs are exported by this integration. The OTel packages are *optional peer
 dependencies*: they are not in the default lockfile and are loaded dynamically
@@ -56,7 +56,7 @@ export OTEL_EXPORTER_OTLP_ENDPOINT="http://otel-collector:4317"
 export OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
 
 # Optional — service identity attached to every span.
-export OTEL_SERVICE_NAME="paperclip"
+export OTEL_SERVICE_NAME="pilot"
 export OTEL_SERVICE_VERSION="2026.5.0"
 ```
 
@@ -70,7 +70,7 @@ returns a value:
    `dist/build-info.json`. The stamp wins so the reported version tracks the
    true built commit and cannot go stale across rebuilds. The build script
    reads the commit from `git rev-parse --short HEAD` first. A Docker image
-   build excludes `.git`, so the build script reads the `PAPERCLIP_BUILD_COMMIT`
+   build excludes `.git`, so the build script reads the `PILOT_BUILD_COMMIT`
    environment variable instead. Pass the built commit in that variable so the
    image stamp records the true commit.
 2. **A runtime `git rev-parse --short HEAD`.** This covers `tsx src/index.ts`
@@ -78,14 +78,14 @@ returns a value:
    stamp. A failure here is not fatal.
 3. **The `OTEL_SERVICE_VERSION` environment variable.** This is the fallback
    for a build with no stamp and no reachable git — for example a tarball
-   build. `OTEL_SERVICE_VERSION` is a Paperclip-specific variable, not an
-   OpenTelemetry SDK variable, so Paperclip controls this precedence.
+   build. `OTEL_SERVICE_VERSION` is a Pilot-specific variable, not an
+   OpenTelemetry SDK variable, so Pilot controls this precedence.
 4. **`"unknown"`** when no source returns a value.
 
 The server logs the resolved `service.version` once at startup, so an operator
 can confirm the value.
 
-If `OTEL_EXPORTER_OTLP_PROTOCOL` is set to an unrecognized value, Paperclip
+If `OTEL_EXPORTER_OTLP_PROTOCOL` is set to an unrecognized value, Pilot
 logs a single warning and falls back to gRPC.
 
 If `OTEL_EXPORTER_OTLP_ENDPOINT` is set but the OTel packages are not

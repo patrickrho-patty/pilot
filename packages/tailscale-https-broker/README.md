@@ -1,9 +1,9 @@
-# Paperclip Tailscale HTTPS broker
+# Pilot Tailscale HTTPS broker
 
-Least-privilege host broker that manages **only** Paperclip-owned, tailnet-only,
+Least-privilege host broker that manages **only** Pilot-owned, tailnet-only,
 same-number HTTPS-to-loopback listeners for managed branch runtimes.
 
-It exists so the Paperclip app/agent account never gains Tailscale operator
+It exists so the Pilot app/agent account never gains Tailscale operator
 authority (see [PAP-16989](../../)) while still getting automatic trusted HTTPS
 previews per branch runtime. Design: [PAP-17049](../../) plan; security contract:
 [PAP-17050](../../) threat-model verdict.
@@ -18,7 +18,7 @@ route are unchanged:
     "type": "tailscale_https",
     "hostname": "auto",
     "publicPort": "same",
-    "includePaperclipViteHmr": true,
+    "includePilotViteHmr": true,
     "failurePolicy": "fail_closed"
   }
 }
@@ -46,7 +46,7 @@ mutation** and is never modified.
 
 The socket transport reads Linux `SO_PEERCRED` before admission, admits at most
 8 concurrent sockets per resolved UID, and reserves 4 of its 32 global slots
-for the configured Paperclip service UID. Connection deadlines destroy the
+for the configured Pilot service UID. Connection deadlines destroy the
 socket so timed-out peers cannot retain kernel-level connection slots. Missing
 or invalid native credentials fail closed; socket permissions are not used as
 a substitute identity.
@@ -54,8 +54,8 @@ a substitute identity.
 ## One-time host installation (`paperclip-dev`)
 
 These steps require **root** and must be run by CloudOps/host owner, not the
-Paperclip agent account. They install the broker as a dedicated
-Tailscale-operator service account distinct from the Paperclip app account.
+Pilot agent account. They install the broker as a dedicated
+Tailscale-operator service account distinct from the Pilot app account.
 
 1. **Preconditions.** Tailscale is installed and up on the node, the node has an
    HTTPS-capable trusted cert (MagicDNS + HTTPS enabled), and the existing
@@ -65,30 +65,30 @@ Tailscale-operator service account distinct from the Paperclip app account.
 
    ```sh
    sudo useradd --system --home /var/lib/paperclip-tailscale-broker \
-     --shell /usr/sbin/nologin paperclip-tsbroker
-   sudo groupadd --system paperclip-tsbroker-sock
-   # The Paperclip *app* service account must have this as its PRIMARY group so
+     --shell /usr/sbin/nologin pilot-tsbroker
+   sudo groupadd --system pilot-tsbroker-sock
+   # The Pilot *app* service account must have this as its PRIMARY group so
    # its SO_PEERCRED gid matches the socket group (supplemental membership is
    # intentionally NOT accepted).
-   sudo usermod -g paperclip-tsbroker-sock <paperclip-app-account>
+   sudo usermod -g pilot-tsbroker-sock <pilot-app-account>
    ```
 
 3. **Grant Tailscale operator authority to the broker account only.**
 
    ```sh
-   sudo tailscale set --operator=paperclip-tsbroker
+   sudo tailscale set --operator=pilot-tsbroker
    ```
 
-   Do **not** grant `--operator` to the Paperclip app/agent account (that grant
+   Do **not** grant `--operator` to the Pilot app/agent account (that grant
    was explicitly rejected in PAP-16989).
 
-4. **Create state directories (not writable by the Paperclip app).** The
+4. **Create state directories (not writable by the Pilot app).** The
    packaged unit creates these automatically; for a manual install use:
 
    ```sh
-   sudo install -d -o paperclip-tsbroker -g paperclip-tsbroker-sock -m 0750 /run/paperclip-tailscale-broker
-   sudo install -d -o paperclip-tsbroker -g paperclip-tsbroker-sock -m 0700 /var/lib/paperclip-tailscale-broker
-   sudo install -d -o paperclip-tsbroker -g paperclip-tsbroker-sock -m 0700 /var/log/paperclip-tailscale-broker
+   sudo install -d -o pilot-tsbroker -g pilot-tsbroker-sock -m 0750 /run/paperclip-tailscale-broker
+   sudo install -d -o pilot-tsbroker -g pilot-tsbroker-sock -m 0700 /var/lib/paperclip-tailscale-broker
+   sudo install -d -o pilot-tsbroker -g pilot-tsbroker-sock -m 0700 /var/log/paperclip-tailscale-broker
    ```
 
    The broker refuses to start if the registry path's parent is group/other
@@ -119,16 +119,16 @@ Tailscale-operator service account distinct from the Paperclip app account.
 
    ```ini
    [Unit]
-   Description=Paperclip Tailscale HTTPS broker
+   Description=Pilot Tailscale HTTPS broker
    After=tailscaled.service
    Requires=tailscaled.service
 
    [Service]
    Type=simple
-   User=paperclip-tsbroker
-   # Socket must end up 0660 paperclip-tsbroker:paperclip-tsbroker-sock. Set the group here and
+   User=pilot-tsbroker
+   # Socket must end up 0660 pilot-tsbroker:pilot-tsbroker-sock. Set the group here and
    # the broker chmods the socket to 0660 on bind.
-   Group=paperclip-tsbroker-sock
+   Group=pilot-tsbroker-sock
    EnvironmentFile=/etc/paperclip/tailscale-https-broker.env
    ExecStart=/usr/bin/node /opt/paperclip/packages/tailscale-https-broker/dist/main.js
    Restart=on-failure
@@ -141,17 +141,17 @@ Tailscale-operator service account distinct from the Paperclip app account.
    ```
 
    Put the `BROKER_*` values from the table below in the environment file. Set
-   `PAPERCLIP_TAILSCALE_BROKER_SOCKET=/run/paperclip-tailscale-broker/broker.sock`
-   on the Paperclip service only if overriding its default.
+   `PILOT_TAILSCALE_BROKER_SOCKET=/run/paperclip-tailscale-broker/broker.sock`
+   on the Pilot service only if overriding its default.
 
    Environment variables (defaults in `src/config.ts`):
 
    | Var | Required | Default | Meaning |
    |-----|----------|---------|---------|
    | `BROKER_NODE_IDENTITY` | yes | — | hostname + boot id; a change forces quarantine + operator reconciliation |
-   | `BROKER_SERVICE_UID` | yes | — | UID of the Paperclip **app** account allowed to connect |
+   | `BROKER_SERVICE_UID` | yes | — | UID of the Pilot **app** account allowed to connect |
    | `BROKER_SERVICE_GID` | yes | — | GID of the dedicated socket group (caller's primary GID) |
-   | `BROKER_RUNTIME_UID` | yes | — | UID that owns Paperclip-managed runtime processes (normally the Paperclip app service account); only its loopback listeners are eligible |
+   | `BROKER_RUNTIME_UID` | yes | — | UID that owns Pilot-managed runtime processes (normally the Pilot app service account); only its loopback listeners are eligible |
    | `BROKER_TAILSCALE_BIN` | no | `/usr/bin/tailscale` | absolute path to the Tailscale CLI |
    | `BROKER_SOCKET_PATH` | no | `/run/paperclip-tailscale-broker/broker.sock` | Unix socket path |
    | `BROKER_REGISTRY_PATH` | no | `/var/lib/paperclip-tailscale-broker/registry.json` | root-owned `0600` ownership registry |
@@ -185,7 +185,7 @@ Tailscale-operator service account distinct from the Paperclip app account.
    Confirm it took effect before trusting it — `--doctor` echoes the parsed set:
 
    ```sh
-   sudo -u paperclip-tsbroker \
+   sudo -u pilot-tsbroker \
      env $(cat /etc/paperclip/tailscale-https-broker.env | xargs) \
      node /opt/paperclip/packages/tailscale-https-broker/dist/main.js --doctor
    ```
@@ -193,7 +193,7 @@ Tailscale-operator service account distinct from the Paperclip app account.
 6. **Preflight (read-only, no mutation).**
 
    ```sh
-   sudo -u paperclip-tsbroker \
+   sudo -u pilot-tsbroker \
      BROKER_NODE_IDENTITY=$(hostname) BROKER_SERVICE_UID=... BROKER_SERVICE_GID=... BROKER_RUNTIME_UID=... \
      node /opt/paperclip/packages/tailscale-https-broker/dist/main.js --doctor
    ```
@@ -203,14 +203,14 @@ Tailscale-operator service account distinct from the Paperclip app account.
    node identity. Exit 0 = ready. It never mutates Serve state.
 
 7. **Enable.** `sudo systemctl daemon-reload && sudo systemctl enable --now
-   paperclip-tailscale-https-broker`. Confirm the socket is `0660
-   paperclip-tsbroker:paperclip-tsbroker-sock`.
+   pilot-tailscale-https-broker`. Confirm the socket is `0660
+   pilot-tsbroker:pilot-tsbroker-sock`.
 
 ## Upgrade
 
 Deploy new package output to
 `/opt/paperclip/packages/tailscale-https-broker/dist`, then
-`sudo systemctl restart paperclip-tailscale-https-broker`. On
+`sudo systemctl restart pilot-tailscale-https-broker`. On
 restart the broker re-reads its root-owned registry and adopts only exact-lease
 matches; a changed `BROKER_NODE_IDENTITY` (host reimage / boot-id change) forces
 quarantine and operator reconciliation rather than silently re-adopting.
@@ -220,11 +220,11 @@ quarantine and operator reconciliation rather than silently re-adopting.
 Rollback disables new exposure and removes only broker-owned listeners; it never
 resets Serve or changes the primary route.
 
-1. Disable the exposure flag on the project runtime (Paperclip stops requesting
+1. Disable the exposure flag on the project runtime (Pilot stops requesting
    `expose`). Existing previews drain on runtime stop.
-2. Drain owned listeners: stop each managed runtime so Paperclip issues `remove`
+2. Drain owned listeners: stop each managed runtime so Pilot issues `remove`
    for its own leases (proven by handle).
-3. `sudo systemctl disable --now paperclip-tailscale-https-broker`.
+3. `sudo systemctl disable --now pilot-tailscale-https-broker`.
 4. Optional cleanup: remove the state dirs and `sudo tailscale set --operator=`
    to drop the operator grant. Do **not** run `tailscale serve reset` — remove
    only the specific per-port Serve entries if any remain.

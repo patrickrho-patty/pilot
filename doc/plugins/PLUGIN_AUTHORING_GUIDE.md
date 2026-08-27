@@ -1,6 +1,6 @@
 # Plugin Authoring Guide
 
-This guide describes the current, implemented way to create a Paperclip plugin in this repo.
+This guide describes the current, implemented way to create a Pilot plugin in this repo.
 
 It is intentionally narrower than [PLUGIN_SPEC.md](./PLUGIN_SPEC.md). The spec includes future ideas; this guide only covers the alpha surface that exists now.
 
@@ -9,7 +9,7 @@ It is intentionally narrower than [PLUGIN_SPEC.md](./PLUGIN_SPEC.md). The spec i
 ## Current reality
 
 - Treat plugin workers and plugin UI as trusted code.
-- Plugin UI runs as same-origin JavaScript inside the main Paperclip app.
+- Plugin UI runs as same-origin JavaScript inside the main Pilot app.
 - Worker-side host APIs are capability-gated.
 - Plugin UI is not sandboxed by manifest capabilities.
 - External object reference providers are trusted-install only in the MVP.
@@ -21,7 +21,7 @@ It is intentionally narrower than [PLUGIN_SPEC.md](./PLUGIN_SPEC.md). The spec i
 - Plugin-owned JSON API routes must be declared in the manifest and are mounted
   only under `/api/plugins/:pluginId/api/*`.
 - The host provides a small shared React component kit through
-  `@paperclipai/plugin-sdk/ui`; use it for common Paperclip controls before
+  `@paperclipai/plugin-sdk/ui`; use it for common Pilot controls before
   building custom versions.
 - `ctx.assets` is not supported in the current runtime.
 
@@ -45,7 +45,7 @@ objectReferences: [
 Implement `onDetectExternalObjects()` in the worker to recognize sanitized URL
 candidates and return provider-stable identities. Implement
 `onResolveExternalObject()` to return normalized board-safe status metadata.
-Paperclip owns inline markdown rendering; plugins must not return React, HTML,
+Pilot owns inline markdown rendering; plugins must not return React, HTML,
 or `dangerouslySetInnerHTML` content for inline references.
 
 ## Scaffold a plugin
@@ -53,7 +53,7 @@ or `dangerouslySetInnerHTML` content for inline references.
 Use the CLI scaffold command:
 
 ```bash
-paperclipai plugin init @yourscope/plugin-name --output /absolute/path/to/plugin-repos
+pilotai plugin init @yourscope/plugin-name --output /absolute/path/to/plugin-repos
 ```
 
 That creates `<output>/plugin-name/` with:
@@ -67,11 +67,11 @@ That creates `<output>/plugin-name/` with:
 
 Inside this monorepo, the scaffold uses `workspace:*` for `@paperclipai/plugin-sdk`.
 
-Outside this monorepo, the scaffold snapshots `@paperclipai/plugin-sdk` from the local Paperclip checkout into a `.paperclip-sdk/` tarball so you can build and test a plugin without publishing anything to npm first. Pass `--sdk-path /absolute/path/to/paperclip/packages/plugins/sdk` if you have more than one Paperclip checkout.
+Outside this monorepo, the scaffold snapshots `@paperclipai/plugin-sdk` from the local Pilot checkout into a `.paperclip-sdk/` tarball so you can build and test a plugin without publishing anything to npm first. Pass `--sdk-path /absolute/path/to/paperclip/packages/plugins/sdk` if you have more than one Pilot checkout.
 
 ## Local development workflow
 
-See the short [Local Plugin Development guide](./LOCAL_PLUGIN_DEVELOPMENT.md) for the full happy path (`pnpm dev` → `paperclipai plugin install <absolute-path>` → `paperclipai plugin list`) and reload semantics.
+See the short [Local Plugin Development guide](./LOCAL_PLUGIN_DEVELOPMENT.md) for the full happy path (`pnpm dev` → `pilotai plugin install <absolute-path>` → `pilotai plugin list`) and reload semantics.
 
 Minimum verification from the generated plugin folder:
 
@@ -159,14 +159,14 @@ handler. The worker receives sanitized headers, route params, query, parsed JSON
 body, actor context, and company id. Do not use plugin routes to claim core
 paths; they always remain under `/api/plugins/:pluginId/api/*`.
 
-## Managed Paperclip resources
+## Managed Pilot resources
 
-Plugins that provide durable Paperclip business objects should declare them in
+Plugins that provide durable Pilot business objects should declare them in
 the manifest and let the host create or relink the actual records per company.
 Do this for plugin-owned agents, projects, routines, and skills.
 Do not hide long-lived work behind private plugin state when it should be visible
 to the board, scoped to a company, audited, budgeted, and assigned like normal
-Paperclip work.
+Pilot work.
 
 Content-oriented plugins, such as LLM Wiki-style ingestion or durable knowledge
 systems, should use the same pattern: managed projects for operation issues,
@@ -178,7 +178,7 @@ Use these surfaces:
 - Managed agents: declare top-level `agents[]` and require
   `agents.managed`. Use this when the plugin provides a named worker the board
   should see in the org, budget, pause, invoke, and inspect. Managed agents are
-  normal Paperclip agents with plugin ownership metadata, not background plugin
+  normal Pilot agents with plugin ownership metadata, not background plugin
   workers.
 - Managed projects: declare top-level `projects[]` and require
   `projects.managed`. Use this when the plugin needs a stable company-scoped
@@ -186,12 +186,12 @@ Use these surfaces:
   in a project instead of scattering generated issues across unrelated projects.
 - Managed routines: declare top-level `routines[]` and require
   `routines.managed`. Use this for scheduled, webhook, or manually triggered
-  jobs that should create visible Paperclip issues. Prefer managed routines over
+  jobs that should create visible Pilot issues. Prefer managed routines over
   plugin `jobs[]` for recurring business work; plugin jobs are for plugin
   runtime maintenance that does not need a board-visible task trail.
 - Managed skills: declare top-level `skills[]` and require `skills.managed`.
   Use this for reusable plugin capabilities that should be surfaced to operators and
-  synced into Paperclip managed agents.
+  synced into Pilot managed agents.
 
 Managed resources are resolved by stable plugin keys, not hardcoded database
 ids. In a worker action or data handler, call `ctx.agents.managed.reconcile()`,
@@ -209,9 +209,9 @@ routine; if a ref is still missing, the routine resolution reports
 `missing_refs` instead of guessing.
 
 ```ts
-import type { PaperclipPluginManifestV1 } from "@paperclipai/plugin-sdk";
+import type { PilotPluginManifestV1 } from "@paperclipai/plugin-sdk";
 
-const manifest: PaperclipPluginManifestV1 = {
+const manifest: PilotPluginManifestV1 = {
   id: "example.research-plugin",
   apiVersion: 1,
   version: "0.1.0",
@@ -239,7 +239,7 @@ const manifest: PaperclipPluginManifestV1 = {
       capabilities: "Runs recurring research briefs for this company.",
       adapterPreference: ["codex_local", "claude_local", "process"],
       instructions: {
-        content: "Follow the Paperclip heartbeat and produce concise research briefs.",
+        content: "Follow the Pilot heartbeat and produce concise research briefs.",
       },
     },
   ],
@@ -325,7 +325,7 @@ Authoring rules:
   the operator or resolved from `ctx.agents.managed`.
 - Use managed routines for recurring or externally triggered work that should
   produce tasks. Schedule, webhook, and API triggers are visible routine
-  triggers, and each run has the normal Paperclip issue/audit trail.
+  triggers, and each run has the normal Pilot issue/audit trail.
 - Use managed skills for reusable operator-visible capabilities that are shared
   by managed agents. Reconcile skill declarations by `skillKey` and keep the
   declared skill markdown and files in sync with agent behavior.
@@ -333,7 +333,7 @@ Authoring rules:
   project-scoped plugin UI a stable home. For filesystem access inside a
   project, still resolve project workspaces through `ctx.projects`.
 - Keep defaults conservative. Managed declarations are suggestions owned by the
-  plugin, but the resulting resources are normal Paperclip records that the
+  plugin, but the resulting resources are normal Pilot records that the
   operator can inspect, pause, and adjust.
 
 UI:
@@ -381,11 +381,11 @@ the user chose as soon as they navigate away.
 ## Shared host components
 
 Use shared components from `@paperclipai/plugin-sdk/ui` when the plugin needs a
-Paperclip-native control. The host owns the implementation, so plugins inherit
+Pilot-native control. The host owns the implementation, so plugins inherit
 the board's current styling, ordering, recent selections, and dark-mode behavior
 without importing `ui/src` internals.
 
-Prefer shared components for common Paperclip UX patterns to reduce drift and
+Prefer shared components for common Pilot UX patterns to reduce drift and
 deprecation risk, especially for task/assignment flows and routine or sidebar-like
 plugin screens.
 
