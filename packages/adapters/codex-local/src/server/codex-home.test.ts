@@ -69,8 +69,8 @@ describe("codex managed home", () => {
         prepareManagedCodexHome(
           {
             CODEX_HOME: sharedCodexHome,
-            PAPERCLIP_HOME: pilotHome,
-            PAPERCLIP_INSTANCE_ID: "default",
+            PILOT_HOME: pilotHome,
+            PILOT_INSTANCE_ID: "default",
           },
           async () => {},
           "company-1",
@@ -117,8 +117,8 @@ describe("codex managed home", () => {
         prepareManagedCodexHome(
           {
             CODEX_HOME: sharedCodexHome,
-            PAPERCLIP_HOME: pilotHome,
-            PAPERCLIP_INSTANCE_ID: "default",
+            PILOT_HOME: pilotHome,
+            PILOT_INSTANCE_ID: "default",
           },
           async () => {},
           "company-1",
@@ -165,8 +165,8 @@ describe("codex managed home", () => {
       await prepareManagedCodexHome(
         {
           CODEX_HOME: sharedCodexHome,
-          PAPERCLIP_HOME: pilotHome,
-          PAPERCLIP_INSTANCE_ID: "default",
+          PILOT_HOME: pilotHome,
+          PILOT_INSTANCE_ID: "default",
         },
         async () => {},
         "company-1",
@@ -226,8 +226,8 @@ describe("codex managed home", () => {
 
 describe("isManagedCodexHomePath", () => {
   const env = {
-    PAPERCLIP_HOME: "/srv/paperclip",
-    PAPERCLIP_INSTANCE_ID: "default",
+    PILOT_HOME: "/srv/paperclip",
+    PILOT_INSTANCE_ID: "default",
   } satisfies NodeJS.ProcessEnv;
   const companyRoot = path.resolve(
     "/srv/paperclip/instances/default/companies/company-1",
@@ -560,8 +560,8 @@ describe("reconcileManagedCodexHome", () => {
     await fs.writeFile(sharedAuth, '{"OPENAI_API_KEY":"shared"}', "utf8");
     const env = {
       CODEX_HOME: sharedCodexHome,
-      PAPERCLIP_HOME: pilotHome,
-      PAPERCLIP_INSTANCE_ID: "default",
+      PILOT_HOME: pilotHome,
+      PILOT_INSTANCE_ID: "default",
     } satisfies NodeJS.ProcessEnv;
     return { root, sharedCodexHome, sharedAuth, agentHome, agentAuth, env };
   }
@@ -737,8 +737,8 @@ describe("evaluateCodexCredentialReadiness", () => {
     const managedAgentHome = path.join(companyRoot, "agents", "agent-1", "codex-home");
     const env: NodeJS.ProcessEnv = {
       CODEX_HOME: sharedCodexHome,
-      PAPERCLIP_HOME: pilotHome,
-      PAPERCLIP_INSTANCE_ID: "default",
+      PILOT_HOME: pilotHome,
+      PILOT_INSTANCE_ID: "default",
     };
     await fs.mkdir(sharedCodexHome, { recursive: true });
     return { root, sharedCodexHome, managedCompanyHome, managedAgentHome, env };

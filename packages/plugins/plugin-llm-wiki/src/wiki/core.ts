@@ -3318,8 +3318,8 @@ async function autoApplyEnabled(ctx: PluginContext, companyId: string, requested
 }
 
 export function getDistillationAutoApplyRestriction(): DistillationAutoApplyRestriction {
-  const rawMode = process.env.PAPERCLIP_DEPLOYMENT_MODE;
-  const rawExposure = process.env.PAPERCLIP_DEPLOYMENT_EXPOSURE;
+  const rawMode = process.env.PILOT_DEPLOYMENT_MODE;
+  const rawExposure = process.env.PILOT_DEPLOYMENT_EXPOSURE;
   const deploymentMode =
     rawMode === "local_trusted" || rawMode === "authenticated" ? rawMode : null;
   const deploymentExposure =

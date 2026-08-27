@@ -18,8 +18,8 @@ describe("home path resolution", () => {
 
   it("defaults to ~/.paperclip and default instance", () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-home-paths-"));
-    process.env.PAPERCLIP_HOME = home;
-    delete process.env.PAPERCLIP_INSTANCE_ID;
+    process.env.PILOT_HOME = home;
+    delete process.env.PILOT_INSTANCE_ID;
 
     const paths = describeLocalInstancePaths();
     expect(paths.homeDir).toBe(home);
@@ -28,7 +28,7 @@ describe("home path resolution", () => {
   });
 
   it("supports PAPERCLIP_HOME and explicit instance ids", () => {
-    process.env.PAPERCLIP_HOME = "~/paperclip-home";
+    process.env.PILOT_HOME = "~/paperclip-home";
 
     const home = resolvePilotHomeDir();
     expect(home).toBe(path.resolve(os.homedir(), "paperclip-home"));

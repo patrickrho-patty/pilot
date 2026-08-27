@@ -104,15 +104,32 @@ type WorktreeRuntimeContext = {
   secretsKeyFilePath: string;
 };
 
+
+/**
+ * Env files written before the brand rename carry PAPERCLIP_* keys. Map any
+ * legacy spelling onto the unset PILOT_* equivalent so persisted worktree env
+ * keeps resolving through the alias window (same policy as the boot shim).
+ */
+function normalizeLegacyEnvEntries(entries: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = { ...entries };
+  for (const key of Object.keys(out)) {
+    if (key.startsWith("PAPERCLIP_") && key !== "PAPERCLIP_") {
+      const target = "PILOT_" + key.slice("PAPERCLIP_".length);
+      if (out[target] === undefined) out[target] = out[key];
+    }
+  }
+  return out;
+}
+
 function resolveWorktreeRuntimeContext(
   env: NodeJS.ProcessEnv,
   overrideConfigPath?: string,
 ): WorktreeRuntimeContext | null {
-  if (env.PAPERCLIP_IN_WORKTREE !== "true") return null;
+  if (env.PILOT_IN_WORKTREE !== "true") return null;
 
   const configPath = resolvePilotConfigPath(overrideConfigPath);
   const envPath = resolvePilotEnvPath(configPath);
-  const persistedEnv = readEnvEntries(envPath);
+  const persistedEnv = normalizeLegacyEnvEntries(readEnvEntries(envPath));
 
   // PAPERCLIP_IN_WORKTREE can leak in from a parent process or a sourced env
   // file while config resolution still points at a non-worktree target (for
@@ -121,9 +138,9 @@ function resolveWorktreeRuntimeContext(
   // layout and its own persisted env already declares it a worktree;
   // otherwise the repair would rewrite main-instance config and env files.
   if (path.basename(path.dirname(configPath)) !== ".paperclip") return null;
-  if (persistedEnv.PAPERCLIP_IN_WORKTREE !== "true") return null;
+  if (persistedEnv.PILOT_IN_WORKTREE !== "true") return null;
 
-  const persistedConfigPath = nonEmpty(persistedEnv.PAPERCLIP_CONFIG);
+  const persistedConfigPath = nonEmpty(persistedEnv.PILOT_CONFIG);
   const persistedConfigLooksStale =
     persistedConfigPath !== null &&
     path.resolve(expandHomePrefix(persistedConfigPath)) !== path.resolve(configPath) &&
@@ -131,17 +148,17 @@ function resolveWorktreeRuntimeContext(
   const stablePersistedEnv = persistedConfigLooksStale ? {} : persistedEnv;
   const worktreeRoot = path.resolve(path.dirname(configPath), "..");
   const worktreeName =
-    nonEmpty(stablePersistedEnv.PAPERCLIP_WORKTREE_NAME) ??
-    nonEmpty(env.PAPERCLIP_WORKTREE_NAME) ??
+    nonEmpty(stablePersistedEnv.PILOT_WORKTREE_NAME) ??
+    nonEmpty(env.PILOT_WORKTREE_NAME) ??
     path.basename(worktreeRoot);
   const instanceId =
-    nonEmpty(stablePersistedEnv.PAPERCLIP_INSTANCE_ID) ??
-    nonEmpty(env.PAPERCLIP_INSTANCE_ID) ??
+    nonEmpty(stablePersistedEnv.PILOT_INSTANCE_ID) ??
+    nonEmpty(env.PILOT_INSTANCE_ID) ??
     sanitizeWorktreeInstanceId(worktreeName);
   const homeDir = resolveHomeAwarePath(
-    nonEmpty(stablePersistedEnv.PAPERCLIP_HOME) ??
-      nonEmpty(env.PAPERCLIP_HOME) ??
-      nonEmpty(env.PAPERCLIP_WORKTREES_DIR) ??
+    nonEmpty(stablePersistedEnv.PILOT_HOME) ??
+      nonEmpty(env.PILOT_HOME) ??
+      nonEmpty(env.PILOT_WORKTREES_DIR) ??
       "~/.paperclip-worktrees",
   );
   const instanceRoot = path.resolve(homeDir, "instances", instanceId);
@@ -454,11 +471,11 @@ export function maybeRepairLegacyWorktreeConfigAndEnvFiles(): {
     return { repairedConfig: false, repairedEnv: false };
   }
 
-  process.env.PAPERCLIP_HOME = context.homeDir;
-  process.env.PAPERCLIP_INSTANCE_ID = context.instanceId;
-  process.env.PAPERCLIP_CONFIG = context.configPath;
-  process.env.PAPERCLIP_CONTEXT = context.contextPath;
-  process.env.PAPERCLIP_WORKTREE_NAME = context.worktreeName;
+  process.env.PILOT_HOME = context.homeDir;
+  process.env.PILOT_INSTANCE_ID = context.instanceId;
+  process.env.PILOT_CONFIG = context.configPath;
+  process.env.PILOT_CONTEXT = context.contextPath;
+  process.env.PILOT_WORKTREE_NAME = context.worktreeName;
 
   let repairedConfig = false;
   if (fs.existsSync(context.configPath)) {
@@ -531,16 +548,23 @@ export function maybeRepairLegacyWorktreeConfigAndEnvFiles(): {
   }
 
   const managedEnvEntries: Record<string, string> = {
-    PAPERCLIP_HOME: context.homeDir,
-    PAPERCLIP_INSTANCE_ID: context.instanceId,
-    PAPERCLIP_CONFIG: context.configPath,
-    PAPERCLIP_CONTEXT: context.contextPath,
-    PAPERCLIP_IN_WORKTREE: "true",
-    PAPERCLIP_DB_BACKUP_ENABLED: "false",
-    PAPERCLIP_WORKTREE_NAME: context.worktreeName,
+    PILOT_HOME: context.homeDir,
+    PILOT_INSTANCE_ID: context.instanceId,
+    PILOT_CONFIG: context.configPath,
+    PILOT_CONTEXT: context.contextPath,
+    PILOT_IN_WORKTREE: "true",
+    PILOT_DB_BACKUP_ENABLED: "false",
+    PILOT_WORKTREE_NAME: context.worktreeName,
   };
+  // Persisted env files are read by CLIs that can predate the brand rename
+  // (a worktree checkout may be arbitrarily old), so managed entries carry a
+  // legacy PAPERCLIP_ twin alongside every PILOT_ key through the alias window.
+  for (const [key, value] of Object.entries(managedEnvEntries)) {
+    const legacy = "PAPERCLIP_" + key.slice("PILOT_".length);
+    managedEnvEntries[legacy] = value;
+  }
 
-  process.env.PAPERCLIP_DB_BACKUP_ENABLED = "false";
+  process.env.PILOT_DB_BACKUP_ENABLED = "false";
 
   const existingContents = fs.existsSync(context.envPath)
     ? fs.readFileSync(context.envPath, "utf8")

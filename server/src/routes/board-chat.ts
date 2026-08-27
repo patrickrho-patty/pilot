@@ -252,8 +252,8 @@ export function boardChatRoutes(
       cwd: "/tmp",
       env: {
         ...process.env,
-        PAPERCLIP_API_URL: apiUrl,
-        PAPERCLIP_COMPANY_ID: companyId,
+        PILOT_API_URL: apiUrl,
+        PILOT_COMPANY_ID: companyId,
       },
     });
 

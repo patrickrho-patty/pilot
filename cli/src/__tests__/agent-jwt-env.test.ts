@@ -23,7 +23,7 @@ function tempConfigPath(): string {
 describe("agent jwt env helpers", () => {
   beforeEach(() => {
     process.env = { ...ORIGINAL_ENV };
-    delete process.env.PAPERCLIP_AGENT_JWT_SECRET;
+    delete process.env.PILOT_AGENT_JWT_SECRET;
   });
 
   afterEach(() => {
@@ -49,7 +49,7 @@ describe("agent jwt env helpers", () => {
 
     const loaded = readAgentJwtSecretFromEnv(configPath);
     expect(loaded).toBe("test-secret");
-    expect(process.env.PAPERCLIP_AGENT_JWT_SECRET).toBe("test-secret");
+    expect(process.env.PILOT_AGENT_JWT_SECRET).toBe("test-secret");
   });
 
   it("doctor check passes when secret exists in adjacent .env", () => {
@@ -67,14 +67,14 @@ describe("agent jwt env helpers", () => {
 
     mergePilotEnvEntries(
       {
-        PAPERCLIP_WORKTREE_COLOR: "#439edb",
+        PILOT_WORKTREE_COLOR: "#439edb",
       },
       envPath,
     );
 
     const contents = fs.readFileSync(envPath, "utf-8");
     expect(contents).toContain('PAPERCLIP_WORKTREE_COLOR="#439edb"');
-    expect(readPilotEnvEntries(envPath).PAPERCLIP_WORKTREE_COLOR).toBe("#439edb");
+    expect(readPilotEnvEntries(envPath).PILOT_WORKTREE_COLOR).toBe("#439edb");
   });
 
   it("preserves operator content and CRLF while updating only managed entries", () => {
@@ -94,9 +94,9 @@ describe("agent jwt env helpers", () => {
 
     mergePilotEnvEntries(
       {
-        PAPERCLIP_HOME: "/new path",
-        PAPERCLIP_DUPLICATE: "current",
-        PAPERCLIP_WORKTREE_COLOR: "#439edb",
+        PILOT_HOME: "/new path",
+        PILOT_DUPLICATE: "current",
+        PILOT_WORKTREE_COLOR: "#439edb",
         DATABASE_URL: "postgres://paperclip-must-not-overwrite",
       },
       envPath,
@@ -129,7 +129,7 @@ describe("agent jwt env helpers", () => {
     fs.writeFileSync(envPath, original, { mode: 0o600 });
     const previousInode = fs.statSync(envPath).ino;
 
-    mergePilotEnvEntries({ PAPERCLIP_HOME: "/same path" }, envPath);
+    mergePilotEnvEntries({ PILOT_HOME: "/same path" }, envPath);
 
     expect(fs.readFileSync(envPath, "utf8")).toBe(original);
     expect(fs.statSync(envPath).ino).toBe(previousInode);

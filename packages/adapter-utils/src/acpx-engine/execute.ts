@@ -591,8 +591,8 @@ async function referencedSourceContentSignature(localPath: string): Promise<stri
 }
 
 function defaultPilotInstanceDir(): string {
-  const home = process.env.PAPERCLIP_HOME?.trim() || path.join(os.homedir(), ".paperclip");
-  const instanceId = process.env.PAPERCLIP_INSTANCE_ID?.trim() || "default";
+  const home = process.env.PILOT_HOME?.trim() || path.join(os.homedir(), ".paperclip");
+  const instanceId = process.env.PILOT_INSTANCE_ID?.trim() || "default";
   return resolvePilotInstanceRootForAdapter({
     homeDir: home,
     instanceId,
@@ -1643,7 +1643,7 @@ async function buildRuntime(input: {
   await fs.mkdir(stateDir, { recursive: true });
 
   const envConfig = parseObject(config.env);
-  const env: Record<string, string> = { ...buildPilotEnv(agent), PAPERCLIP_RUN_ID: runId };
+  const env: Record<string, string> = { ...buildPilotEnv(agent), PILOT_RUN_ID: runId };
   const wakeTaskId =
     (typeof context.taskId === "string" && context.taskId.trim()) ||
     (typeof context.issueId === "string" && context.issueId.trim()) ||
@@ -1660,14 +1660,14 @@ async function buildRuntime(input: {
     : [];
   const wakePayloadJson = stringifyPilotWakePayload(context.paperclipWake);
   const issueWorkMode = readPilotIssueWorkModeFromContext(context);
-  if (wakeTaskId) env.PAPERCLIP_TASK_ID = wakeTaskId;
-  if (issueWorkMode) env.PAPERCLIP_ISSUE_WORK_MODE = issueWorkMode;
-  if (wakeReason) env.PAPERCLIP_WAKE_REASON = wakeReason;
-  if (wakeCommentId) env.PAPERCLIP_WAKE_COMMENT_ID = wakeCommentId;
-  if (approvalId) env.PAPERCLIP_APPROVAL_ID = approvalId;
-  if (approvalStatus) env.PAPERCLIP_APPROVAL_STATUS = approvalStatus;
-  if (linkedIssueIds.length > 0) env.PAPERCLIP_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
-  if (wakePayloadJson) env.PAPERCLIP_WAKE_PAYLOAD_JSON = wakePayloadJson;
+  if (wakeTaskId) env.PILOT_TASK_ID = wakeTaskId;
+  if (issueWorkMode) env.PILOT_ISSUE_WORK_MODE = issueWorkMode;
+  if (wakeReason) env.PILOT_WAKE_REASON = wakeReason;
+  if (wakeCommentId) env.PILOT_WAKE_COMMENT_ID = wakeCommentId;
+  if (approvalId) env.PILOT_APPROVAL_ID = approvalId;
+  if (approvalStatus) env.PILOT_APPROVAL_STATUS = approvalStatus;
+  if (linkedIssueIds.length > 0) env.PILOT_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
+  if (wakePayloadJson) env.PILOT_WAKE_PAYLOAD_JSON = wakePayloadJson;
   applyPilotWorkspaceEnv(env, {
     workspaceCwd: shapedWorkspaceEnv.workspaceCwd,
     workspaceSource,
@@ -1706,7 +1706,7 @@ async function buildRuntime(input: {
     env[key] = value;
     resolvedAdapterEnv[key] = value;
   }
-  if (authToken) env.PAPERCLIP_API_KEY = authToken;
+  if (authToken) env.PILOT_API_KEY = authToken;
   // For the claude agent, set model via ANTHROPIC_MODEL at startup rather than
   // via session/set_config_option — the ACP server's set_config_option handler
   // validates the value against its internal available-models list and rejects
@@ -2031,7 +2031,7 @@ async function buildRuntime(input: {
           stagedProjectDirs,
         }).workspaceHints;
         if (shapedHints.length > 0) {
-          env.PAPERCLIP_WORKSPACES_JSON = JSON.stringify(shapedHints);
+          env.PILOT_WORKSPACES_JSON = JSON.stringify(shapedHints);
         }
       },
       onReuseLog: () =>
@@ -2046,7 +2046,7 @@ async function buildRuntime(input: {
           runtimeRootDir,
           adapterKey: input.engine.adapterType,
           timeoutSec,
-          hostApiToken: env.PAPERCLIP_API_KEY,
+          hostApiToken: env.PILOT_API_KEY,
           onLog: input.ctx.onLog,
           getRuntimeParentContext: input.getRuntimeParentContext,
           runtimeSpan: input.runtimeSpan,
@@ -2343,7 +2343,7 @@ function renderPilotEnvNote(env: Record<string, string>): string {
 }
 
 function renderApiAccessNote(env: Record<string, string>): string {
-  if (!env.PAPERCLIP_API_URL || !env.PAPERCLIP_API_KEY) return "";
+  if (!env.PILOT_API_URL || !env.PILOT_API_KEY) return "";
   const lines = [
     "Paperclip API access note:",
     "Use terminal commands with curl to make Paperclip API requests.",
@@ -2352,7 +2352,7 @@ function renderApiAccessNote(env: Record<string, string>): string {
     "GET example:",
     `  curl -s -H "Authorization: Bearer $PAPERCLIP_API_KEY" "$PAPERCLIP_API_BASE/api/agents/me"`,
   ];
-  if (env.PAPERCLIP_TASK_ID) {
+  if (env.PILOT_TASK_ID) {
     lines.push(
       "Scoped issue comment example:",
       `  curl -s -X POST -H "Authorization: Bearer $PAPERCLIP_API_KEY" -H "Content-Type: application/json" -H "X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID" -d '{"body":"Status update from agent."}' "$PAPERCLIP_API_BASE/api/issues/$PAPERCLIP_TASK_ID/comments"`,

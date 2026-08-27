@@ -41,8 +41,8 @@ describe("codex auth cache store", () => {
 
   function envFor(instanceHome: string, extra: Record<string, string> = {}): NodeJS.ProcessEnv {
     return {
-      PAPERCLIP_HOME: instanceHome,
-      PAPERCLIP_INSTANCE_ID: "default",
+      PILOT_HOME: instanceHome,
+      PILOT_INSTANCE_ID: "default",
       ...extra,
     };
   }
@@ -322,12 +322,12 @@ describe("codex auth cache store", () => {
 
     it("isCodexAuthCacheEnabled defaults to on and turns off on an explicit falsy flag", () => {
       expect(isCodexAuthCacheEnabled({})).toBe(true);
-      expect(isCodexAuthCacheEnabled({ PAPERCLIP_CODEX_AUTH_CACHE: "1" })).toBe(true);
-      expect(isCodexAuthCacheEnabled({ PAPERCLIP_CODEX_AUTH_CACHE: "on" })).toBe(true);
-      expect(isCodexAuthCacheEnabled({ PAPERCLIP_CODEX_AUTH_CACHE: "0" })).toBe(false);
-      expect(isCodexAuthCacheEnabled({ PAPERCLIP_CODEX_AUTH_CACHE: "false" })).toBe(false);
-      expect(isCodexAuthCacheEnabled({ PAPERCLIP_CODEX_AUTH_CACHE: "off" })).toBe(false);
-      expect(isCodexAuthCacheEnabled({ PAPERCLIP_CODEX_AUTH_CACHE: "no" })).toBe(false);
+      expect(isCodexAuthCacheEnabled({ PILOT_CODEX_AUTH_CACHE: "1" })).toBe(true);
+      expect(isCodexAuthCacheEnabled({ PILOT_CODEX_AUTH_CACHE: "on" })).toBe(true);
+      expect(isCodexAuthCacheEnabled({ PILOT_CODEX_AUTH_CACHE: "0" })).toBe(false);
+      expect(isCodexAuthCacheEnabled({ PILOT_CODEX_AUTH_CACHE: "false" })).toBe(false);
+      expect(isCodexAuthCacheEnabled({ PILOT_CODEX_AUTH_CACHE: "off" })).toBe(false);
+      expect(isCodexAuthCacheEnabled({ PILOT_CODEX_AUTH_CACHE: "no" })).toBe(false);
     });
   });
 });

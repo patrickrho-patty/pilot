@@ -43,9 +43,9 @@ const {
   syncDirectoryToSsh: vi.fn(async () => undefined),
   startAdapterExecutionTargetPilotBridge: vi.fn(async () => ({
     env: {
-      PAPERCLIP_API_URL: "http://127.0.0.1:4310",
-      PAPERCLIP_API_KEY: "bridge-token",
-      PAPERCLIP_API_BRIDGE_MODE: "queue_v1",
+      PILOT_API_URL: "http://127.0.0.1:4310",
+      PILOT_API_KEY: "bridge-token",
+      PILOT_API_BRIDGE_MODE: "queue_v1",
     },
     stop: async () => {},
   })),
@@ -204,8 +204,8 @@ describe("gemini remote execution", () => {
     const call = runChildProcess.mock.calls[0] as unknown as
       | [string, string, string[], { env: Record<string, string>; remoteExecution?: { remoteCwd: string } | null }]
       | undefined;
-    expect(call?.[3].env.PAPERCLIP_WORKSPACE_CWD).toBe(managedRemoteWorkspace);
-    expect(JSON.parse(call?.[3].env.PAPERCLIP_WORKSPACES_JSON ?? "[]")).toEqual([
+    expect(call?.[3].env.PILOT_WORKSPACE_CWD).toBe(managedRemoteWorkspace);
+    expect(JSON.parse(call?.[3].env.PILOT_WORKSPACES_JSON ?? "[]")).toEqual([
       {
         workspaceId: "workspace-1",
         cwd: managedRemoteWorkspace,
@@ -218,8 +218,8 @@ describe("gemini remote execution", () => {
         repoRef: "feature/other",
       },
     ]);
-    expect(call?.[3].env.PAPERCLIP_API_URL).toBe("http://127.0.0.1:4310");
-    expect(call?.[3].env.PAPERCLIP_API_BRIDGE_MODE).toBe("queue_v1");
+    expect(call?.[3].env.PILOT_API_URL).toBe("http://127.0.0.1:4310");
+    expect(call?.[3].env.PILOT_API_BRIDGE_MODE).toBe("queue_v1");
     expect(call?.[3].env.GEMINI_CLI_TRUST_WORKSPACE).toBe("true");
     expect(call?.[3].env.TERM).toBe("xterm-256color");
     expect(call?.[3].env.COLORTERM).toBe("truecolor");

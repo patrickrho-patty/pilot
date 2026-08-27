@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-base_cwd="${PAPERCLIP_WORKSPACE_BASE_CWD:?PAPERCLIP_WORKSPACE_BASE_CWD is required}"
-worktree_cwd="${PAPERCLIP_WORKSPACE_CWD:?PAPERCLIP_WORKSPACE_CWD is required}"
-paperclip_home="${PAPERCLIP_HOME:-$HOME/.paperclip}"
-paperclip_instance_id="${PAPERCLIP_INSTANCE_ID:-default}"
+base_cwd="${PILOT_WORKSPACE_BASE_CWD:-${PAPERCLIP_WORKSPACE_BASE_CWD:?PAPERCLIP_WORKSPACE_BASE_CWD is required}}"
+worktree_cwd="${PILOT_WORKSPACE_CWD:-${PAPERCLIP_WORKSPACE_CWD:?PAPERCLIP_WORKSPACE_CWD is required}}"
+paperclip_home="${PILOT_HOME:-${PAPERCLIP_HOME:-$HOME/.paperclip}}"
+paperclip_instance_id="${PILOT_INSTANCE_ID:-${PAPERCLIP_INSTANCE_ID:-default}}"
 paperclip_dir="$worktree_cwd/.paperclip"
 worktree_config_path="$paperclip_dir/config.json"
 worktree_env_path="$paperclip_dir/.env"
 seed_manifest_path="$paperclip_dir/seed-manifest.json"
 seed_pending_marker_path="$paperclip_dir/seed-pending"
 seed_complete_marker_path="$paperclip_dir/seed-complete"
-worktree_name="${PAPERCLIP_WORKSPACE_BRANCH:-$(basename "$worktree_cwd")}"
+worktree_name="${PILOT_WORKSPACE_BRANCH:-${PAPERCLIP_WORKSPACE_BRANCH:-$(basename "$worktree_cwd")}}"
 created_worktree_config=0
 worktree_instance_id="$(WORKTREE_CWD="$worktree_cwd" node <<'EOF'
 const crypto = require("node:crypto");
@@ -52,7 +52,7 @@ if [[ ! -e "$source_config_path" && ! -L "$source_config_path" ]]; then
   # A base workspace that is a plain checkout carries no instance config of its own.
   # Fall back to the control plane's own registered instance config, which is process
   # state this workspace cannot rewrite.
-  source_config_path="${PAPERCLIP_CONFIG:-$paperclip_home/instances/$paperclip_instance_id/config.json}"
+  source_config_path="${PILOT_CONFIG:-${PAPERCLIP_CONFIG:-$paperclip_home/instances/$paperclip_instance_id/config.json}}"
 fi
 if [[ ! -f "$source_config_path" || -L "$source_config_path" ]]; then
   echo "Registered Paperclip seed source config is missing or is not a canonical file: $source_config_path" >&2
@@ -217,13 +217,13 @@ const configPath = path.resolve(process.env.WORKTREE_CONFIG_PATH);
 const envPath = path.resolve(process.env.WORKTREE_ENV_PATH);
 const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
 const env = parseEnvFile(fs.readFileSync(envPath, "utf8"));
-const envConfigPath = expandHomePrefix(env.PAPERCLIP_CONFIG);
+const envConfigPath = expandHomePrefix(env.PILOT_CONFIG ?? env.PAPERCLIP_CONFIG);
 if (envConfigPath && path.resolve(envConfigPath) !== configPath) {
   fail(`existing worktree env points at ${envConfigPath}, not ${configPath}`);
 }
 
-const homeDir = expandHomePrefix(env.PAPERCLIP_HOME);
-const instanceId = env.PAPERCLIP_INSTANCE_ID;
+const homeDir = expandHomePrefix(env.PILOT_HOME ?? env.PAPERCLIP_HOME);
+const instanceId = env.PILOT_INSTANCE_ID ?? env.PAPERCLIP_INSTANCE_ID;
 const expectedInstanceId = process.env.WORKTREE_INSTANCE_ID;
 if (!homeDir || !instanceId) {
   fail("existing worktree env is missing PAPERCLIP_HOME or PAPERCLIP_INSTANCE_ID");
@@ -549,7 +549,7 @@ async function main() {
 
   fs.writeFileSync(configPath, `${JSON.stringify(targetConfig, null, 2)}\n`, { mode: 0o600 });
 
-  const inlineMasterKey = nonEmpty(sourceEnvEntries.PAPERCLIP_SECRETS_MASTER_KEY);
+  const inlineMasterKey = nonEmpty(sourceEnvEntries.PILOT_SECRETS_MASTER_KEY ?? sourceEnvEntries.PAPERCLIP_SECRETS_MASTER_KEY);
   if (inlineMasterKey) {
     fs.mkdirSync(path.resolve(instanceRoot, "secrets"), { recursive: true });
     fs.writeFileSync(targetConfig.secrets.localEncrypted.keyFilePath, inlineMasterKey, {
@@ -557,7 +557,7 @@ async function main() {
       mode: 0o600,
     });
   } else {
-    const sourceKeyFilePath = nonEmpty(sourceEnvEntries.PAPERCLIP_SECRETS_MASTER_KEY_FILE)
+    const sourceKeyFilePath = nonEmpty(sourceEnvEntries.PILOT_SECRETS_MASTER_KEY_FILE ?? sourceEnvEntries.PAPERCLIP_SECRETS_MASTER_KEY_FILE)
       ? resolveRuntimeLikePath(sourceEnvEntries.PAPERCLIP_SECRETS_MASTER_KEY_FILE, sourceConfigPath)
       : nonEmpty(sourceConfig?.secrets?.localEncrypted?.keyFilePath)
         ? resolveRuntimeLikePath(sourceConfig.secrets.localEncrypted.keyFilePath, sourceConfigPath)
@@ -570,14 +570,21 @@ async function main() {
     }
   }
 
-  const envLines = [
-    "PAPERCLIP_HOME=" + JSON.stringify(worktreeHome),
-    "PAPERCLIP_INSTANCE_ID=" + JSON.stringify(instanceId),
-    "PAPERCLIP_CONFIG=" + JSON.stringify(configPath),
-    "PAPERCLIP_CONTEXT=" + JSON.stringify(path.resolve(worktreeHome, "context.json")),
-    "PAPERCLIP_IN_WORKTREE=true",
-    "PAPERCLIP_WORKTREE_NAME=" + JSON.stringify(worktreeName),
+  // Managed entries carry a legacy PAPERCLIP_ twin alongside every PILOT_ key:
+  // CLIs running inside the worktree can predate the brand rename.
+  const managedEnv = [
+    ["HOME", worktreeHome],
+    ["INSTANCE_ID", instanceId],
+    ["CONFIG", configPath],
+    ["CONTEXT", path.resolve(worktreeHome, "context.json")],
+    ["IN_WORKTREE", "true"],
+    ["WORKTREE_NAME", worktreeName],
   ];
+  const envLines: string[] = [];
+  for (const [suffix, value] of managedEnv) {
+    envLines.push(`PILOT_${suffix}=` + JSON.stringify(value));
+    envLines.push(`PAPERCLIP_${suffix}=` + JSON.stringify(value));
+  }
 
   // Secrets that must be carried over from the source instance so the worktree's
   // dev server behaves like the real one. PAPERCLIP_TOOL_ACTION_SIGNING_SECRET is
@@ -585,14 +592,15 @@ async function main() {
   // it the first gated POST /tool-gateway/tools/call returns Internal server error.
   // BETTER_AUTH_SECRET keeps auth tokens compatible across the source/worktree pair.
   const propagatedSecretKeys = [
-    "PAPERCLIP_AGENT_JWT_SECRET",
-    "PAPERCLIP_TOOL_ACTION_SIGNING_SECRET",
-    "BETTER_AUTH_SECRET",
+    ["PILOT_AGENT_JWT_SECRET", "PAPERCLIP_AGENT_JWT_SECRET"],
+    ["PILOT_TOOL_ACTION_SIGNING_SECRET", "PAPERCLIP_TOOL_ACTION_SIGNING_SECRET"],
+    ["BETTER_AUTH_SECRET", "BETTER_AUTH_SECRET"],
   ];
-  for (const key of propagatedSecretKeys) {
-    const value = nonEmpty(sourceEnvEntries[key]);
+  for (const [key, legacyKey] of propagatedSecretKeys) {
+    const value = nonEmpty(sourceEnvEntries[key] ?? sourceEnvEntries[legacyKey]);
     if (value) {
       envLines.push(key + "=" + JSON.stringify(value));
+      envLines.push(legacyKey + "=" + JSON.stringify(value));
     }
   }
 

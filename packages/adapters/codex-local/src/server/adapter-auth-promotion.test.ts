@@ -47,8 +47,8 @@ describe("device-login credential promotion", () => {
 
   function envFor(instanceHome: string, extra: Record<string, string> = {}): NodeJS.ProcessEnv {
     return {
-      PAPERCLIP_HOME: instanceHome,
-      PAPERCLIP_INSTANCE_ID: "default",
+      PILOT_HOME: instanceHome,
+      PILOT_INSTANCE_ID: "default",
       // A fixed shared host home, so a test can assert the helper never writes it.
       CODEX_HOME: path.join(instanceHome, "shared-codex"),
       ...extra,
@@ -235,7 +235,7 @@ describe("device-login credential promotion", () => {
 
   it("the cache off-switch skips the cache slot but still seeds the company home", async () => {
     const home = await makeInstanceRoot();
-    const env = envFor(home, { PAPERCLIP_CODEX_AUTH_CACHE: "off" });
+    const env = envFor(home, { PILOT_CODEX_AUTH_CACHE: "off" });
     const outcome = await promoteDeviceLoginCredential({
       authBytes: subscriptionAuth({ accountId: ACCOUNT, lastRefresh: NEWER }),
       companyId: COMPANY_A,

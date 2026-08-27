@@ -30,7 +30,7 @@ async function readOptionalSecret(
  */
 function resolveEnvLabStatePath(): string {
   const instanceRoot =
-    process.env.PAPERCLIP_INSTANCE_ROOT?.trim() ||
+    process.env.PILOT_INSTANCE_ROOT?.trim() ||
     path.join(process.env.HOME ?? "/tmp", ".paperclip-worktrees", "instances", "live-ssh-test");
   return path.join(instanceRoot, "env-lab", "ssh-fixture", "state.json");
 }
@@ -42,11 +42,11 @@ function tryExplicitConfig(): {
   username: string;
   remoteWorkspacePath: string;
 } | null {
-  const host = process.env.PAPERCLIP_ENV_LIVE_SSH_HOST?.trim() ?? "";
-  const username = process.env.PAPERCLIP_ENV_LIVE_SSH_USERNAME?.trim() ?? "";
+  const host = process.env.PILOT_ENV_LIVE_SSH_HOST?.trim() ?? "";
+  const username = process.env.PILOT_ENV_LIVE_SSH_USERNAME?.trim() ?? "";
   const remoteWorkspacePath =
-    process.env.PAPERCLIP_ENV_LIVE_SSH_REMOTE_WORKSPACE_PATH?.trim() ?? "";
-  const port = Number.parseInt(process.env.PAPERCLIP_ENV_LIVE_SSH_PORT ?? "22", 10);
+    process.env.PILOT_ENV_LIVE_SSH_REMOTE_WORKSPACE_PATH?.trim() ?? "";
+  const port = Number.parseInt(process.env.PILOT_ENV_LIVE_SSH_PORT ?? "22", 10);
 
   if (!host || !username || !remoteWorkspacePath || !Number.isInteger(port) || port < 1 || port > 65535) {
     return null;
@@ -102,15 +102,15 @@ async function resolveSshConfig(): Promise<SshConnectionConfig | null> {
     return {
       ...explicit,
       privateKey: await readOptionalSecret(
-        process.env.PAPERCLIP_ENV_LIVE_SSH_PRIVATE_KEY,
-        process.env.PAPERCLIP_ENV_LIVE_SSH_PRIVATE_KEY_PATH,
+        process.env.PILOT_ENV_LIVE_SSH_PRIVATE_KEY,
+        process.env.PILOT_ENV_LIVE_SSH_PRIVATE_KEY_PATH,
       ),
       knownHosts: await readOptionalSecret(
-        process.env.PAPERCLIP_ENV_LIVE_SSH_KNOWN_HOSTS,
-        process.env.PAPERCLIP_ENV_LIVE_SSH_KNOWN_HOSTS_PATH,
+        process.env.PILOT_ENV_LIVE_SSH_KNOWN_HOSTS,
+        process.env.PILOT_ENV_LIVE_SSH_KNOWN_HOSTS_PATH,
       ),
       strictHostKeyChecking:
-        (process.env.PAPERCLIP_ENV_LIVE_SSH_STRICT_HOST_KEY_CHECKING ?? "true").toLowerCase() !== "false",
+        (process.env.PILOT_ENV_LIVE_SSH_STRICT_HOST_KEY_CHECKING ?? "true").toLowerCase() !== "false",
     };
   }
 
@@ -119,7 +119,7 @@ async function resolveSshConfig(): Promise<SshConnectionConfig | null> {
   if (running) return running;
 
   // 3. Auto-start env-lab
-  if (process.env.PAPERCLIP_ENV_LIVE_SSH_NO_AUTO_FIXTURE !== "true") {
+  if (process.env.PILOT_ENV_LIVE_SSH_NO_AUTO_FIXTURE !== "true") {
     const started = await startEnvLabForTest();
     if (started) {
       envLabCleanup = started.cleanup;
@@ -137,7 +137,7 @@ const describeLiveSsh = (() => {
   // If explicit vars are set, use them. Otherwise, we'll attempt env-lab in beforeAll.
   if (tryExplicitConfig()) return describe;
   // If NO_AUTO_FIXTURE is set and no explicit config, skip immediately
-  if (process.env.PAPERCLIP_ENV_LIVE_SSH_NO_AUTO_FIXTURE === "true") {
+  if (process.env.PILOT_ENV_LIVE_SSH_NO_AUTO_FIXTURE === "true") {
     console.warn(
       "Skipping live SSH smoke test. Set PAPERCLIP_ENV_LIVE_SSH_HOST, PAPERCLIP_ENV_LIVE_SSH_USERNAME, and PAPERCLIP_ENV_LIVE_SSH_REMOTE_WORKSPACE_PATH to enable it, or remove PAPERCLIP_ENV_LIVE_SSH_NO_AUTO_FIXTURE to auto-start env-lab.",
     );

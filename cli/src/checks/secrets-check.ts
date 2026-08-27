@@ -63,7 +63,7 @@ export function secretsCheck(config: PilotConfig, configPath?: string): CheckRes
     };
   }
 
-  const envMasterKey = process.env.PAPERCLIP_SECRETS_MASTER_KEY;
+  const envMasterKey = process.env.PILOT_SECRETS_MASTER_KEY;
   if (envMasterKey && envMasterKey.trim().length > 0) {
     if (!decodeMasterKey(envMasterKey)) {
       return {
@@ -86,7 +86,7 @@ export function secretsCheck(config: PilotConfig, configPath?: string): CheckRes
     );
   }
 
-  const keyFileOverride = process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE;
+  const keyFileOverride = process.env.PILOT_SECRETS_MASTER_KEY_FILE;
   const configuredPath =
     keyFileOverride && keyFileOverride.trim().length > 0
       ? keyFileOverride.trim()
@@ -177,7 +177,7 @@ function awsSecretsManagerCheck(): CheckResult {
     process.env.AWS_ACCESS_KEY_ID?.trim() && process.env.AWS_SECRET_ACCESS_KEY?.trim();
   const credentialSource = detectedAwsCredentialSources().join(", ");
   const message =
-    `AWS Secrets Manager provider configured for deployment ${process.env.PAPERCLIP_SECRETS_AWS_DEPLOYMENT_ID}; ` +
+    `AWS Secrets Manager provider configured for deployment ${process.env.PILOT_SECRETS_AWS_DEPLOYMENT_ID}; ` +
     `runtime credentials source: ${credentialSource || "AWS SDK default credential chain"}`;
 
   if (staticEnvCredentials) {
@@ -202,18 +202,18 @@ function missingAwsSecretsManagerConfig(): string[] {
   const missing: string[] = [];
   if (
     !(
-      process.env.PAPERCLIP_SECRETS_AWS_REGION?.trim() ||
+      process.env.PILOT_SECRETS_AWS_REGION?.trim() ||
       process.env.AWS_REGION?.trim() ||
       process.env.AWS_DEFAULT_REGION?.trim()
     )
   ) {
     missing.push("PAPERCLIP_SECRETS_AWS_REGION or AWS_REGION/AWS_DEFAULT_REGION");
   }
-  if (!process.env.PAPERCLIP_SECRETS_AWS_DEPLOYMENT_ID?.trim()) {
-    missing.push("PAPERCLIP_SECRETS_AWS_DEPLOYMENT_ID");
+  if (!process.env.PILOT_SECRETS_AWS_DEPLOYMENT_ID?.trim()) {
+    missing.push("PILOT_SECRETS_AWS_DEPLOYMENT_ID");
   }
-  if (!process.env.PAPERCLIP_SECRETS_AWS_KMS_KEY_ID?.trim()) {
-    missing.push("PAPERCLIP_SECRETS_AWS_KMS_KEY_ID");
+  if (!process.env.PILOT_SECRETS_AWS_KMS_KEY_ID?.trim()) {
+    missing.push("PILOT_SECRETS_AWS_KMS_KEY_ID");
   }
   return missing;
 }

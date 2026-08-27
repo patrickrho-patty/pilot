@@ -34,8 +34,8 @@ import { OPERATION_ORIGIN_KIND, type WikiSkillResource } from "../src/wiki.js";
 
 const COMPANY_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_COMPANY_ID = "99999999-9999-4999-8999-999999999999";
-const ORIGINAL_DEPLOYMENT_MODE = process.env.PAPERCLIP_DEPLOYMENT_MODE;
-const ORIGINAL_DEPLOYMENT_EXPOSURE = process.env.PAPERCLIP_DEPLOYMENT_EXPOSURE;
+const ORIGINAL_DEPLOYMENT_MODE = process.env.PILOT_DEPLOYMENT_MODE;
+const ORIGINAL_DEPLOYMENT_EXPOSURE = process.env.PILOT_DEPLOYMENT_EXPOSURE;
 type TestBridgeGlobal = typeof globalThis & {
   __paperclipPluginBridge__?: {
     sdkUi?: Record<string, unknown>;
@@ -101,14 +101,14 @@ let mockPageMetadataByPath: Record<string, {
 
 beforeEach(() => {
   if (ORIGINAL_DEPLOYMENT_MODE == null) {
-    delete process.env.PAPERCLIP_DEPLOYMENT_MODE;
+    delete process.env.PILOT_DEPLOYMENT_MODE;
   } else {
-    process.env.PAPERCLIP_DEPLOYMENT_MODE = ORIGINAL_DEPLOYMENT_MODE;
+    process.env.PILOT_DEPLOYMENT_MODE = ORIGINAL_DEPLOYMENT_MODE;
   }
   if (ORIGINAL_DEPLOYMENT_EXPOSURE == null) {
-    delete process.env.PAPERCLIP_DEPLOYMENT_EXPOSURE;
+    delete process.env.PILOT_DEPLOYMENT_EXPOSURE;
   } else {
-    process.env.PAPERCLIP_DEPLOYMENT_EXPOSURE = ORIGINAL_DEPLOYMENT_EXPOSURE;
+    process.env.PILOT_DEPLOYMENT_EXPOSURE = ORIGINAL_DEPLOYMENT_EXPOSURE;
   }
   mockPathname = "/PAP/wiki";
   mockSearch = "";
@@ -460,14 +460,14 @@ beforeEach(() => {
 
 afterEach(() => {
   if (ORIGINAL_DEPLOYMENT_MODE == null) {
-    delete process.env.PAPERCLIP_DEPLOYMENT_MODE;
+    delete process.env.PILOT_DEPLOYMENT_MODE;
   } else {
-    process.env.PAPERCLIP_DEPLOYMENT_MODE = ORIGINAL_DEPLOYMENT_MODE;
+    process.env.PILOT_DEPLOYMENT_MODE = ORIGINAL_DEPLOYMENT_MODE;
   }
   if (ORIGINAL_DEPLOYMENT_EXPOSURE == null) {
-    delete process.env.PAPERCLIP_DEPLOYMENT_EXPOSURE;
+    delete process.env.PILOT_DEPLOYMENT_EXPOSURE;
   } else {
-    process.env.PAPERCLIP_DEPLOYMENT_EXPOSURE = ORIGINAL_DEPLOYMENT_EXPOSURE;
+    process.env.PILOT_DEPLOYMENT_EXPOSURE = ORIGINAL_DEPLOYMENT_EXPOSURE;
   }
   delete (globalThis as TestBridgeGlobal).__paperclipPluginBridge__;
 });
@@ -2645,8 +2645,8 @@ Duplicate headings receive stable suffixes.
   });
 
   it("refuses auto-apply Paperclip project page patches in authenticated/public deployments", async () => {
-    process.env.PAPERCLIP_DEPLOYMENT_MODE = "authenticated";
-    process.env.PAPERCLIP_DEPLOYMENT_EXPOSURE = "public";
+    process.env.PILOT_DEPLOYMENT_MODE = "authenticated";
+    process.env.PILOT_DEPLOYMENT_EXPOSURE = "public";
     const harness = createTestHarness({ manifest, config: { autoApplyIngestPatches: true } });
     const project = existingProject();
     const issue = pilotIssue({

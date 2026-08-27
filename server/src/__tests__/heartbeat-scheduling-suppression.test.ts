@@ -7,7 +7,7 @@ import {
 describe("heartbeat scheduling suppression", () => {
   it("suppresses heartbeat scheduling for worktree runtimes", () => {
     expect(resolveHeartbeatSchedulingSuppression({
-      PAPERCLIP_IN_WORKTREE: "true",
+      PILOT_IN_WORKTREE: "true",
     })).toEqual({
       suppressed: true,
       reason: "worktree_instance",
@@ -16,7 +16,7 @@ describe("heartbeat scheduling suppression", () => {
 
   it("suppresses heartbeat scheduling while database restore is in progress", () => {
     expect(resolveHeartbeatSchedulingSuppression({
-      PAPERCLIP_DATABASE_RESTORE_IN_PROGRESS: "1",
+      PILOT_DATABASE_RESTORE_IN_PROGRESS: "1",
     })).toEqual({
       suppressed: true,
       reason: "database_restore_in_progress",
@@ -33,7 +33,7 @@ describe("heartbeat scheduling suppression", () => {
   it("lifts worktree suppression when run execution is explicitly allowed", () => {
     expect(
       resolveHeartbeatSchedulingSuppression(
-        { PAPERCLIP_IN_WORKTREE: "true" },
+        { PILOT_IN_WORKTREE: "true" },
         { allowWorktreeRunExecution: true },
       ),
     ).toEqual({
@@ -46,8 +46,8 @@ describe("heartbeat scheduling suppression", () => {
     expect(
       resolveHeartbeatSchedulingSuppression(
         {
-          PAPERCLIP_IN_WORKTREE: "true",
-          PAPERCLIP_DATABASE_RESTORE_IN_PROGRESS: "1",
+          PILOT_IN_WORKTREE: "true",
+          PILOT_DATABASE_RESTORE_IN_PROGRESS: "1",
         },
         { allowWorktreeRunExecution: true },
       ),

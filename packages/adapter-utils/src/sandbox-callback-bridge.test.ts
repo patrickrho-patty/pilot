@@ -54,7 +54,7 @@ describe("sandbox callback bridge", () => {
           (args[0] === "-c" || args[0] === "-lc") &&
           typeof args[1] === "string"
         ) {
-          env.PAPERCLIP_TEST_STDIN = input.stdin;
+          env.PILOT_TEST_STDIN = input.stdin;
           args[1] = `printf '%s' \"$PAPERCLIP_TEST_STDIN\" | (${args[1]})`;
         }
         try {
@@ -1366,7 +1366,7 @@ describe("sandbox callback bridge", () => {
 
     expect(runner.execute).toHaveBeenCalledWith(expect.objectContaining({
       env: {
-        PAPERCLIP_SANDBOX_EXEC_CHANNEL: "bridge",
+        PILOT_SANDBOX_EXEC_CHANNEL: "bridge",
       },
     }));
   });

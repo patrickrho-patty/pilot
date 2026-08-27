@@ -47,11 +47,11 @@ describe("reconcileCodexLocalManagedHomesOnStartup", () => {
     await fs.mkdir(sharedCodexHome, { recursive: true });
     await fs.writeFile(path.join(sharedCodexHome, "auth.json"), '{"OPENAI_API_KEY":"sk-shared"}', "utf8");
 
-    for (const key of ["PAPERCLIP_HOME", "PAPERCLIP_INSTANCE_ID", "CODEX_HOME"]) {
+    for (const key of ["PILOT_HOME", "PILOT_INSTANCE_ID", "CODEX_HOME"]) {
       savedEnv[key] = process.env[key];
     }
-    process.env.PAPERCLIP_HOME = pilotHome;
-    process.env.PAPERCLIP_INSTANCE_ID = "default";
+    process.env.PILOT_HOME = pilotHome;
+    process.env.PILOT_INSTANCE_ID = "default";
     process.env.CODEX_HOME = sharedCodexHome;
   });
 

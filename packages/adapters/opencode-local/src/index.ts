@@ -82,7 +82,7 @@ export const DEFAULT_OPENCODE_CHEAP_MODEL = "openai/gpt-5.1-codex-mini";
 export function buildOpenCodeModelProfiles(
   env: NodeJS.ProcessEnv = typeof process === "undefined" ? {} : process.env,
 ): AdapterModelProfileDefinition[] {
-  const override = (env.PAPERCLIP_OPENCODE_CHEAP_MODEL ?? env.PAPERCLIP_OPENCODE_SMALL_MODEL)?.trim();
+  const override = (env.PILOT_OPENCODE_CHEAP_MODEL ?? env.PILOT_OPENCODE_SMALL_MODEL)?.trim();
   return [
     {
       key: "cheap",

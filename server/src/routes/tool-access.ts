@@ -93,8 +93,8 @@ export function toolAccessRoutes(
 
   function configuredPublicBaseUrl() {
     const raw = (
-      process.env.PAPERCLIP_PUBLIC_URL?.trim()
-      || process.env.PAPERCLIP_AUTH_PUBLIC_BASE_URL?.trim()
+      process.env.PILOT_PUBLIC_URL?.trim()
+      || process.env.PILOT_AUTH_PUBLIC_BASE_URL?.trim()
       || process.env.BETTER_AUTH_URL?.trim()
       || process.env.BETTER_AUTH_BASE_URL?.trim()
     );

@@ -493,7 +493,7 @@ export async function resolveCloudTenantActor(
   db: Db,
   req: CloudActorHeaderSource,
 ): Promise<Express.Request["actor"] | null> {
-  const expectedToken = process.env.PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN?.trim();
+  const expectedToken = process.env.PILOT_CLOUD_TENANT_SERVER_TOKEN?.trim();
   if (!expectedToken) return null;
 
   const token = req.header("x-paperclip-cloud-tenant-token")?.trim();

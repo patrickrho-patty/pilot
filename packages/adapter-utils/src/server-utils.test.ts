@@ -68,7 +68,7 @@ describe("buildInvocationEnvForLogs", () => {
     );
 
     expect(loggedEnv.SAFE_VALUE).toBe("visible");
-    expect(loggedEnv.PAPERCLIP_RESOLVED_COMMAND).toBe(
+    expect(loggedEnv.PILOT_RESOLVED_COMMAND).toBe(
       "env OPENAI_API_KEY=***REDACTED*** PAPERCLIP_API_KEY='***REDACTED***' custom-acp --paperclip-api-key=***REDACTED*** --token ***REDACTED***",
     );
   });
@@ -2310,14 +2310,14 @@ describe("applyPaperclipWorkspaceEnv", () => {
     );
 
     expect(env).toEqual({
-      PAPERCLIP_WORKSPACE_CWD: "/tmp/workspace",
-      PAPERCLIP_WORKSPACE_SOURCE: "project_primary",
-      PAPERCLIP_WORKSPACE_STRATEGY: "git_worktree",
-      PAPERCLIP_WORKSPACE_ID: "workspace-1",
-      PAPERCLIP_WORKSPACE_REPO_URL: "https://github.com/paperclipai/paperclip.git",
-      PAPERCLIP_WORKSPACE_REPO_REF: "main",
-      PAPERCLIP_WORKSPACE_BRANCH: "feature/test",
-      PAPERCLIP_WORKSPACE_WORKTREE_PATH: "/tmp/worktree",
+      PILOT_WORKSPACE_CWD: "/tmp/workspace",
+      PILOT_WORKSPACE_SOURCE: "project_primary",
+      PILOT_WORKSPACE_STRATEGY: "git_worktree",
+      PILOT_WORKSPACE_ID: "workspace-1",
+      PILOT_WORKSPACE_REPO_URL: "https://github.com/paperclipai/paperclip.git",
+      PILOT_WORKSPACE_REPO_REF: "main",
+      PILOT_WORKSPACE_BRANCH: "feature/test",
+      PILOT_WORKSPACE_WORKTREE_PATH: "/tmp/worktree",
       AGENT_HOME: "/tmp/agent-home",
     });
   });
@@ -2508,9 +2508,9 @@ describe("rewriteWorkspaceCwdEnvVarsForExecution", () => {
 describe("refreshPaperclipWorkspaceEnvForExecution", () => {
   it("rewrites Paperclip workspace env to the prepared remote runtime cwd", () => {
     const env: Record<string, string> = {
-      PAPERCLIP_WORKSPACE_CWD: "/remote/workspace",
-      PAPERCLIP_WORKSPACE_WORKTREE_PATH: "/host/worktree",
-      PAPERCLIP_WORKSPACES_JSON: JSON.stringify([
+      PILOT_WORKSPACE_CWD: "/remote/workspace",
+      PILOT_WORKSPACE_WORKTREE_PATH: "/host/worktree",
+      PILOT_WORKSPACES_JSON: JSON.stringify([
         { workspaceId: "workspace-1", cwd: "/remote/workspace" },
         { workspaceId: "workspace-2", cwd: "/tmp/other" },
       ]),
@@ -2545,10 +2545,10 @@ describe("refreshPaperclipWorkspaceEnvForExecution", () => {
         },
       ],
     });
-    expect(env.PAPERCLIP_WORKSPACE_CWD).toBe("/remote/workspace/.paperclip-runtime/runs/run-1/workspace");
-    expect(env.PAPERCLIP_WORKSPACE_WORKTREE_PATH).toBeUndefined();
+    expect(env.PILOT_WORKSPACE_CWD).toBe("/remote/workspace/.paperclip-runtime/runs/run-1/workspace");
+    expect(env.PILOT_WORKSPACE_WORKTREE_PATH).toBeUndefined();
     expect(env.QA_PROJECT_WORKSPACE_CWD).toBe("/remote/workspace/.paperclip-runtime/runs/run-1/workspace");
-    expect(JSON.parse(env.PAPERCLIP_WORKSPACES_JSON ?? "[]")).toEqual([
+    expect(JSON.parse(env.PILOT_WORKSPACES_JSON ?? "[]")).toEqual([
       {
         workspaceId: "workspace-1",
         cwd: "/remote/workspace/.paperclip-runtime/runs/run-1/workspace",
@@ -2561,9 +2561,9 @@ describe("refreshPaperclipWorkspaceEnvForExecution", () => {
 
   it("forwards resolved adapter env but never overrides Paperclip runtime env", () => {
     const env: Record<string, string> = {
-      PAPERCLIP_RUN_ID: "run-1",
-      PAPERCLIP_TASK_ID: "issue-1",
-      PAPERCLIP_API_URL: "http://runtime:3100",
+      PILOT_RUN_ID: "run-1",
+      PILOT_TASK_ID: "issue-1",
+      PILOT_API_URL: "http://runtime:3100",
     };
 
     refreshPilotWorkspaceEnvForExecution({
@@ -2574,16 +2574,16 @@ describe("refreshPaperclipWorkspaceEnvForExecution", () => {
         // Server-resolved secret_ref value arrives as a plain string here.
         OPENROUTER_API_KEY: "resolved-secret-value",
         // Reserved-namespace keys must not clobber runtime identity/wake vars.
-        PAPERCLIP_TASK_ID: "attacker-issue",
-        PAPERCLIP_API_URL: "http://evil:9999",
+        PILOT_TASK_ID: "attacker-issue",
+        PILOT_API_URL: "http://evil:9999",
       },
       workspaceCwd: null,
     });
 
     expect(env.OOGA_BOOGA_123).toBe("plain-value");
     expect(env.OPENROUTER_API_KEY).toBe("resolved-secret-value");
-    expect(env.PAPERCLIP_TASK_ID).toBe("issue-1");
-    expect(env.PAPERCLIP_API_URL).toBe("http://runtime:3100");
+    expect(env.PILOT_TASK_ID).toBe("issue-1");
+    expect(env.PILOT_API_URL).toBe("http://runtime:3100");
   });
 
   it("applies a configured PAPERCLIP_* key only when Paperclip has not set it", () => {
@@ -2592,14 +2592,14 @@ describe("refreshPaperclipWorkspaceEnvForExecution", () => {
     refreshPilotWorkspaceEnvForExecution({
       env,
       envConfig: {
-        PAPERCLIP_CLOUD_PROVIDER_TOKEN: "cloud-token",
+        PILOT_CLOUD_PROVIDER_TOKEN: "cloud-token",
       },
       workspaceCwd: null,
     });
 
     // Paperclip did not assign this PAPERCLIP_*-named key for the run, so the
     // configured value flows through to the spawned process.
-    expect(env.PAPERCLIP_CLOUD_PROVIDER_TOKEN).toBe("cloud-token");
+    expect(env.PILOT_CLOUD_PROVIDER_TOKEN).toBe("cloud-token");
   });
 
   it("never accepts PAPERCLIP_API_KEY from config env", () => {
@@ -2608,14 +2608,14 @@ describe("refreshPaperclipWorkspaceEnvForExecution", () => {
     refreshPilotWorkspaceEnvForExecution({
       env,
       envConfig: {
-        PAPERCLIP_API_KEY: "explicit-key",
+        PILOT_API_KEY: "explicit-key",
       },
       workspaceCwd: null,
     });
 
     // The harness-minted run token is the only PAPERCLIP_API_KEY source;
     // a configured value is dropped even when Paperclip has not set one.
-    expect(env.PAPERCLIP_API_KEY).toBeUndefined();
+    expect(env.PILOT_API_KEY).toBeUndefined();
   });
 });
 
@@ -2631,10 +2631,10 @@ describe("appendWithByteCap", () => {
 
 describe("buildPilotEnv", () => {
   const ENV_KEYS = [
-    "PAPERCLIP_API_URL",
-    "PAPERCLIP_RUNTIME_API_URL",
-    "PAPERCLIP_LISTEN_HOST",
-    "PAPERCLIP_LISTEN_PORT",
+    "PILOT_API_URL",
+    "PILOT_RUNTIME_API_URL",
+    "PILOT_LISTEN_HOST",
+    "PILOT_LISTEN_PORT",
     "HOST",
     "PORT",
   ] as const;
@@ -2657,14 +2657,14 @@ describe("buildPilotEnv", () => {
   it("prefers an explicit PAPERCLIP_API_URL override over the derived runtime URL", () => {
     withEnv(
       {
-        PAPERCLIP_API_URL: "http://localhost:3100",
-        PAPERCLIP_RUNTIME_API_URL: "http://203.0.113.7:3100",
+        PILOT_API_URL: "http://localhost:3100",
+        PILOT_RUNTIME_API_URL: "http://203.0.113.7:3100",
       },
       () => {
         const env = buildPilotEnv({ id: "agent-1", companyId: "company-1" });
-        expect(env.PAPERCLIP_API_URL).toBe("http://localhost:3100");
-        expect(env.PAPERCLIP_AGENT_ID).toBe("agent-1");
-        expect(env.PAPERCLIP_COMPANY_ID).toBe("company-1");
+        expect(env.PILOT_API_URL).toBe("http://localhost:3100");
+        expect(env.PILOT_AGENT_ID).toBe("agent-1");
+        expect(env.PILOT_COMPANY_ID).toBe("company-1");
       },
     );
   });
@@ -2680,22 +2680,22 @@ describe("buildPilotEnv", () => {
         expect(env[`PAPERCLIP_${key.slice("PILOT_".length)}`]).toBe(env[key]);
       }
       // And the legacy contract itself holds regardless of internal spelling.
-      expect(env.PAPERCLIP_AGENT_ID ?? env.PILOT_AGENT_ID).toBe("agent-1");
-      expect(env.PAPERCLIP_COMPANY_ID ?? env.PILOT_COMPANY_ID).toBe("company-1");
+      expect(env.PILOT_AGENT_ID ?? env.PILOT_AGENT_ID).toBe("agent-1");
+      expect(env.PILOT_COMPANY_ID ?? env.PILOT_COMPANY_ID).toBe("company-1");
     });
   });
 
   it("falls back to the derived runtime URL when no explicit override is set", () => {
-    withEnv({ PAPERCLIP_RUNTIME_API_URL: "http://203.0.113.7:3100" }, () => {
+    withEnv({ PILOT_RUNTIME_API_URL: "http://203.0.113.7:3100" }, () => {
       const env = buildPilotEnv({ id: "agent-1", companyId: "company-1" });
-      expect(env.PAPERCLIP_API_URL).toBe("http://203.0.113.7:3100");
+      expect(env.PILOT_API_URL).toBe("http://203.0.113.7:3100");
     });
   });
 
   it("derives a listen-host URL when neither override is set", () => {
-    withEnv({ PAPERCLIP_LISTEN_HOST: "0.0.0.0", PAPERCLIP_LISTEN_PORT: "3200" }, () => {
+    withEnv({ PILOT_LISTEN_HOST: "0.0.0.0", PILOT_LISTEN_PORT: "3200" }, () => {
       const env = buildPilotEnv({ id: "agent-1", companyId: "company-1" });
-      expect(env.PAPERCLIP_API_URL).toBe("http://localhost:3200");
+      expect(env.PILOT_API_URL).toBe("http://localhost:3200");
     });
   });
 });

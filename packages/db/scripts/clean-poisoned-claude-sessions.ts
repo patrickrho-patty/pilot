@@ -226,8 +226,8 @@ function readDatabaseUrlFromConfig(configPath: string): string {
 function defaultConfigPath(): string | null {
   const candidates: string[] = [];
   const home = os.homedir();
-  if (process.env.PAPERCLIP_HOME) {
-    candidates.push(path.join(process.env.PAPERCLIP_HOME, "config.json"));
+  if (process.env.PILOT_HOME) {
+    candidates.push(path.join(process.env.PILOT_HOME, "config.json"));
   }
   candidates.push(path.join(home, ".paperclip", "instances", "default", "config.json"));
   for (const candidate of candidates) {

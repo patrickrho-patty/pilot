@@ -142,7 +142,7 @@ let cachedCatalogManifest: {
 } | null = null;
 
 function buildCatalogPackageRootCandidates() {
-  const configuredRoot = process.env.PAPERCLIP_TEAMS_CATALOG_DIR?.trim();
+  const configuredRoot = process.env.PILOT_TEAMS_CATALOG_DIR?.trim();
   const candidates = [
     ...(configuredRoot ? [path.resolve(configuredRoot)] : []),
     path.resolve(process.cwd(), "packages/teams-catalog"),
@@ -684,7 +684,7 @@ async function readCatalogTeamSourceFiles(team: CatalogTeam): Promise<Record<str
 const FALLBACK_SAFE_CATALOG_ADAPTER_TYPE = "claude_local";
 
 function defaultSafeCatalogAdapterType() {
-  return process.env.PAPERCLIP_TEAMS_CATALOG_DEFAULT_ADAPTER_TYPE?.trim() || FALLBACK_SAFE_CATALOG_ADAPTER_TYPE;
+  return process.env.PILOT_TEAMS_CATALOG_DEFAULT_ADAPTER_TYPE?.trim() || FALLBACK_SAFE_CATALOG_ADAPTER_TYPE;
 }
 
 /**

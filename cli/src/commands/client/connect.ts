@@ -40,7 +40,7 @@ export function registerConnectCommand(program: Command): void {
       .command("connect")
       .description("Interactively connect the CLI as a board operator or agent")
       .option("--persona <persona>", "Persona to configure: board or agent")
-      .option("--api-key-env-var-name <name>", "Env var name to store in the profile", "PAPERCLIP_API_KEY")
+      .option("--api-key-env-var-name <name>", "Env var name to store in the profile", "PILOT_API_KEY")
       .option("--token-name <name>", "Token label to create")
       .action(async (opts: ConnectOptions) => {
         try {
@@ -84,7 +84,7 @@ async function connectWizard(opts: ConnectOptions) {
 
   const persona = await choosePersona(opts.persona);
   const profileName = opts.profile?.trim() || await askProfileName(resolvedProfile.name);
-  const apiKeyEnvVarName = opts.apiKeyEnvVarName?.trim() || "PAPERCLIP_API_KEY";
+  const apiKeyEnvVarName = opts.apiKeyEnvVarName?.trim() || "PILOT_API_KEY";
 
   if (persona === "board") {
     const company = await chooseCompany(companies, opts.companyId ?? resolvedProfile.profile.companyId, {

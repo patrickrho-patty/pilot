@@ -44,20 +44,20 @@ describe("parseExecutionPolicyBootstrapEnv", () => {
 
   it("returns null when execution mode is explicitly any", () => {
     expect(
-      parseExecutionPolicyBootstrapEnv(env({ PAPERCLIP_EXECUTION_MODE: "any" })),
+      parseExecutionPolicyBootstrapEnv(env({ PILOT_EXECUTION_MODE: "any" })),
     ).toBeNull();
   });
 
   it("parses the forced kubernetes policy with a job/gvisor/cilium config", () => {
     const parsed = parseExecutionPolicyBootstrapEnv(
       env({
-        PAPERCLIP_EXECUTION_MODE: "kubernetes",
-        PAPERCLIP_K8S_BACKEND: "job",
-        PAPERCLIP_K8S_IN_CLUSTER: "true",
-        PAPERCLIP_K8S_RUNTIME_CLASS_NAME: "gvisor",
-        PAPERCLIP_K8S_EGRESS_MODE: "cilium",
-        PAPERCLIP_K8S_EGRESS_ALLOW_FQDNS: "api.anthropic.com, api.openai.com",
-        PAPERCLIP_K8S_EGRESS_ALLOW_CIDRS: "10.0.0.0/8",
+        PILOT_EXECUTION_MODE: "kubernetes",
+        PILOT_K8S_BACKEND: "job",
+        PILOT_K8S_IN_CLUSTER: "true",
+        PILOT_K8S_RUNTIME_CLASS_NAME: "gvisor",
+        PILOT_K8S_EGRESS_MODE: "cilium",
+        PILOT_K8S_EGRESS_ALLOW_FQDNS: "api.anthropic.com, api.openai.com",
+        PILOT_K8S_EGRESS_ALLOW_CIDRS: "10.0.0.0/8",
       }),
     );
     expect(parsed).not.toBeNull();
@@ -74,7 +74,7 @@ describe("parseExecutionPolicyBootstrapEnv", () => {
 
   it("defaults inCluster false and omits unset optional fields", () => {
     const parsed = parseExecutionPolicyBootstrapEnv(
-      env({ PAPERCLIP_EXECUTION_MODE: "kubernetes" }),
+      env({ PILOT_EXECUTION_MODE: "kubernetes" }),
     );
     expect(parsed?.kubernetesConfig.inCluster).toBe(false);
     expect(parsed?.kubernetesConfig.runtimeClassName).toBeUndefined();
@@ -83,15 +83,15 @@ describe("parseExecutionPolicyBootstrapEnv", () => {
 
   it("throws on an unknown execution mode", () => {
     expect(() =>
-      parseExecutionPolicyBootstrapEnv(env({ PAPERCLIP_EXECUTION_MODE: "vm" })),
+      parseExecutionPolicyBootstrapEnv(env({ PILOT_EXECUTION_MODE: "vm" })),
     ).toThrow(/PAPERCLIP_EXECUTION_MODE/);
   });
 
   it("attaches the declared adapter registry to the kubernetes config", () => {
     const parsed = parseExecutionPolicyBootstrapEnv(
       env({
-        PAPERCLIP_EXECUTION_MODE: "kubernetes",
-        PAPERCLIP_ADAPTERS: JSON.stringify([
+        PILOT_EXECUTION_MODE: "kubernetes",
+        PILOT_ADAPTERS: JSON.stringify([
           { adapterType: "opencode_local", runtimeImage: "img", envKeys: ["ANTHROPIC_API_KEY"], allowFqdns: [], probeCommand: ["opencode", "--version"], defaultEnv: { ANTHROPIC_BASE_URL: "http://bifrost:8080" } },
         ]),
       }),
@@ -101,34 +101,34 @@ describe("parseExecutionPolicyBootstrapEnv", () => {
   });
 
   it("leaves adapters undefined when PAPERCLIP_ADAPTERS is absent", () => {
-    const parsed = parseExecutionPolicyBootstrapEnv(env({ PAPERCLIP_EXECUTION_MODE: "kubernetes" }));
+    const parsed = parseExecutionPolicyBootstrapEnv(env({ PILOT_EXECUTION_MODE: "kubernetes" }));
     expect(parsed?.kubernetesConfig.adapters).toBeUndefined();
   });
 
   it("reads PAPERCLIP_K8S_RPC_TIMEOUT_MS into kubernetesConfig.timeoutMs", () => {
     const parsed = parseExecutionPolicyBootstrapEnv(
       env({
-        PAPERCLIP_EXECUTION_MODE: "kubernetes",
-        PAPERCLIP_K8S_RPC_TIMEOUT_MS: "600000",
+        PILOT_EXECUTION_MODE: "kubernetes",
+        PILOT_K8S_RPC_TIMEOUT_MS: "600000",
       }),
     );
     expect(parsed?.kubernetesConfig.timeoutMs).toBe(600000);
   });
 
   it("omits timeoutMs when PAPERCLIP_K8S_RPC_TIMEOUT_MS is absent", () => {
-    const parsed = parseExecutionPolicyBootstrapEnv(env({ PAPERCLIP_EXECUTION_MODE: "kubernetes" }));
+    const parsed = parseExecutionPolicyBootstrapEnv(env({ PILOT_EXECUTION_MODE: "kubernetes" }));
     expect(parsed?.kubernetesConfig.timeoutMs).toBeUndefined();
   });
 
   it("throws when PAPERCLIP_K8S_RPC_TIMEOUT_MS is not a positive integer", () => {
     expect(() =>
       parseExecutionPolicyBootstrapEnv(
-        env({ PAPERCLIP_EXECUTION_MODE: "kubernetes", PAPERCLIP_K8S_RPC_TIMEOUT_MS: "0" }),
+        env({ PILOT_EXECUTION_MODE: "kubernetes", PILOT_K8S_RPC_TIMEOUT_MS: "0" }),
       ),
     ).toThrow(/PAPERCLIP_K8S_RPC_TIMEOUT_MS/);
     expect(() =>
       parseExecutionPolicyBootstrapEnv(
-        env({ PAPERCLIP_EXECUTION_MODE: "kubernetes", PAPERCLIP_K8S_RPC_TIMEOUT_MS: "abc" }),
+        env({ PILOT_EXECUTION_MODE: "kubernetes", PILOT_K8S_RPC_TIMEOUT_MS: "abc" }),
       ),
     ).toThrow(/PAPERCLIP_K8S_RPC_TIMEOUT_MS/);
   });

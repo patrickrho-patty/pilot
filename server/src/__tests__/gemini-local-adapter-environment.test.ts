@@ -8,7 +8,7 @@ async function writeFakeGeminiCommand(binDir: string, argsCapturePath: string): 
   const commandPath = path.join(binDir, "gemini");
   const script = `#!/usr/bin/env node
 const fs = require("node:fs");
-const outPath = process.env.PAPERCLIP_TEST_ARGS_PATH;
+const outPath = process.env.PILOT_TEST_ARGS_PATH ?? process.env.PAPERCLIP_TEST_ARGS_PATH;
 if (outPath) {
   fs.writeFileSync(outPath, JSON.stringify(process.argv.slice(2)), "utf8");
 }
@@ -90,7 +90,7 @@ describe("gemini_local environment diagnostics", () => {
         yolo: true,
         env: {
           GEMINI_API_KEY: "test-key",
-          PAPERCLIP_TEST_ARGS_PATH: argsCapturePath,
+          PILOT_TEST_ARGS_PATH: argsCapturePath,
           PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
         },
       },

@@ -907,7 +907,7 @@ const LOW_TRUST_SENSITIVE_ENV_KEY_RE =
 //    binding; adapters enforce this at env-merge time.
 // 3. Any other PAPERCLIP_*-named binding is user data and flows through to
 //    the run env like any non-prefixed binding.
-const FORBIDDEN_ENV_BINDING_KEYS = new Set(["PAPERCLIP_API_KEY"]);
+const FORBIDDEN_ENV_BINDING_KEYS = new Set(["PILOT_API_KEY"]);
 
 function stripForbiddenEnvBindings(envValue: unknown): Record<string, unknown> | null {
   const record = parseObject(envValue);
@@ -2805,7 +2805,7 @@ export function prioritizeProjectWorkspaceCandidatesForRun<T extends ProjectWork
  * value (`"false"`, `"0"`, `"off"`, or `""`). While off, a run materializes only
  * the anchor project's workspace exactly as before — the referenced set is inert.
  */
-export const MULTI_PROJECT_WORKSPACE_SYNC_ENV = "PAPERCLIP_MULTI_PROJECT_WORKSPACE_SYNC";
+export const MULTI_PROJECT_WORKSPACE_SYNC_ENV = "PILOT_MULTI_PROJECT_WORKSPACE_SYNC";
 
 /**
  * True when an environment value explicitly turns a flag off. An unset value is
@@ -2856,7 +2856,7 @@ export function isRemoteExecutionEnvironmentDriver(driver: string | null | undef
  * runs no referenced-project authorization or staging and reverts to the remote drop path.
  */
 export const MULTI_PROJECT_WORKSPACE_SYNC_REMOTE_ENV =
-  "PAPERCLIP_MULTI_PROJECT_WORKSPACE_SYNC_REMOTE";
+  "PILOT_MULTI_PROJECT_WORKSPACE_SYNC_REMOTE";
 
 export function isMultiProjectWorkspaceSyncRemoteEnabled(
   env: Record<string, string | undefined> = process.env,
@@ -3331,7 +3331,7 @@ type ManagedMcpGatewayRunConfig = {
 };
 
 function pilotApiBaseUrl(): string {
-  const configured = readNonEmptyString(process.env.PAPERCLIP_API_URL);
+  const configured = readNonEmptyString(process.env.PILOT_API_URL);
   if (!configured) {
     throw new Error("PAPERCLIP_API_URL is required to deliver managed runtime MCP servers");
   }
@@ -6735,12 +6735,12 @@ export function resolveHeartbeatSchedulingSuppression(
   env: Record<string, string | undefined> = process.env,
   overrides: { allowWorktreeRunExecution?: boolean } = {},
 ): { suppressed: boolean; reason: "worktree_instance" | "database_restore_in_progress" | null } {
-  if (isTruthyRuntimeEnvValue(env.PAPERCLIP_IN_WORKTREE) && !overrides.allowWorktreeRunExecution) {
+  if (isTruthyRuntimeEnvValue(env.PILOT_IN_WORKTREE) && !overrides.allowWorktreeRunExecution) {
     return { suppressed: true, reason: "worktree_instance" };
   }
   if (
-    isTruthyRuntimeEnvValue(env.PAPERCLIP_DATABASE_RESTORE_IN_PROGRESS) ||
-    isTruthyRuntimeEnvValue(env.PAPERCLIP_RESTORE_IN_PROGRESS)
+    isTruthyRuntimeEnvValue(env.PILOT_DATABASE_RESTORE_IN_PROGRESS) ||
+    isTruthyRuntimeEnvValue(env.PILOT_RESTORE_IN_PROGRESS)
   ) {
     return { suppressed: true, reason: "database_restore_in_progress" };
   }
@@ -6753,7 +6753,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     enabled: (await instanceSettings.getGeneral()).censorUsernameInLogs,
   });
   const runtimeEnv = options.runtimeEnv ?? process.env;
-  const inWorktreeRuntime = isTruthyRuntimeEnvValue(runtimeEnv.PAPERCLIP_IN_WORKTREE);
+  const inWorktreeRuntime = isTruthyRuntimeEnvValue(runtimeEnv.PILOT_IN_WORKTREE);
   // Preview worktree instances suppress the run engine by default. Users can lift
   // that per-worktree via the `enableWorktreeRunExecution` experimental setting
   // (worktree instances have their own isolated DB, so it can't affect the parent).
@@ -6775,7 +6775,7 @@ export function heartbeatService(db: Db, options: HeartbeatServiceOptions = {}) 
     try {
       const activation = resolveWorktreeRunExecutionActivation(
         await instanceSettings.getExperimental(),
-        runtimeEnv.PAPERCLIP_INSTANCE_ID?.trim() || null,
+        runtimeEnv.PILOT_INSTANCE_ID?.trim() || null,
       );
       const cutoff = activation.armed ? new Date(activation.cutoff) : null;
       cachedWorktreeRunExecutionOverride = {

@@ -27,7 +27,7 @@ export function deploymentAuthCheck(config: PilotConfig): CheckResult {
 
   const secret =
     process.env.BETTER_AUTH_SECRET?.trim() ??
-    process.env.PAPERCLIP_AGENT_JWT_SECRET?.trim();
+    process.env.PILOT_AGENT_JWT_SECRET?.trim();
   if (!secret) {
     return {
       name: "Deployment/auth mode",

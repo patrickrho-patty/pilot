@@ -49,8 +49,8 @@ afterEach(async () => {
       cleanupDirs.delete(dir);
     }),
   );
-  delete process.env.PAPERCLIP_HOME;
-  delete process.env.PAPERCLIP_INSTANCE_ID;
+  delete process.env.PILOT_HOME;
+  delete process.env.PILOT_INSTANCE_ID;
 });
 
 const BASE_CONFIG = {
@@ -149,8 +149,8 @@ describe("setup/sync rerun survival — cross-cutting", () => {
 
   it("keeps operator edits and additions in a managed instructions tree across a re-materialize", async () => {
     const home = await tmp("pap16587-instr-home-");
-    process.env.PAPERCLIP_HOME = home;
-    process.env.PAPERCLIP_INSTANCE_ID = "test-instance";
+    process.env.PILOT_HOME = home;
+    process.env.PILOT_INSTANCE_ID = "test-instance";
 
     const svc = agentInstructionsService();
     const agent = { id: "agent-1", companyId: "company-1", name: "Agent 1", adapterConfig: {} };

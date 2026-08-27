@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readConfigFile } from "../config-file.js";
 
-const ORIGINAL_PILOT_CONFIG = process.env.PAPERCLIP_CONFIG;
+const ORIGINAL_PILOT_CONFIG = process.env.PILOT_CONFIG;
 
 function writeConfig(configPath: string, value: unknown): void {
   fs.writeFileSync(configPath, `${JSON.stringify(value, null, 2)}\n`);
@@ -38,15 +38,15 @@ describe("readConfigFile", () => {
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-config-file-test-"));
     configPath = path.join(tempDir, "config.json");
-    process.env.PAPERCLIP_CONFIG = configPath;
+    process.env.PILOT_CONFIG = configPath;
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
     if (ORIGINAL_PILOT_CONFIG === undefined) {
-      delete process.env.PAPERCLIP_CONFIG;
+      delete process.env.PILOT_CONFIG;
     } else {
-      process.env.PAPERCLIP_CONFIG = ORIGINAL_PILOT_CONFIG;
+      process.env.PILOT_CONFIG = ORIGINAL_PILOT_CONFIG;
     }
 
     fs.rmSync(tempDir, { recursive: true, force: true });

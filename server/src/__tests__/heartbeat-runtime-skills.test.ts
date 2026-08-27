@@ -69,14 +69,14 @@ describeEmbeddedPostgres("heartbeat runtime skill version pins", () => {
   beforeAll(async () => {
     tempDb = await startEmbeddedPostgresTestDatabase("heartbeat-runtime-skills-");
     db = createDb(tempDb.connectionString);
-    oldPilotHome = process.env.PAPERCLIP_HOME;
+    oldPilotHome = process.env.PILOT_HOME;
     pilotHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-runtime-skills-home-"));
-    process.env.PAPERCLIP_HOME = pilotHome;
+    process.env.PILOT_HOME = pilotHome;
     // The server normalizes PAPERCLIP_API_URL into its own env at boot
     // (server/src/index.ts); heartbeat gateway delivery requires it, so pin
     // a deterministic value for tests that never boot the full server.
-    oldPilotApiUrl = process.env.PAPERCLIP_API_URL;
-    process.env.PAPERCLIP_API_URL = "http://127.0.0.1:3100/api";
+    oldPilotApiUrl = process.env.PILOT_API_URL;
+    process.env.PILOT_API_URL = "http://127.0.0.1:3100/api";
     registerServerAdapter({
       type: TEST_ADAPTER_TYPE,
       execute: async (ctx) => {
@@ -134,10 +134,10 @@ describeEmbeddedPostgres("heartbeat runtime skill version pins", () => {
 
   afterAll(async () => {
     unregisterServerAdapter(TEST_ADAPTER_TYPE);
-    if (oldPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
-    else process.env.PAPERCLIP_HOME = oldPilotHome;
-    if (oldPilotApiUrl === undefined) delete process.env.PAPERCLIP_API_URL;
-    else process.env.PAPERCLIP_API_URL = oldPilotApiUrl;
+    if (oldPilotHome === undefined) delete process.env.PILOT_HOME;
+    else process.env.PILOT_HOME = oldPilotHome;
+    if (oldPilotApiUrl === undefined) delete process.env.PILOT_API_URL;
+    else process.env.PILOT_API_URL = oldPilotApiUrl;
     if (pilotHome) {
       await fs.rm(pilotHome, { recursive: true, force: true });
     }

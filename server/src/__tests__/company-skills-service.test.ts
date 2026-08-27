@@ -52,11 +52,11 @@ describeEmbeddedPostgres("companySkillService.list", () => {
 
   beforeAll(async () => {
     tempDb = await startEmbeddedPostgresTestDatabase("paperclip-company-skills-service-");
-    oldPilotHome = process.env.PAPERCLIP_HOME;
-    oldPilotInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
+    oldPilotHome = process.env.PILOT_HOME;
+    oldPilotInstanceId = process.env.PILOT_INSTANCE_ID;
     pilotHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-company-skills-home-"));
-    process.env.PAPERCLIP_HOME = pilotHome;
-    process.env.PAPERCLIP_INSTANCE_ID = "default";
+    process.env.PILOT_HOME = pilotHome;
+    process.env.PILOT_INSTANCE_ID = "default";
     db = createDb(tempDb.connectionString);
     svc = companySkillService(db);
   }, 20_000);
@@ -74,10 +74,10 @@ describeEmbeddedPostgres("companySkillService.list", () => {
   });
 
   afterAll(async () => {
-    if (oldPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
-    else process.env.PAPERCLIP_HOME = oldPilotHome;
-    if (oldPilotInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-    else process.env.PAPERCLIP_INSTANCE_ID = oldPilotInstanceId;
+    if (oldPilotHome === undefined) delete process.env.PILOT_HOME;
+    else process.env.PILOT_HOME = oldPilotHome;
+    if (oldPilotInstanceId === undefined) delete process.env.PILOT_INSTANCE_ID;
+    else process.env.PILOT_INSTANCE_ID = oldPilotInstanceId;
     if (pilotHome) {
       await fs.rm(pilotHome, { recursive: true, force: true });
     }

@@ -85,23 +85,23 @@ function createFreshConfigPath() {
 describe("onboard", () => {
   beforeEach(() => {
     process.env = { ...ORIGINAL_ENV };
-    delete process.env.PAPERCLIP_AGENT_JWT_SECRET;
-    delete process.env.PAPERCLIP_SECRETS_MASTER_KEY;
-    delete process.env.PAPERCLIP_SECRETS_MASTER_KEY_FILE;
-    delete process.env.PAPERCLIP_DB_BACKUP_DIR;
-    delete process.env.PAPERCLIP_DB_BACKUP_ENABLED;
-    delete process.env.PAPERCLIP_DB_BACKUP_INTERVAL_MINUTES;
-    delete process.env.PAPERCLIP_DB_BACKUP_RETENTION_DAYS;
-    delete process.env.PAPERCLIP_STORAGE_PROVIDER;
-    delete process.env.PAPERCLIP_STORAGE_LOCAL_DIR;
-    delete process.env.PAPERCLIP_SECRETS_PROVIDER;
-    delete process.env.PAPERCLIP_SECRETS_STRICT_MODE;
-    delete process.env.PAPERCLIP_HOME;
-    delete process.env.PAPERCLIP_CONFIG;
-    delete process.env.PAPERCLIP_INSTANCE_ID;
-    delete process.env.PAPERCLIP_BIND;
-    delete process.env.PAPERCLIP_BIND_HOST;
-    delete process.env.PAPERCLIP_TAILNET_BIND_HOST;
+    delete process.env.PILOT_AGENT_JWT_SECRET;
+    delete process.env.PILOT_SECRETS_MASTER_KEY;
+    delete process.env.PILOT_SECRETS_MASTER_KEY_FILE;
+    delete process.env.PILOT_DB_BACKUP_DIR;
+    delete process.env.PILOT_DB_BACKUP_ENABLED;
+    delete process.env.PILOT_DB_BACKUP_INTERVAL_MINUTES;
+    delete process.env.PILOT_DB_BACKUP_RETENTION_DAYS;
+    delete process.env.PILOT_STORAGE_PROVIDER;
+    delete process.env.PILOT_STORAGE_LOCAL_DIR;
+    delete process.env.PILOT_SECRETS_PROVIDER;
+    delete process.env.PILOT_SECRETS_STRICT_MODE;
+    delete process.env.PILOT_HOME;
+    delete process.env.PILOT_CONFIG;
+    delete process.env.PILOT_INSTANCE_ID;
+    delete process.env.PILOT_BIND;
+    delete process.env.PILOT_BIND_HOST;
+    delete process.env.PILOT_TAILNET_BIND_HOST;
     delete process.env.HOST;
   });
 
@@ -148,7 +148,7 @@ describe("onboard", () => {
   it("keeps --yes onboarding on local trusted loopback defaults", async () => {
     const configPath = createFreshConfigPath();
     process.env.HOST = "0.0.0.0";
-    process.env.PAPERCLIP_BIND = "lan";
+    process.env.PILOT_BIND = "lan";
 
     await onboard({ config: configPath, yes: true, invokedByRun: true });
 
@@ -163,7 +163,7 @@ describe("onboard", () => {
     const home = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-onboard-home-"));
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-onboard-cwd-"));
     process.chdir(cwd);
-    process.env.PAPERCLIP_HOME = home;
+    process.env.PILOT_HOME = home;
 
     await onboard({ yes: true, invokedByRun: true });
 
@@ -182,7 +182,7 @@ describe("onboard", () => {
 
   it("supports authenticated/private quickstart bind presets", async () => {
     const configPath = createFreshConfigPath();
-    process.env.PAPERCLIP_TAILNET_BIND_HOST = "100.64.0.8";
+    process.env.PILOT_TAILNET_BIND_HOST = "100.64.0.8";
 
     await onboard({ config: configPath, yes: true, invokedByRun: true, bind: "tailnet" });
 
@@ -195,7 +195,7 @@ describe("onboard", () => {
 
   it("keeps tailnet quickstart on loopback until tailscale is available", async () => {
     const configPath = createFreshConfigPath();
-    delete process.env.PAPERCLIP_TAILNET_BIND_HOST;
+    delete process.env.PILOT_TAILNET_BIND_HOST;
     process.env.PATH = "";
 
     try {
@@ -213,7 +213,7 @@ describe("onboard", () => {
 
   it("ignores deployment env overrides during --yes quickstart", async () => {
     const configPath = createFreshConfigPath();
-    process.env.PAPERCLIP_DEPLOYMENT_MODE = "authenticated";
+    process.env.PILOT_DEPLOYMENT_MODE = "authenticated";
 
     await onboard({ config: configPath, yes: true, invokedByRun: true });
 

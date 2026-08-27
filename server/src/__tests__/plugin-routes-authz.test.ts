@@ -1107,10 +1107,10 @@ describe.sequential("plugin tool and bridge authz", () => {
 describe.sequential("operator-hidden plugin management floor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env.PAPERCLIP_HIDDEN_SETTINGS = "instance.plugins";
+    process.env.PILOT_HIDDEN_SETTINGS = "instance.plugins";
   });
   afterEach(() => {
-    delete process.env.PAPERCLIP_HIDDEN_SETTINGS;
+    delete process.env.PILOT_HIDDEN_SETTINGS;
   });
 
   const instanceAdmin = () => boardActor({ isInstanceAdmin: true, userId: "instance-admin" });

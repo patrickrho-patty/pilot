@@ -37,7 +37,7 @@ describe("managed install commands", () => {
     process.env = {
       ...ORIGINAL_ENV,
       HOME: path.join(root, "home"),
-      PAPERCLIP_HOME: path.join(root, "home", ".paperclip"),
+      PILOT_HOME: path.join(root, "home", ".paperclip"),
       PATH: "/usr/bin:/bin",
       SHELL: "/bin/bash",
     };
@@ -184,7 +184,7 @@ describe("managed install commands", () => {
       expect(env, `${call[0]} ${call[1].join(" ")} must run with an explicit env`).toBeDefined();
       expect(env, `${call[0]} ${call[1].join(" ")} must not inherit NODE_ENV`).not.toHaveProperty("NODE_ENV");
     }
-    const uiPackCall = buildCalls.find(([file, , options]) => file === "corepack" && options?.env?.PAPERCLIP_RELEASE_REUSE_UI_DIST === "1");
+    const uiPackCall = buildCalls.find(([file, , options]) => file === "corepack" && options?.env?.PILOT_RELEASE_REUSE_UI_DIST === "1");
     expect(uiPackCall).toBeDefined();
   });
 
@@ -248,7 +248,7 @@ describe("managed install commands", () => {
     const entrypoint = path.join(manifest!.payloadPath, "node_modules", "paperclipai", "dist", "index.js");
     expect(resolveCliVersion(entrypoint)).toContain(`managed npm latest; payload ${manifest!.payloadPath}`);
 
-    const userData = path.join(process.env.PAPERCLIP_HOME!, "instances", "default", "keep.txt");
+    const userData = path.join(process.env.PILOT_HOME!, "instances", "default", "keep.txt");
     fs.mkdirSync(path.dirname(userData), { recursive: true });
     fs.writeFileSync(userData, "keep");
     const uninstallService = vi.fn(async () => {

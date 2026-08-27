@@ -23,7 +23,7 @@ const PRIVATE_DIR_MODE = 0o700;
 // One default-on off-switch. When the flag is an explicit falsy value the cache
 // write and the cache vend become no-ops. The host default overwrite is
 // unchanged in both states.
-export const CODEX_AUTH_CACHE_OFF_SWITCH_ENV = "PAPERCLIP_CODEX_AUTH_CACHE";
+export const CODEX_AUTH_CACHE_OFF_SWITCH_ENV = "PILOT_CODEX_AUTH_CACHE";
 const FALSY_ENV_RE = /^(0|false|no|off)$/i;
 
 // The cache reuses the same direction-agnostic decision predicate the copy-back
@@ -101,8 +101,8 @@ export function resolveCodexAuthCacheDir(
 ): string {
   const safeCompanyId = toSafePathSegment(companyId, "companyId");
   const instanceRoot = resolvePilotInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   return path.resolve(instanceRoot, "companies", safeCompanyId, CACHE_DIR_NAME);

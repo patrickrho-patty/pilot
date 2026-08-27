@@ -153,7 +153,7 @@ export function buildPrompt(
   // Build API URL — ensure it has the /api path
   let pilotApiUrl =
     cfgString(config.paperclipApiUrl) ||
-    process.env.PAPERCLIP_API_URL ||
+    process.env.PILOT_API_URL ||
     "http://127.0.0.1:3100/api";
   // Ensure /api suffix
   if (!pilotApiUrl.endsWith("/api")) {
@@ -194,8 +194,8 @@ export function buildPrompt(
     taskContext: pilotTaskMarkdown,
     paperclipWakeJson: wakePayloadJson,
     wakePayloadJson,
-    paperclipApiKeyEnv: "PAPERCLIP_API_KEY",
-    paperclipRunIdEnv: "PAPERCLIP_RUN_ID",
+    paperclipApiKeyEnv: "PILOT_API_KEY",
+    paperclipRunIdEnv: "PILOT_RUN_ID",
   };
 
   const rendered = isPilotRecoveryWakePayload(context.paperclipWake)
@@ -469,23 +469,23 @@ export async function execute(
     ...buildPilotEnv(ctx.agent),
   };
 
-  if (ctx.runId) env.PAPERCLIP_RUN_ID = ctx.runId;
+  if (ctx.runId) env.PILOT_RUN_ID = ctx.runId;
 
   // PAPERCLIP_API_KEY is never accepted from config — the harness-minted run
   // token is the only source of Paperclip API identity.
-  delete env.PAPERCLIP_API_KEY;
-  if ((ctx as any).authToken) env.PAPERCLIP_API_KEY = (ctx as any).authToken;
+  delete env.PILOT_API_KEY;
+  if ((ctx as any).authToken) env.PILOT_API_KEY = (ctx as any).authToken;
 
   // BUG FIX: Read task context from ctx.context (wake context), not ctx.config (adapter config)
   const ctxContext = (ctx as any).context || {};
   const envTaskId = cfgString(ctxContext.taskId) || cfgString(ctxContext.issueId) || cfgString(ctx.config?.taskId);
-  if (envTaskId) env.PAPERCLIP_TASK_ID = envTaskId;
+  if (envTaskId) env.PILOT_TASK_ID = envTaskId;
   const envWakeReason = cfgString(ctxContext.wakeReason) || cfgString(ctx.config?.wakeReason);
-  if (envWakeReason) env.PAPERCLIP_WAKE_REASON = envWakeReason;
+  if (envWakeReason) env.PILOT_WAKE_REASON = envWakeReason;
   const envCommentId = cfgString(ctxContext.commentId) || cfgString(ctxContext.wakeCommentId) || cfgString(ctx.config?.commentId);
-  if (envCommentId) env.PAPERCLIP_WAKE_COMMENT_ID = envCommentId;
+  if (envCommentId) env.PILOT_WAKE_COMMENT_ID = envCommentId;
   const wakePayloadJson = stringifyPilotWakePayload(ctxContext.paperclipWake);
-  if (wakePayloadJson) env.PAPERCLIP_WAKE_PAYLOAD_JSON = wakePayloadJson;
+  if (wakePayloadJson) env.PILOT_WAKE_PAYLOAD_JSON = wakePayloadJson;
 
   // ── Resolve working directory ──────────────────────────────────────────
   const cwd =

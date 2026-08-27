@@ -50,7 +50,7 @@ export function projectRoutes(db: Db) {
   const externalObjectsSvc = externalObjectService(db, {
     enabled: async () => (await instanceSettings.getExperimental()).enableExternalObjects === true,
   });
-  const strictSecretsMode = process.env.PAPERCLIP_SECRETS_STRICT_MODE === "true";
+  const strictSecretsMode = process.env.PILOT_SECRETS_STRICT_MODE === "true";
   const environmentsSvc = environmentService(db);
 
   async function assertProjectEnvironmentSelection(companyId: string, environmentId: string | null | undefined) {

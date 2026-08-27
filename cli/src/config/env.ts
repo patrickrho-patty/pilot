@@ -5,8 +5,8 @@ import { config as loadDotenv, parse as parseEnvFileContents } from "dotenv";
 import { updateEnvFileContents, writeEnvFileAtomicallyIfChanged } from "@paperclipai/shared/env-file";
 import { resolveConfigPath } from "./store.js";
 
-const JWT_SECRET_ENV_KEY = "PAPERCLIP_AGENT_JWT_SECRET";
-const PILOT_OWNED_ENV_KEY_PATTERN = /^PAPERCLIP_[A-Z0-9_]+$/;
+const JWT_SECRET_ENV_KEY = "PILOT_AGENT_JWT_SECRET";
+const PILOT_OWNED_ENV_KEY_PATTERN = /^(?:PILOT|PAPERCLIP)_[A-Z0-9_]+$/;
 function resolveEnvFilePath(configPath?: string) {
   return path.resolve(path.dirname(resolveConfigPath(configPath)), ".env");
 }

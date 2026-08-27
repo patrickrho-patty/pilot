@@ -40,7 +40,7 @@ import {
 
 export type ManagedConfigEnv = Record<string, string | undefined>;
 
-export const MANAGED_CONFIG_ENV_KEY = "PAPERCLIP_MANAGED_CONFIG";
+export const MANAGED_CONFIG_ENV_KEY = "PILOT_MANAGED_CONFIG";
 export const SUPPORTED_MANAGED_CONFIG_VERSION = 1;
 
 export interface ManagedInstanceConfig {

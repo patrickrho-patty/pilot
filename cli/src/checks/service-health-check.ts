@@ -40,7 +40,7 @@ export async function serviceHealthChecks(
   config: PilotConfig,
   dependencies: Partial<ServiceCheckDependencies> = {},
 ): Promise<CheckResult[]> {
-  if (process.env.PAPERCLIP_SERVICE_MANAGED === "1") return [];
+  if (process.env.PILOT_SERVICE_MANAGED === "1") return [];
 
   const deps: ServiceCheckDependencies = {
     detect: (instanceId) => detectServiceManager({ instanceId }),

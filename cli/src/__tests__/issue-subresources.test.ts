@@ -37,8 +37,8 @@ async function run(args: string[]): Promise<void> {
 describe("issue subresource commands", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    delete process.env.PAPERCLIP_API_KEY;
-    delete process.env.PAPERCLIP_API_URL;
+    delete process.env.PILOT_API_KEY;
+    delete process.env.PILOT_API_URL;
     vi.spyOn(console, "log").mockImplementation(() => {});
   });
 

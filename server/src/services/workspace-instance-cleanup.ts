@@ -44,7 +44,9 @@ export function readWorktreeInstanceId(workspacePath: string): string | null {
   } catch {
     return null;
   }
-  const instanceId = parseEnvContents(contents).PAPERCLIP_INSTANCE_ID?.trim();
+  const envEntries = parseEnvContents(contents);
+  // Worktree env files written before the brand rename carry the legacy key.
+  const instanceId = (envEntries.PILOT_INSTANCE_ID ?? envEntries.PAPERCLIP_INSTANCE_ID)?.trim();
   if (!instanceId || !INSTANCE_ID_RE.test(instanceId)) return null;
   return instanceId;
 }
@@ -200,8 +202,10 @@ function resolveConfiguredInstanceRoot(pointer: WorktreeInstancePointer, expecte
   | { instanceRoot: string; instanceId: string }
   | { warning: string; instanceRoot: string | null; refusalReason: string | null } {
   const env = parseEnvContents(pointer.envContents);
-  const configuredHome = env.PAPERCLIP_HOME?.trim();
-  const instanceId = env.PAPERCLIP_INSTANCE_ID?.trim();
+  // Env files written before the brand rename carry PAPERCLIP_* keys; accept
+  // both spellings through the alias window.
+  const configuredHome = (env.PILOT_HOME ?? env.PAPERCLIP_HOME)?.trim();
+  const instanceId = (env.PILOT_INSTANCE_ID ?? env.PAPERCLIP_INSTANCE_ID)?.trim();
   if (!configuredHome || !instanceId) {
     return { warning: "", instanceRoot: null, refusalReason: null };
   }
@@ -236,7 +240,7 @@ function resolveManagedInstancesDir(worktreesDir?: string): string {
   const managedWorktreesDir = path.resolve(
     expandHomePrefix(
       worktreesDir?.trim()
-      || process.env.PAPERCLIP_WORKTREES_DIR?.trim()
+      || process.env.PILOT_WORKTREES_DIR?.trim()
       || path.join(os.homedir(), ".paperclip-worktrees"),
     ),
   );

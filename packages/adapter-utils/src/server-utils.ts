@@ -126,7 +126,7 @@ export function isPilotRuntimeEnvKey(key: string): boolean {
 // Other PAPERCLIP_*-named config keys are allowed as long as Paperclip has
 // not assigned the same key for the run (runtime vars always win).
 export function isForbiddenConfigEnvKey(key: string): boolean {
-  return key === "PAPERCLIP_API_KEY";
+  return key === "PILOT_API_KEY";
 }
 const PILOT_SKILL_ROOT_RELATIVE_CANDIDATES = [
   "../../skills",
@@ -148,9 +148,9 @@ export function resolvePilotInstanceRootForAdapter(input: {
   env?: NodeJS.ProcessEnv;
 } = {}): string {
   const env = input.env ?? process.env;
-  const homeRaw = input.homeDir?.trim() || env.PAPERCLIP_HOME?.trim();
+  const homeRaw = input.homeDir?.trim() || env.PILOT_HOME?.trim();
   const homeDir = path.resolve(homeRaw ? expandHomePrefix(homeRaw) : path.resolve(os.homedir(), ".paperclip"));
-  const instanceId = input.instanceId?.trim() || env.PAPERCLIP_INSTANCE_ID?.trim() || DEFAULT_PILOT_INSTANCE_ID;
+  const instanceId = input.instanceId?.trim() || env.PILOT_INSTANCE_ID?.trim() || DEFAULT_PILOT_INSTANCE_ID;
   if (!PATH_SEGMENT_RE.test(instanceId)) throw new Error(`Invalid PAPERCLIP_INSTANCE_ID '${instanceId}'.`);
   return path.resolve(homeDir, "instances", instanceId);
 }
@@ -2062,7 +2062,7 @@ export function buildInvocationEnvForLogs(
 
   const resolvedCommand = options.resolvedCommand?.trim();
   if (resolvedCommand) {
-    merged[options.resolvedCommandEnvKey ?? "PAPERCLIP_RESOLVED_COMMAND"] = redactCommandTextForLogs(resolvedCommand);
+    merged[options.resolvedCommandEnvKey ?? "PILOT_RESOLVED_COMMAND"] = redactCommandTextForLogs(resolvedCommand);
   }
 
   return redactEnvForLogs(merged);
@@ -2076,21 +2076,21 @@ export function buildPilotEnv(agent: { id: string; companyId: string }): Record<
     return host;
   };
   const vars: Record<string, string> = {
-    PAPERCLIP_AGENT_ID: agent.id,
-    PAPERCLIP_COMPANY_ID: agent.companyId,
+    PILOT_AGENT_ID: agent.id,
+    PILOT_COMPANY_ID: agent.companyId,
   };
   const runtimeHost = resolveHostForUrl(
-    process.env.PAPERCLIP_LISTEN_HOST ?? process.env.HOST ?? "localhost",
+    process.env.PILOT_LISTEN_HOST ?? process.env.HOST ?? "localhost",
   );
-  const runtimePort = process.env.PAPERCLIP_LISTEN_PORT ?? process.env.PORT ?? "3100";
+  const runtimePort = process.env.PILOT_LISTEN_PORT ?? process.env.PORT ?? "3100";
   // An explicit PAPERCLIP_API_URL override must win over the URL derived from
   // authPublicBaseUrl: the derived URL can be unreachable from inside the
   // runtime container (e.g. when the public base URL is VPN/tailnet-only).
   const apiUrl =
-    process.env.PAPERCLIP_API_URL ??
-    process.env.PAPERCLIP_RUNTIME_API_URL ??
+    process.env.PILOT_API_URL ??
+    process.env.PILOT_RUNTIME_API_URL ??
     `http://${runtimeHost}:${runtimePort}`;
-  vars.PAPERCLIP_API_URL = apiUrl;
+  vars.PILOT_API_URL = apiUrl;
   // Brand-rename alias window: emit legacy PAPERCLIP_* alongside every
   // PILOT_* key (same value, never clobbering an existing legacy key) so
   // spawned agents and CLIs running pre-rename code keep working.
@@ -2118,14 +2118,14 @@ export function applyPilotWorkspaceEnv(
   },
 ): Record<string, string> {
   const mappings = [
-    ["PAPERCLIP_WORKSPACE_CWD", input.workspaceCwd],
-    ["PAPERCLIP_WORKSPACE_SOURCE", input.workspaceSource],
-    ["PAPERCLIP_WORKSPACE_STRATEGY", input.workspaceStrategy],
-    ["PAPERCLIP_WORKSPACE_ID", input.workspaceId],
-    ["PAPERCLIP_WORKSPACE_REPO_URL", input.workspaceRepoUrl],
-    ["PAPERCLIP_WORKSPACE_REPO_REF", input.workspaceRepoRef],
-    ["PAPERCLIP_WORKSPACE_BRANCH", input.workspaceBranch],
-    ["PAPERCLIP_WORKSPACE_WORKTREE_PATH", input.workspaceWorktreePath],
+    ["PILOT_WORKSPACE_CWD", input.workspaceCwd],
+    ["PILOT_WORKSPACE_SOURCE", input.workspaceSource],
+    ["PILOT_WORKSPACE_STRATEGY", input.workspaceStrategy],
+    ["PILOT_WORKSPACE_ID", input.workspaceId],
+    ["PILOT_WORKSPACE_REPO_URL", input.workspaceRepoUrl],
+    ["PILOT_WORKSPACE_REPO_REF", input.workspaceRepoRef],
+    ["PILOT_WORKSPACE_BRANCH", input.workspaceBranch],
+    ["PILOT_WORKSPACE_WORKTREE_PATH", input.workspaceWorktreePath],
     ["AGENT_HOME", input.agentHome],
   ] as const;
 
@@ -2301,9 +2301,9 @@ export function refreshPilotWorkspaceEnvForExecution(input: {
     stagedProjectDirs: input.stagedProjectDirs,
   });
 
-  delete input.env.PAPERCLIP_WORKSPACE_CWD;
-  delete input.env.PAPERCLIP_WORKSPACE_WORKTREE_PATH;
-  delete input.env.PAPERCLIP_WORKSPACES_JSON;
+  delete input.env.PILOT_WORKSPACE_CWD;
+  delete input.env.PILOT_WORKSPACE_WORKTREE_PATH;
+  delete input.env.PILOT_WORKSPACES_JSON;
 
   applyPilotWorkspaceEnv(input.env, {
     workspaceCwd: shapedWorkspaceEnv.workspaceCwd,
@@ -2318,7 +2318,7 @@ export function refreshPilotWorkspaceEnvForExecution(input: {
   });
 
   if (shapedWorkspaceEnv.workspaceHints.length > 0) {
-    input.env.PAPERCLIP_WORKSPACES_JSON = JSON.stringify(shapedWorkspaceEnv.workspaceHints);
+    input.env.PILOT_WORKSPACES_JSON = JSON.stringify(shapedWorkspaceEnv.workspaceHints);
   }
 
   const shapedEnvConfig = rewriteWorkspaceCwdEnvVarsForExecution({
@@ -2346,12 +2346,12 @@ export function refreshPilotWorkspaceEnvForExecution(input: {
 
 export function sanitizeInheritedPilotEnv(baseEnv: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...baseEnv };
-  delete env.PAPERCLIPAI_CMD;
+  delete env.PILOTAI_CMD;
   for (const key of Object.keys(env)) {
     if (!key.startsWith("PAPERCLIP_")) continue;
-    if (key === "PAPERCLIP_RUNTIME_API_URL") continue;
-    if (key === "PAPERCLIP_LISTEN_HOST") continue;
-    if (key === "PAPERCLIP_LISTEN_PORT") continue;
+    if (key === "PILOT_RUNTIME_API_URL") continue;
+    if (key === "PILOT_LISTEN_HOST") continue;
+    if (key === "PILOT_LISTEN_PORT") continue;
     delete env[key];
   }
   return env;

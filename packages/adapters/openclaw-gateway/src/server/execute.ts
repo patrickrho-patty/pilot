@@ -345,21 +345,21 @@ function buildPilotEnvForWake(ctx: AdapterExecutionContext, wakePayload: WakePay
   const pilotApiUrlOverride = resolvePilotApiUrlOverride(ctx.config.paperclipApiUrl);
   const pilotEnv: Record<string, string> = {
     ...buildPilotEnv(ctx.agent),
-    PAPERCLIP_RUN_ID: ctx.runId,
+    PILOT_RUN_ID: ctx.runId,
   };
 
   if (pilotApiUrlOverride) {
-    pilotEnv.PAPERCLIP_API_URL = pilotApiUrlOverride;
+    pilotEnv.PILOT_API_URL = pilotApiUrlOverride;
   }
-  if (wakePayload.taskId) pilotEnv.PAPERCLIP_TASK_ID = wakePayload.taskId;
+  if (wakePayload.taskId) pilotEnv.PILOT_TASK_ID = wakePayload.taskId;
   const issueWorkMode = readPilotIssueWorkModeFromContext(ctx.context);
-  if (issueWorkMode) pilotEnv.PAPERCLIP_ISSUE_WORK_MODE = issueWorkMode;
-  if (wakePayload.wakeReason) pilotEnv.PAPERCLIP_WAKE_REASON = wakePayload.wakeReason;
-  if (wakePayload.wakeCommentId) pilotEnv.PAPERCLIP_WAKE_COMMENT_ID = wakePayload.wakeCommentId;
-  if (wakePayload.approvalId) pilotEnv.PAPERCLIP_APPROVAL_ID = wakePayload.approvalId;
-  if (wakePayload.approvalStatus) pilotEnv.PAPERCLIP_APPROVAL_STATUS = wakePayload.approvalStatus;
+  if (issueWorkMode) pilotEnv.PILOT_ISSUE_WORK_MODE = issueWorkMode;
+  if (wakePayload.wakeReason) pilotEnv.PILOT_WAKE_REASON = wakePayload.wakeReason;
+  if (wakePayload.wakeCommentId) pilotEnv.PILOT_WAKE_COMMENT_ID = wakePayload.wakeCommentId;
+  if (wakePayload.approvalId) pilotEnv.PILOT_APPROVAL_ID = wakePayload.approvalId;
+  if (wakePayload.approvalStatus) pilotEnv.PILOT_APPROVAL_STATUS = wakePayload.approvalStatus;
   if (wakePayload.issueIds.length > 0) {
-    pilotEnv.PAPERCLIP_LINKED_ISSUE_IDS = wakePayload.issueIds.join(",");
+    pilotEnv.PILOT_LINKED_ISSUE_IDS = wakePayload.issueIds.join(",");
   }
 
   return pilotEnv;
@@ -372,16 +372,16 @@ function buildWakeText(
   claimedApiKeyPath: string,
 ): string {
   const orderedKeys = [
-    "PAPERCLIP_RUN_ID",
-    "PAPERCLIP_AGENT_ID",
-    "PAPERCLIP_COMPANY_ID",
-    "PAPERCLIP_API_URL",
-    "PAPERCLIP_TASK_ID",
-    "PAPERCLIP_WAKE_REASON",
-    "PAPERCLIP_WAKE_COMMENT_ID",
-    "PAPERCLIP_APPROVAL_ID",
-    "PAPERCLIP_APPROVAL_STATUS",
-    "PAPERCLIP_LINKED_ISSUE_IDS",
+    "PILOT_RUN_ID",
+    "PILOT_AGENT_ID",
+    "PILOT_COMPANY_ID",
+    "PILOT_API_URL",
+    "PILOT_TASK_ID",
+    "PILOT_WAKE_REASON",
+    "PILOT_WAKE_COMMENT_ID",
+    "PILOT_APPROVAL_ID",
+    "PILOT_APPROVAL_STATUS",
+    "PILOT_LINKED_ISSUE_IDS",
   ];
 
   const envLines: string[] = [];
@@ -392,7 +392,7 @@ function buildWakeText(
   }
 
   const issueIdHint = payload.taskId ?? payload.issueId ?? "";
-  const apiBaseHint = pilotEnv.PAPERCLIP_API_URL ?? "<set PAPERCLIP_API_URL>";
+  const apiBaseHint = pilotEnv.PILOT_API_URL ?? "<set PILOT_API_URL>";
 
   const lines = [
     "Paperclip wake event for a cloud adapter.",
@@ -401,7 +401,7 @@ function buildWakeText(
     "",
     "Set these values in your run context:",
     ...envLines,
-    `PAPERCLIP_API_KEY=<token from ${claimedApiKeyPath}>`,
+    `PILOT_API_KEY=<token from ${claimedApiKeyPath}>`,
     "",
     `Load PAPERCLIP_API_KEY from ${claimedApiKeyPath} (the token you saved after claim-api-key).`,
     "",

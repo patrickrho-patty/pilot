@@ -132,8 +132,8 @@ export function resolveManagedClaudeConfigSeedDir(
   companyId?: string,
 ): string {
   const instanceRoot = resolvePilotInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   return companyId
@@ -147,8 +147,8 @@ export function resolveManagedClaudeRuntimeStateDir(
   agentId: string,
 ): string {
   const instanceRoot = resolvePilotInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   return path.join(instanceRoot, "companies", companyId, "agents", agentId, "claude-runtime");

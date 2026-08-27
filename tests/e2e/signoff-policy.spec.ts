@@ -21,7 +21,7 @@ import { test, expect, request as pwRequest, type APIRequestContext } from "@pla
  *     the in_review state the signoff policy requires).
  */
 
-const PORT = Number(process.env.PAPERCLIP_E2E_PORT ?? 3199);
+const PORT = Number(process.env.PILOT_E2E_PORT ?? 3199);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const COMPANY_NAME = `E2E-Signoff-${Date.now()}`;
 

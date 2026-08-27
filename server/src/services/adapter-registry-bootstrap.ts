@@ -27,8 +27,8 @@ export type AdapterRegistryEnv = Record<string, string | undefined>;
 export function parseAdapterRegistryEnv(
   env: AdapterRegistryEnv = process.env,
 ): AdapterRegistryEntryParsed[] | null {
-  const inline = env.PAPERCLIP_ADAPTERS?.trim();
-  const filePath = env.PAPERCLIP_ADAPTERS_FILE?.trim();
+  const inline = env.PILOT_ADAPTERS?.trim();
+  const filePath = env.PILOT_ADAPTERS_FILE?.trim();
   if (!inline && !filePath) return null;
 
   let rawText: string;

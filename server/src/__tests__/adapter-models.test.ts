@@ -23,7 +23,7 @@ describe("adapter model listing", () => {
     delete process.env.ANTHROPIC_BASE_URL;
     delete process.env.ANTHROPIC_BEDROCK_BASE_URL;
     delete process.env.CLAUDE_CODE_USE_BEDROCK;
-    delete process.env.PAPERCLIP_OPENCODE_COMMAND;
+    delete process.env.PILOT_OPENCODE_COMMAND;
     resetClaudeModelsCacheForTests();
     resetCodexModelsCacheForTests();
     resetCursorModelsCacheForTests();
@@ -202,7 +202,7 @@ describe("adapter model listing", () => {
   });
 
   it("returns opencode fallback models including gpt-5.4", async () => {
-    process.env.PAPERCLIP_OPENCODE_COMMAND = "__paperclip_missing_opencode_command__";
+    process.env.PILOT_OPENCODE_COMMAND = "__paperclip_missing_opencode_command__";
 
     const models = await listAdapterModels("opencode_local");
 
@@ -230,11 +230,11 @@ describe("adapter model listing", () => {
 
   describe("PAPERCLIP_ADAPTER_MODELS declared models", () => {
     afterEach(() => {
-      delete process.env.PAPERCLIP_ADAPTER_MODELS;
+      delete process.env.PILOT_ADAPTER_MODELS;
     });
 
     it("prefers declared env models over adapter discovery", async () => {
-      process.env.PAPERCLIP_ADAPTER_MODELS = JSON.stringify({
+      process.env.PILOT_ADAPTER_MODELS = JSON.stringify({
         opencode_local: [
           { id: "tensorix/deepseek/deepseek-chat-v3.1", label: "DeepSeek v3.1" },
           { id: "tensorix/z-ai/glm-4.7" },
@@ -250,14 +250,14 @@ describe("adapter model listing", () => {
     });
 
     it("observes env changes between calls (memo keyed by raw env value)", async () => {
-      process.env.PAPERCLIP_ADAPTER_MODELS = JSON.stringify({
+      process.env.PILOT_ADAPTER_MODELS = JSON.stringify({
         opencode_local: [{ id: "model-a" }],
       });
       expect(await listAdapterModels("opencode_local")).toEqual([
         { id: "model-a", label: "model-a" },
       ]);
 
-      process.env.PAPERCLIP_ADAPTER_MODELS = JSON.stringify({
+      process.env.PILOT_ADAPTER_MODELS = JSON.stringify({
         opencode_local: [{ id: "model-b" }],
       });
       expect(await listAdapterModels("opencode_local")).toEqual([
@@ -266,8 +266,8 @@ describe("adapter model listing", () => {
     });
 
     it("fails soft on malformed values: falls back to adapter models instead of throwing", async () => {
-      process.env.PAPERCLIP_ADAPTER_MODELS = "{not json";
-      process.env.PAPERCLIP_OPENCODE_COMMAND = "__paperclip_missing_opencode_command__";
+      process.env.PILOT_ADAPTER_MODELS = "{not json";
+      process.env.PILOT_OPENCODE_COMMAND = "__paperclip_missing_opencode_command__";
       const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const models = await listAdapterModels("opencode_local");
@@ -281,7 +281,7 @@ describe("adapter model listing", () => {
     });
 
     it("ignores declared models for adapters not in the map", async () => {
-      process.env.PAPERCLIP_ADAPTER_MODELS = JSON.stringify({
+      process.env.PILOT_ADAPTER_MODELS = JSON.stringify({
         opencode_local: [{ id: "model-a" }],
       });
       const models = await listAdapterModels("codex_local");

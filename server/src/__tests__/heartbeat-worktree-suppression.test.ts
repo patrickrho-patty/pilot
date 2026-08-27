@@ -145,8 +145,8 @@ describeEmbeddedPostgres("heartbeat worktree suppression", () => {
   async function armWorktreeRunExecution(cutoff: Date) {
     await instanceSettingsService(db, {
       runtimeEnv: {
-        PAPERCLIP_IN_WORKTREE: "true",
-        PAPERCLIP_INSTANCE_ID: "test-worktree",
+        PILOT_IN_WORKTREE: "true",
+        PILOT_INSTANCE_ID: "test-worktree",
       },
       now: () => cutoff,
     }).updateExperimental({ enableWorktreeRunExecution: true });
@@ -186,7 +186,7 @@ describeEmbeddedPostgres("heartbeat worktree suppression", () => {
   it("suppresses new assignment wakes in worktree instances without creating heartbeat runs", async () => {
     const { agentId, issueId } = await insertAgentAndIssue();
     const heartbeat = heartbeatService(db, {
-      runtimeEnv: { PAPERCLIP_IN_WORKTREE: "true" },
+      runtimeEnv: { PILOT_IN_WORKTREE: "true" },
     });
 
     const run = await heartbeat.wakeup(agentId, {
@@ -237,7 +237,7 @@ describeEmbeddedPostgres("heartbeat worktree suppression", () => {
     });
 
     const heartbeat = heartbeatService(db, {
-      runtimeEnv: { PAPERCLIP_IN_WORKTREE: "true" },
+      runtimeEnv: { PILOT_IN_WORKTREE: "true" },
     });
 
     await heartbeat.resumeQueuedRuns();
@@ -267,8 +267,8 @@ describeEmbeddedPostgres("heartbeat worktree suppression", () => {
     await armWorktreeRunExecution(new Date(Date.now() + 1_000));
     const heartbeat = heartbeatService(db, {
       runtimeEnv: {
-        PAPERCLIP_IN_WORKTREE: "true",
-        PAPERCLIP_INSTANCE_ID: "test-worktree",
+        PILOT_IN_WORKTREE: "true",
+        PILOT_INSTANCE_ID: "test-worktree",
       },
     });
 
@@ -340,7 +340,7 @@ describeEmbeddedPostgres("heartbeat worktree suppression", () => {
 
   it("recognizes explicit restore-in-progress suppression", () => {
     expect(resolveHeartbeatSchedulingSuppression({
-      PAPERCLIP_DATABASE_RESTORE_IN_PROGRESS: "true",
+      PILOT_DATABASE_RESTORE_IN_PROGRESS: "true",
     })).toEqual({
       suppressed: true,
       reason: "database_restore_in_progress",

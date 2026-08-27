@@ -15,16 +15,16 @@ let previousPilotHome: string | undefined;
 let previousServiceManaged: string | undefined;
 
 beforeEach(() => {
-  previousPilotHome = process.env.PAPERCLIP_HOME;
-  previousServiceManaged = process.env.PAPERCLIP_SERVICE_MANAGED;
-  process.env.PAPERCLIP_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-service-restart-"));
+  previousPilotHome = process.env.PILOT_HOME;
+  previousServiceManaged = process.env.PILOT_SERVICE_MANAGED;
+  process.env.PILOT_HOME = fs.mkdtempSync(path.join(os.tmpdir(), "paperclip-service-restart-"));
 });
 
 afterEach(() => {
-  if (previousPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
-  else process.env.PAPERCLIP_HOME = previousPilotHome;
-  if (previousServiceManaged === undefined) delete process.env.PAPERCLIP_SERVICE_MANAGED;
-  else process.env.PAPERCLIP_SERVICE_MANAGED = previousServiceManaged;
+  if (previousPilotHome === undefined) delete process.env.PILOT_HOME;
+  else process.env.PILOT_HOME = previousPilotHome;
+  if (previousServiceManaged === undefined) delete process.env.PILOT_SERVICE_MANAGED;
+  else process.env.PILOT_SERVICE_MANAGED = previousServiceManaged;
 });
 
 function managerFixture(active = true) {
@@ -57,7 +57,7 @@ function managerFixture(active = true) {
 
 describe("service health doctor checks", () => {
   it("skips live service checks during the managed unit's own activation", async () => {
-    process.env.PAPERCLIP_SERVICE_MANAGED = "1";
+    process.env.PILOT_SERVICE_MANAGED = "1";
     const detect = vi.fn();
     const probe = vi.fn();
     await expect(serviceHealthChecks(config, { detect, probe })).resolves.toEqual([]);
@@ -94,7 +94,7 @@ describe("service health doctor checks", () => {
   });
 
   it("reclaims restart locks left by terminated processes", async () => {
-    const lockPath = path.join(process.env.PAPERCLIP_HOME!, "instances", "default", "hot-restart.lock");
+    const lockPath = path.join(process.env.PILOT_HOME!, "instances", "default", "hot-restart.lock");
     fs.mkdirSync(path.dirname(lockPath), { recursive: true });
     fs.writeFileSync(lockPath, "424242:stale-token\n");
     const callback = vi.fn(async () => "restarted");

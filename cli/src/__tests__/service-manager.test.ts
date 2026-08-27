@@ -17,7 +17,7 @@ const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map((directory) => fs.rm(directory, { recursive: true, force: true })));
-  delete process.env.PAPERCLIP_SERVICE_MANAGED;
+  delete process.env.PILOT_SERVICE_MANAGED;
 });
 
 async function temporaryDirectory(): Promise<string> {
@@ -200,7 +200,7 @@ describe("single-writer guard", () => {
   });
 
   it("allows the supervisor-owned process", async () => {
-    process.env.PAPERCLIP_SERVICE_MANAGED = "1";
+    process.env.PILOT_SERVICE_MANAGED = "1";
     await expect(assertForegroundRunAllowed("default", false, detector)).resolves.toBeUndefined();
   });
 

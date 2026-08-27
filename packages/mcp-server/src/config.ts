@@ -20,11 +20,11 @@ export function normalizeApiUrl(apiUrl: string): string {
 }
 
 export function readConfigFromEnv(env: NodeJS.ProcessEnv = process.env): PilotMcpConfig {
-  const apiUrl = nonEmpty(env.PAPERCLIP_API_URL);
+  const apiUrl = nonEmpty(env.PILOT_API_URL);
   if (!apiUrl) {
     throw new Error("Missing PAPERCLIP_API_URL");
   }
-  const apiKey = nonEmpty(env.PAPERCLIP_API_KEY);
+  const apiKey = nonEmpty(env.PILOT_API_KEY);
   if (!apiKey) {
     throw new Error("Missing PAPERCLIP_API_KEY");
   }
@@ -32,8 +32,8 @@ export function readConfigFromEnv(env: NodeJS.ProcessEnv = process.env): PilotMc
   return {
     apiUrl: normalizeApiUrl(apiUrl),
     apiKey,
-    companyId: nonEmpty(env.PAPERCLIP_COMPANY_ID),
-    agentId: nonEmpty(env.PAPERCLIP_AGENT_ID),
-    runId: nonEmpty(env.PAPERCLIP_RUN_ID),
+    companyId: nonEmpty(env.PILOT_COMPANY_ID),
+    agentId: nonEmpty(env.PILOT_AGENT_ID),
+    runId: nonEmpty(env.PILOT_RUN_ID),
   };
 }

@@ -7,7 +7,7 @@ import { logger } from "../middleware/logger.js";
  * keys are warned about once and ignored so one list can be rolled across a
  * fleet of mixed app versions without refusing boot on older images.
  */
-export const HIDDEN_SETTINGS_ENV_KEY = "PAPERCLIP_HIDDEN_SETTINGS";
+export const HIDDEN_SETTINGS_ENV_KEY = "PILOT_HIDDEN_SETTINGS";
 
 export type HiddenSettingsEnv = Record<string, string | undefined>;
 

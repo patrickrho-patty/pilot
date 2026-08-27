@@ -42,7 +42,7 @@ describe("parseKimiJsonl", () => {
 
     const parsed = parseKimiJsonl(stdout);
 
-    expect(parsed.summary).toBe("PAPERCLIP_ADAPTER_TEST_OK");
+    expect(parsed.summary).toBe("PILOT_ADAPTER_TEST_OK");
     expect(parsed.sessionId).toBe("session_769ddab9-0a25-4edd-99f4-cdfebdc90879");
     expect(parsed.errorMessage).toBeNull();
   });

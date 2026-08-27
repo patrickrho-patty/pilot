@@ -161,8 +161,8 @@ describe("buildPluginWorkerEnv", () => {
     });
 
     expect(env).toEqual({
-      PAPERCLIP_DEPLOYMENT_MODE: "authenticated",
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: "public",
+      PILOT_DEPLOYMENT_MODE: "authenticated",
+      PILOT_DEPLOYMENT_EXPOSURE: "public",
       ANTHROPIC_API_KEY: "anthropic-token",
       OPENAI_API_KEY: "openai-token",
     });
@@ -181,8 +181,8 @@ describe("buildPluginWorkerEnv", () => {
     });
 
     expect(env).toEqual({
-      PAPERCLIP_DEPLOYMENT_MODE: "authenticated",
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: "public",
+      PILOT_DEPLOYMENT_MODE: "authenticated",
+      PILOT_DEPLOYMENT_EXPOSURE: "public",
       KUBERNETES_SERVICE_HOST: "10.0.0.1",
       KUBERNETES_SERVICE_PORT: "443",
     });
@@ -198,8 +198,8 @@ describe("buildPluginWorkerEnv", () => {
     });
 
     expect(env).toEqual({
-      PAPERCLIP_DEPLOYMENT_MODE: "authenticated",
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: "public",
+      PILOT_DEPLOYMENT_MODE: "authenticated",
+      PILOT_DEPLOYMENT_EXPOSURE: "public",
     });
   });
 
@@ -220,8 +220,8 @@ describe("buildPluginWorkerEnv", () => {
     });
 
     expect(env).toEqual({
-      PAPERCLIP_DEPLOYMENT_MODE: "authenticated",
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: "public",
+      PILOT_DEPLOYMENT_MODE: "authenticated",
+      PILOT_DEPLOYMENT_EXPOSURE: "public",
       DAYTONA_API_KEY: "daytona-token",
     });
   });
@@ -242,8 +242,8 @@ describe("buildPluginWorkerEnv", () => {
     });
 
     expect(env).toEqual({
-      PAPERCLIP_DEPLOYMENT_MODE: "authenticated",
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: "public",
+      PILOT_DEPLOYMENT_MODE: "authenticated",
+      PILOT_DEPLOYMENT_EXPOSURE: "public",
       DAYTONA_API_KEY: "daytona-token",
     });
   });
@@ -264,8 +264,8 @@ describe("buildPluginWorkerEnv", () => {
     });
 
     expect(env).toEqual({
-      PAPERCLIP_DEPLOYMENT_MODE: "authenticated",
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: "public",
+      PILOT_DEPLOYMENT_MODE: "authenticated",
+      PILOT_DEPLOYMENT_EXPOSURE: "public",
     });
   });
 
@@ -283,8 +283,8 @@ describe("buildPluginWorkerEnv", () => {
     });
 
     expect(env).toEqual({
-      PAPERCLIP_DEPLOYMENT_MODE: "authenticated",
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: "public",
+      PILOT_DEPLOYMENT_MODE: "authenticated",
+      PILOT_DEPLOYMENT_EXPOSURE: "public",
     });
   });
 
@@ -302,8 +302,8 @@ describe("buildPluginWorkerEnv", () => {
     });
 
     expect(env).toEqual({
-      PAPERCLIP_DEPLOYMENT_MODE: "authenticated",
-      PAPERCLIP_DEPLOYMENT_EXPOSURE: "public",
+      PILOT_DEPLOYMENT_MODE: "authenticated",
+      PILOT_DEPLOYMENT_EXPOSURE: "public",
     });
   });
 });
@@ -721,8 +721,8 @@ describeEmbeddedPostgres("plugin database namespaces", () => {
       expect.objectContaining({
         databaseNamespace: namespace,
         env: {
-          PAPERCLIP_DEPLOYMENT_MODE: "authenticated",
-          PAPERCLIP_DEPLOYMENT_EXPOSURE: "public",
+          PILOT_DEPLOYMENT_MODE: "authenticated",
+          PILOT_DEPLOYMENT_EXPOSURE: "public",
         },
         manifest: expect.objectContaining({
           database: expect.objectContaining({ coreReadTables: ["companies"] }),

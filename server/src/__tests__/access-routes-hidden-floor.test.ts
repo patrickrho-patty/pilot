@@ -60,7 +60,7 @@ describe("operator-hidden access admin floor", () => {
   }, 30_000);
 
   afterEach(() => {
-    delete process.env.PAPERCLIP_HIDDEN_SETTINGS;
+    delete process.env.PILOT_HIDDEN_SETTINGS;
   });
 
   const attempts: Array<[string, () => request.Test]> = [
@@ -77,7 +77,7 @@ describe("operator-hidden access admin floor", () => {
   it.each(attempts)(
     "floors the %s route when the operator hides the surface",
     async (_name, buildRequest) => {
-      process.env.PAPERCLIP_HIDDEN_SETTINGS = "instance.access";
+      process.env.PILOT_HIDDEN_SETTINGS = "instance.access";
 
       const res = await buildRequest();
 

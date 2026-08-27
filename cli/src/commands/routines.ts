@@ -239,7 +239,7 @@ export async function disableAllRoutinesInConfig(
   loadPilotEnvFile(configPath);
   const companyId =
     nonEmpty(options.companyId)
-    ?? nonEmpty(process.env.PAPERCLIP_COMPANY_ID)
+    ?? nonEmpty(process.env.PILOT_COMPANY_ID)
     ?? null;
   if (!companyId) {
     throw new Error("Company ID is required. Pass --company-id or set PAPERCLIP_COMPANY_ID.");

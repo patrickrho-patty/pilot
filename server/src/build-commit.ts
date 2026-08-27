@@ -22,7 +22,7 @@ export function readBuildCommit(
 ): string | null {
   const environmentCommit = parseBuildCommit(
     opts.environmentCommit === undefined
-      ? process.env.PAPERCLIP_BUILD_COMMIT
+      ? process.env.PILOT_BUILD_COMMIT
       : opts.environmentCommit,
   );
   if (environmentCommit) return environmentCommit;

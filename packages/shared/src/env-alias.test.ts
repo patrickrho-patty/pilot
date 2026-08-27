@@ -7,23 +7,23 @@ describe("applyLegacyPaperclipEnvAliases", () => {
   });
 
   it("maps set PAPERCLIP_X to unset PILOT_X", () => {
-    vi.stubEnv("PAPERCLIP_API_URL", "https://example.test");
+    vi.stubEnv("PILOT_API_URL", "https://example.test");
     const mapped = applyLegacyPaperclipEnvAliases();
     expect(process.env.PILOT_API_URL).toBe("https://example.test");
     expect(mapped).toContain("PILOT_API_URL");
   });
 
   it("never overwrites an explicitly set PILOT_X", () => {
-    vi.stubEnv("PAPERCLIP_API_URL", "https://legacy.test");
+    vi.stubEnv("PILOT_API_URL", "https://legacy.test");
     vi.stubEnv("PILOT_API_URL", "https://new.test");
     applyLegacyPaperclipEnvAliases();
     expect(process.env.PILOT_API_URL).toBe("https://new.test");
   });
 
   it("maps every PAPERCLIP_X shape used by the codebase (HOME, INSTANCE_ID, nested subkeys)", () => {
-    vi.stubEnv("PAPERCLIP_HOME", "/data");
-    vi.stubEnv("PAPERCLIP_INSTANCE_ID", "inst-1");
-    vi.stubEnv("PAPERCLIP_DB_BACKUP_MAX_AGE_HOURS", "24");
+    vi.stubEnv("PILOT_HOME", "/data");
+    vi.stubEnv("PILOT_INSTANCE_ID", "inst-1");
+    vi.stubEnv("PILOT_DB_BACKUP_MAX_AGE_HOURS", "24");
     const mapped = applyLegacyPaperclipEnvAliases();
     expect(process.env.PILOT_HOME).toBe("/data");
     expect(process.env.PILOT_INSTANCE_ID).toBe("inst-1");

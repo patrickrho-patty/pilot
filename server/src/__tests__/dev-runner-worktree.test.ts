@@ -91,7 +91,7 @@ describe("dev-runner worktree env bootstrap", () => {
     );
 
     const env: NodeJS.ProcessEnv = {
-      PAPERCLIP_INSTANCE_ID: "already-set",
+      PILOT_INSTANCE_ID: "already-set",
     };
     const result = bootstrapDevRunnerWorktreeEnv(root, env);
 
@@ -99,10 +99,10 @@ describe("dev-runner worktree env bootstrap", () => {
       envPath: resolveWorktreeEnvFilePath(root),
       missingEnv: false,
     });
-    expect(env.PAPERCLIP_HOME).toBe("/tmp/paperclip-worktrees");
-    expect(env.PAPERCLIP_INSTANCE_ID).toBe("already-set");
-    expect(env.PAPERCLIP_IN_WORKTREE).toBe("true");
-    expect(env.PAPERCLIP_OPTIONAL).toBe("");
+    expect(env.PILOT_HOME).toBe("/tmp/paperclip-worktrees");
+    expect(env.PILOT_INSTANCE_ID).toBe("already-set");
+    expect(env.PILOT_IN_WORKTREE).toBe("true");
+    expect(env.PILOT_OPTIONAL).toBe("");
   });
 
   it("repairs stale migrated config paths before loading worktree env", () => {
@@ -127,7 +127,7 @@ describe("dev-runner worktree env bootstrap", () => {
     );
 
     const env: NodeJS.ProcessEnv = {
-      PAPERCLIP_WORKTREES_DIR: worktreesDir,
+      PILOT_WORKTREES_DIR: worktreesDir,
     };
     const result = bootstrapDevRunnerWorktreeEnv(root, env);
 
@@ -135,10 +135,10 @@ describe("dev-runner worktree env bootstrap", () => {
       envPath: resolveWorktreeEnvFilePath(root),
       missingEnv: false,
     });
-    expect(env.PAPERCLIP_HOME).toBe(worktreesDir);
-    expect(env.PAPERCLIP_CONFIG).toBe(localConfigPath);
-    expect(env.PAPERCLIP_CONTEXT).toBe(path.join(worktreesDir, "context.json"));
-    expect(env.PAPERCLIP_INSTANCE_ID).toBe("feature-worktree");
+    expect(env.PILOT_HOME).toBe(worktreesDir);
+    expect(env.PILOT_CONFIG).toBe(localConfigPath);
+    expect(env.PILOT_CONTEXT).toBe(path.join(worktreesDir, "context.json"));
+    expect(env.PILOT_INSTANCE_ID).toBe("feature-worktree");
   });
 
   it("reports uninitialized linked worktrees so dev runner can fail fast", () => {

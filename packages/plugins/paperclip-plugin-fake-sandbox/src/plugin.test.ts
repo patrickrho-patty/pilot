@@ -360,8 +360,8 @@ describe("fake sandbox provider plugin", () => {
   });
 
   it("does not expose host-only environment variables to executed commands", async () => {
-    const previousSecret = process.env.PAPERCLIP_FAKE_PLUGIN_HOST_SECRET;
-    process.env.PAPERCLIP_FAKE_PLUGIN_HOST_SECRET = "should-not-leak";
+    const previousSecret = process.env.PILOT_FAKE_PLUGIN_HOST_SECRET;
+    process.env.PILOT_FAKE_PLUGIN_HOST_SECRET = "should-not-leak";
     try {
       const definition = plugin.definition;
       const harness = createEnvironmentTestHarness({
@@ -409,9 +409,9 @@ describe("fake sandbox provider plugin", () => {
       });
     } finally {
       if (previousSecret === undefined) {
-        delete process.env.PAPERCLIP_FAKE_PLUGIN_HOST_SECRET;
+        delete process.env.PILOT_FAKE_PLUGIN_HOST_SECRET;
       } else {
-        process.env.PAPERCLIP_FAKE_PLUGIN_HOST_SECRET = previousSecret;
+        process.env.PILOT_FAKE_PLUGIN_HOST_SECRET = previousSecret;
       }
     }
   });

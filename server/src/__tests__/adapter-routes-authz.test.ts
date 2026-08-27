@@ -343,10 +343,10 @@ describe.sequential("adapter management route authorization", () => {
 
   describe("cloud-managed adapter code install floor", () => {
     beforeEach(() => {
-      process.env.PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN = "test-server-token";
+      process.env.PILOT_CLOUD_TENANT_SERVER_TOKEN = "test-server-token";
     });
     afterEach(() => {
-      delete process.env.PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN;
+      delete process.env.PILOT_CLOUD_TENANT_SERVER_TOKEN;
     });
 
     it.each(["install", "reinstall"] as const)(
@@ -370,10 +370,10 @@ describe.sequential("adapter management route authorization", () => {
 
   describe("operator-hidden adapter management floor", () => {
     beforeEach(() => {
-      process.env.PAPERCLIP_HIDDEN_SETTINGS = "instance.adapters";
+      process.env.PILOT_HIDDEN_SETTINGS = "instance.adapters";
     });
     afterEach(() => {
-      delete process.env.PAPERCLIP_HIDDEN_SETTINGS;
+      delete process.env.PILOT_HIDDEN_SETTINGS;
     });
 
     it.each(["install", "disable", "override", "delete", "reload", "reinstall"] as const)(

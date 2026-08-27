@@ -101,13 +101,15 @@ function normalizeMode(rawMode: string): "plan" | "ask" | null {
 }
 
 function renderPilotEnvNote(env: Record<string, string>): string {
-  const pilotKeys = Object.keys(env)
-    .filter((key) => key.startsWith("PAPERCLIP_"))
-    .sort();
+  const pilotKeys = [...new Set(
+    Object.keys(env)
+      .filter((key) => key.startsWith("PAPERCLIP_") || key.startsWith("PILOT_"))
+      .map((key) => (key.startsWith("PAPERCLIP_") ? "PILOT_" + key.slice("PAPERCLIP_".length) : key)),
+  )].sort();
   if (pilotKeys.length === 0) return "";
   return [
     "Paperclip runtime note:",
-    `The following PAPERCLIP_* environment variables are available in this run: ${pilotKeys.join(", ")}`,
+    `The following PILOT_* environment variables are available in this run: ${pilotKeys.join(", ")}`,
     "Do not assume these variables are missing without checking your shell environment.",
     "",
     "",
@@ -238,7 +240,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
 
   const envConfig = parseObject(config.env);
   let env: Record<string, string> = { ...buildPilotEnv(agent) };
-  env.PAPERCLIP_RUN_ID = runId;
+  env.PILOT_RUN_ID = runId;
   const wakeTaskId =
     (typeof context.taskId === "string" && context.taskId.trim().length > 0 && context.taskId.trim()) ||
     (typeof context.issueId === "string" && context.issueId.trim().length > 0 && context.issueId.trim()) ||
@@ -265,28 +267,28 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   const wakePayloadJson = stringifyPilotWakePayload(context.paperclipWake);
   const issueWorkMode = readPilotIssueWorkModeFromContext(context);
   if (wakeTaskId) {
-    env.PAPERCLIP_TASK_ID = wakeTaskId;
+    env.PILOT_TASK_ID = wakeTaskId;
   }
   if (issueWorkMode) {
-    env.PAPERCLIP_ISSUE_WORK_MODE = issueWorkMode;
+    env.PILOT_ISSUE_WORK_MODE = issueWorkMode;
   }
   if (wakeReason) {
-    env.PAPERCLIP_WAKE_REASON = wakeReason;
+    env.PILOT_WAKE_REASON = wakeReason;
   }
   if (wakeCommentId) {
-    env.PAPERCLIP_WAKE_COMMENT_ID = wakeCommentId;
+    env.PILOT_WAKE_COMMENT_ID = wakeCommentId;
   }
   if (approvalId) {
-    env.PAPERCLIP_APPROVAL_ID = approvalId;
+    env.PILOT_APPROVAL_ID = approvalId;
   }
   if (approvalStatus) {
-    env.PAPERCLIP_APPROVAL_STATUS = approvalStatus;
+    env.PILOT_APPROVAL_STATUS = approvalStatus;
   }
   if (linkedIssueIds.length > 0) {
-    env.PAPERCLIP_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
+    env.PILOT_LINKED_ISSUE_IDS = linkedIssueIds.join(",");
   }
   if (wakePayloadJson) {
-    env.PAPERCLIP_WAKE_PAYLOAD_JSON = wakePayloadJson;
+    env.PILOT_WAKE_PAYLOAD_JSON = wakePayloadJson;
   }
   refreshPilotWorkspaceEnvForExecution({
     env,
@@ -302,7 +304,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     executionCwd: effectiveExecutionCwd,
   });
   if (authToken) {
-    env.PAPERCLIP_API_KEY = authToken;
+    env.PILOT_API_KEY = authToken;
   }
   const timeoutSec = resolveAdapterExecutionTargetTimeoutSec(
     executionTarget,
@@ -459,7 +461,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       runtimeRootDir: remoteRuntimeRootDir,
       adapterKey: "cursor",
       timeoutSec,
-      hostApiToken: env.PAPERCLIP_API_KEY,
+      hostApiToken: env.PILOT_API_KEY,
       onLog,
     });
     if (pilotBridge) {

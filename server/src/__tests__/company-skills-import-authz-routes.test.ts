@@ -39,15 +39,15 @@ describeEmbeddedPostgres("company skill import authorization routes", () => {
   let tempDb: Awaited<ReturnType<typeof startEmbeddedPostgresTestDatabase>> | null = null;
   let pilotHome: string | null = null;
   const cleanupDirs = new Set<string>();
-  const previousAgentJwtSecret = process.env.PAPERCLIP_AGENT_JWT_SECRET;
-  const previousPilotHome = process.env.PAPERCLIP_HOME;
-  const previousPilotInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
+  const previousAgentJwtSecret = process.env.PILOT_AGENT_JWT_SECRET;
+  const previousPilotHome = process.env.PILOT_HOME;
+  const previousPilotInstanceId = process.env.PILOT_INSTANCE_ID;
 
   beforeAll(async () => {
-    process.env.PAPERCLIP_AGENT_JWT_SECRET = "company-skills-import-authz-test-secret";
+    process.env.PILOT_AGENT_JWT_SECRET = "company-skills-import-authz-test-secret";
     pilotHome = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-company-skills-import-authz-home-"));
-    process.env.PAPERCLIP_HOME = pilotHome;
-    process.env.PAPERCLIP_INSTANCE_ID = "default";
+    process.env.PILOT_HOME = pilotHome;
+    process.env.PILOT_INSTANCE_ID = "default";
     tempDb = await startEmbeddedPostgresTestDatabase("paperclip-company-skills-import-authz-");
     db = createDb(tempDb.connectionString);
   }, 20_000);
@@ -70,12 +70,12 @@ describeEmbeddedPostgres("company skill import authorization routes", () => {
     if (pilotHome) {
       await fs.rm(pilotHome, { recursive: true, force: true });
     }
-    if (previousAgentJwtSecret === undefined) delete process.env.PAPERCLIP_AGENT_JWT_SECRET;
-    else process.env.PAPERCLIP_AGENT_JWT_SECRET = previousAgentJwtSecret;
-    if (previousPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
-    else process.env.PAPERCLIP_HOME = previousPilotHome;
-    if (previousPilotInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-    else process.env.PAPERCLIP_INSTANCE_ID = previousPilotInstanceId;
+    if (previousAgentJwtSecret === undefined) delete process.env.PILOT_AGENT_JWT_SECRET;
+    else process.env.PILOT_AGENT_JWT_SECRET = previousAgentJwtSecret;
+    if (previousPilotHome === undefined) delete process.env.PILOT_HOME;
+    else process.env.PILOT_HOME = previousPilotHome;
+    if (previousPilotInstanceId === undefined) delete process.env.PILOT_INSTANCE_ID;
+    else process.env.PILOT_INSTANCE_ID = previousPilotInstanceId;
   });
 
   function authenticatedApp() {

@@ -860,7 +860,7 @@ describe.sequential("company portability routes", () => {
   });
 
   it.sequential("keeps Cloud-managed global import apply synchronous when async opt-in is absent", async () => {
-    vi.stubEnv("PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN", "tenant-secret");
+    vi.stubEnv("PILOT_CLOUD_TENANT_SERVER_TOKEN", "tenant-secret");
     mockCompanyPortabilityService.importBundle.mockResolvedValueOnce(createImportResult("created"));
     try {
       const app = await createApp(cloudTenantActor());

@@ -1476,13 +1476,13 @@ describeEmbeddedPostgres("heartbeat orphaned process recovery", () => {
 
   async function withTempPilotHome<T>(fn: (home: string) => Promise<T>): Promise<T> {
     const home = await fs.mkdtemp(path.join(os.tmpdir(), "paperclip-hot-restart-"));
-    const previousHome = process.env.PAPERCLIP_HOME;
-    process.env.PAPERCLIP_HOME = home;
+    const previousHome = process.env.PILOT_HOME;
+    process.env.PILOT_HOME = home;
     try {
       return await fn(home);
     } finally {
-      if (previousHome === undefined) delete process.env.PAPERCLIP_HOME;
-      else process.env.PAPERCLIP_HOME = previousHome;
+      if (previousHome === undefined) delete process.env.PILOT_HOME;
+      else process.env.PILOT_HOME = previousHome;
       await fs.rm(home, { recursive: true, force: true });
     }
   }

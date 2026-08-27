@@ -119,11 +119,11 @@ function createBasePilotEnv(options: TestPilotEnv) {
     }
   }
 
-  env.PAPERCLIP_CONFIG = options.configPath;
-  env.PAPERCLIP_HOME = options.paperclipHome;
-  env.PAPERCLIP_INSTANCE_ID = options.instanceId;
-  env.PAPERCLIP_CONTEXT = path.join(options.paperclipHome, "context.json");
-  env.PAPERCLIP_AUTH_STORE = path.join(options.paperclipHome, "auth.json");
+  env.PILOT_CONFIG = options.configPath;
+  env.PILOT_HOME = options.paperclipHome;
+  env.PILOT_INSTANCE_ID = options.instanceId;
+  env.PILOT_CONTEXT = path.join(options.paperclipHome, "context.json");
+  env.PILOT_AUTH_STORE = path.join(options.paperclipHome, "auth.json");
   if (options.shellHome) {
     env.HOME = options.shellHome;
   }
@@ -152,11 +152,11 @@ function createServerEnv(
   env.HOST = "127.0.0.1";
   env.PORT = String(port);
   env.SERVE_UI = "false";
-  env.PAPERCLIP_DB_BACKUP_ENABLED = "false";
-  env.PAPERCLIP_DECISION_SIGNING_SECRET = "company-import-export-decision-signing-secret";
+  env.PILOT_DB_BACKUP_ENABLED = "false";
+  env.PILOT_DECISION_SIGNING_SECRET = "company-import-export-decision-signing-secret";
   env.HEARTBEAT_SCHEDULER_ENABLED = "false";
-  env.PAPERCLIP_MIGRATION_AUTO_APPLY = "true";
-  env.PAPERCLIP_UI_DEV_MIDDLEWARE = "false";
+  env.PILOT_MIGRATION_AUTO_APPLY = "true";
+  env.PILOT_UI_DEV_MIDDLEWARE = "false";
 
   return env;
 }
@@ -167,10 +167,10 @@ function createCliEnv(options: TestPilotEnv) {
   delete env.PORT;
   delete env.HOST;
   delete env.SERVE_UI;
-  delete env.PAPERCLIP_DB_BACKUP_ENABLED;
+  delete env.PILOT_DB_BACKUP_ENABLED;
   delete env.HEARTBEAT_SCHEDULER_ENABLED;
-  delete env.PAPERCLIP_MIGRATION_AUTO_APPLY;
-  delete env.PAPERCLIP_UI_DEV_MIDDLEWARE;
+  delete env.PILOT_MIGRATION_AUTO_APPLY;
+  delete env.PILOT_UI_DEV_MIDDLEWARE;
   return env;
 }
 

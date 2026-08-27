@@ -546,9 +546,9 @@ describe("shared ACPX engine runtime behavior", () => {
     const prompt = String(meta[0]?.prompt ?? "");
     const promptMetrics = meta[0]?.promptMetrics as Record<string, number> | undefined;
     expect(prompt).toContain("Paperclip runtime note:");
-    expect(prompt).toContain("PAPERCLIP_AGENT_ID");
-    expect(prompt).toContain("PAPERCLIP_API_KEY");
-    expect(prompt).toContain("PAPERCLIP_WAKE_PAYLOAD_JSON");
+    expect(prompt).toContain("PILOT_AGENT_ID");
+    expect(prompt).toContain("PILOT_API_KEY");
+    expect(prompt).toContain("PILOT_WAKE_PAYLOAD_JSON");
     expect(prompt).toContain("Paperclip API access note:");
     expect(prompt).toContain('PAPERCLIP_API_BASE="${PAPERCLIP_API_URL%/}"; PAPERCLIP_API_BASE="${PAPERCLIP_API_BASE%/api}"');
     expect(prompt).toContain("$PAPERCLIP_API_BASE/api/agents/me");
@@ -1221,12 +1221,12 @@ describe("shared ACPX engine runtime behavior", () => {
     await fs.writeFile(managedAuth, "{\"stale\":true}", "utf8");
 
     const previousCodexHome = process.env.CODEX_HOME;
-    const previousPilotHome = process.env.PAPERCLIP_HOME;
-    const previousPilotInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
+    const previousPilotHome = process.env.PILOT_HOME;
+    const previousPilotInstanceId = process.env.PILOT_INSTANCE_ID;
     try {
       process.env.CODEX_HOME = sourceCodexHome;
-      process.env.PAPERCLIP_HOME = pilotHome;
-      process.env.PAPERCLIP_INSTANCE_ID = pilotInstanceId;
+      process.env.PILOT_HOME = pilotHome;
+      process.env.PILOT_INSTANCE_ID = pilotInstanceId;
       await runExecutor({
         agent: "codex",
         stateDir: path.join(root, "state"),
@@ -1236,10 +1236,10 @@ describe("shared ACPX engine runtime behavior", () => {
     } finally {
       if (previousCodexHome === undefined) delete process.env.CODEX_HOME;
       else process.env.CODEX_HOME = previousCodexHome;
-      if (previousPilotHome === undefined) delete process.env.PAPERCLIP_HOME;
-      else process.env.PAPERCLIP_HOME = previousPilotHome;
-      if (previousPilotInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-      else process.env.PAPERCLIP_INSTANCE_ID = previousPilotInstanceId;
+      if (previousPilotHome === undefined) delete process.env.PILOT_HOME;
+      else process.env.PILOT_HOME = previousPilotHome;
+      if (previousPilotInstanceId === undefined) delete process.env.PILOT_INSTANCE_ID;
+      else process.env.PILOT_INSTANCE_ID = previousPilotInstanceId;
     }
 
     const authStat = await fs.lstat(managedAuth);
@@ -1271,7 +1271,7 @@ describe("shared ACPX engine runtime behavior", () => {
     ).toBe("node ./fake-acp.js");
     expect(
       (second.sessionInputs[0]!.sessionOptions as { env: Record<string, string> }).env
-        .PAPERCLIP_API_KEY,
+        .PILOT_API_KEY,
     ).toBe("new-key");
     await expect(fs.access(path.join(stateDir, "wrappers"))).rejects.toThrow();
   });
@@ -1288,11 +1288,11 @@ describe("shared ACPX engine runtime behavior", () => {
           // Server-resolved secret_ref values arrive here as plain strings.
           OPENROUTER_API_KEY: "resolved-secret-value",
           // Reserved-namespace config keys must not clobber runtime identity/wake.
-          PAPERCLIP_TASK_ID: "attacker-issue",
+          PILOT_TASK_ID: "attacker-issue",
           // PAPERCLIP_API_KEY is never accepted from config.
-          PAPERCLIP_API_KEY: "config-key",
+          PILOT_API_KEY: "config-key",
           // A PAPERCLIP_*-named key the harness does not assign flows through.
-          PAPERCLIP_CLOUD_PROVIDER_TOKEN: "cloud-token",
+          PILOT_CLOUD_PROVIDER_TOKEN: "cloud-token",
         },
       },
       {
@@ -1303,9 +1303,9 @@ describe("shared ACPX engine runtime behavior", () => {
     const env = (sessionInputs[0]!.sessionOptions as { env: Record<string, string> }).env;
     expect(env.OOGA_BOOGA_123).toBe("plain-value");
     expect(env.OPENROUTER_API_KEY).toBe("resolved-secret-value");
-    expect(env.PAPERCLIP_TASK_ID).toBe("issue-real");
-    expect(env.PAPERCLIP_API_KEY).toBe("runtime-secret-token");
-    expect(env.PAPERCLIP_CLOUD_PROVIDER_TOKEN).toBe("cloud-token");
+    expect(env.PILOT_TASK_ID).toBe("issue-real");
+    expect(env.PILOT_API_KEY).toBe("runtime-secret-token");
+    expect(env.PILOT_CLOUD_PROVIDER_TOKEN).toBe("cloud-token");
   });
 
   it("busts the session fingerprint when resolved adapter env changes but not across wakes", async () => {
@@ -1349,11 +1349,11 @@ describe("shared ACPX engine runtime behavior", () => {
     // value, even across an otherwise-identical wake context.
     const context = { taskId: "issue-1", wakeReason: "issue_assigned" };
     const withKey = await runExecutor(
-      { ...baseConfig, env: { PAPERCLIP_CLOUD_PROVIDER_TOKEN: "explicit-key-1" } },
+      { ...baseConfig, env: { PILOT_CLOUD_PROVIDER_TOKEN: "explicit-key-1" } },
       { context },
     );
     const rotatedKey = await runExecutor(
-      { ...baseConfig, env: { PAPERCLIP_CLOUD_PROVIDER_TOKEN: "explicit-key-2" } },
+      { ...baseConfig, env: { PILOT_CLOUD_PROVIDER_TOKEN: "explicit-key-2" } },
       { context },
     );
 
@@ -1522,7 +1522,7 @@ describe("shared ACPX engine runtime behavior", () => {
       { context: { paperclipWorkspace: { cwd: localCwd, workspaceWorktreePath: localCwd } }, executionTarget: { kind: "remote", transport: "ssh", remoteCwd } },
     );
     const env = (sessionInputs[0]!.sessionOptions as { env: Record<string, string> }).env;
-    expect(env.PAPERCLIP_WORKSPACE_CWD).toBe(localCwd);
+    expect(env.PILOT_WORKSPACE_CWD).toBe(localCwd);
     // The ssh remote transport is NOT the runner-backed process-session lane, so
     // it stays byte-identical: no host-spawn redirect. `cwd` is the host cwd and
     // `spawnCwd` is unset.
@@ -1544,11 +1544,11 @@ describe("shared ACPX engine runtime behavior", () => {
     ]);
     expect(
       (first.sessionInputs[0]!.sessionOptions as { env: Record<string, string> }).env
-        .PAPERCLIP_API_KEY,
+        .PILOT_API_KEY,
     ).toBe("first");
     expect(
       (second.sessionInputs[0]!.sessionOptions as { env: Record<string, string> }).env
-        .PAPERCLIP_API_KEY,
+        .PILOT_API_KEY,
     ).toBe("second");
   });
 
@@ -1650,7 +1650,7 @@ describe("shared ACPX engine runtime behavior", () => {
     let sessionPayload: Record<string, unknown> | null = null;
     const runner = createLocalSandboxRunner(
       (input: { args?: string[]; env?: Record<string, string> }) => {
-        if (input.env?.PAPERCLIP_SANDBOX_EXEC_CHANNEL === "bridge") {
+        if (input.env?.PILOT_SANDBOX_EXEC_CHANNEL === "bridge") {
           const script = input.args?.[1] ?? "";
           const match = script.match(/PAPERCLIP_PROCESS_SESSION_COMMAND_B64='([^']+)'/);
           if (match) {
@@ -1693,13 +1693,13 @@ describe("shared ACPX engine runtime behavior", () => {
     expect(runtimeOptions[0]!.spawnCwd).not.toBe(sessionInputs[0]!.cwd);
     const payloadEnv = ((sessionPayload as Record<string, unknown> | null)?.env ?? {}) as Record<string, unknown>;
     expect(payloadEnv).toMatchObject({
-      PAPERCLIP_API_BRIDGE_MODE: "queue_v1",
+      PILOT_API_BRIDGE_MODE: "queue_v1",
     });
-    expect(String(payloadEnv.PAPERCLIP_API_URL ?? "")).toMatch(
+    expect(String(payloadEnv.PILOT_API_URL ?? "")).toMatch(
       /^http:\/\/127\.0\.0\.1:\d+$/,
     );
-    expect(payloadEnv.PAPERCLIP_API_KEY).toBeTruthy();
-    expect(payloadEnv.PAPERCLIP_API_KEY).not.toBe("real-run-jwt");
+    expect(payloadEnv.PILOT_API_KEY).toBeTruthy();
+    expect(payloadEnv.PILOT_API_KEY).not.toBe("real-run-jwt");
   });
 
   it("keeps the session fingerprint stable when only the host spawn cwd changes", async () => {
@@ -1843,9 +1843,9 @@ describe("shared ACPX engine runtime behavior", () => {
         close: async () => {},
       }) as never,
     });
-    const previousApiKey = process.env.PAPERCLIP_API_KEY;
+    const previousApiKey = process.env.PILOT_API_KEY;
     try {
-      delete process.env.PAPERCLIP_API_KEY;
+      delete process.env.PILOT_API_KEY;
       const result = await execute({
         runId: "run-1",
         agent: { id: "agent-1", companyId: "company-1" },
@@ -1857,11 +1857,11 @@ describe("shared ACPX engine runtime behavior", () => {
         onMeta: async () => {},
       } as never);
       expect(result.exitCode).toBe(0);
-      expect(observedSessionEnv?.PAPERCLIP_API_KEY).toBe("runtime-key");
-      expect(process.env.PAPERCLIP_API_KEY).toBeUndefined();
+      expect(observedSessionEnv?.PILOT_API_KEY).toBe("runtime-key");
+      expect(process.env.PILOT_API_KEY).toBeUndefined();
     } finally {
-      if (previousApiKey === undefined) delete process.env.PAPERCLIP_API_KEY;
-      else process.env.PAPERCLIP_API_KEY = previousApiKey;
+      if (previousApiKey === undefined) delete process.env.PILOT_API_KEY;
+      else process.env.PILOT_API_KEY = previousApiKey;
     }
   });
 
@@ -2572,7 +2572,7 @@ describe("ACPX engine remote sandbox staging seam (PR 1: workspace + cwd)", () =
     // in-sandbox process env is carried there, NOT in the exec's own `env`.
     let launchPayload: Record<string, unknown> | null = null;
     (executionTarget as { runner: unknown }).runner = createLocalSandboxRunner((input) => {
-      if (input.env?.PAPERCLIP_SANDBOX_EXEC_CHANNEL === "bridge") {
+      if (input.env?.PILOT_SANDBOX_EXEC_CHANNEL === "bridge") {
         const script = input.args?.[1] ?? "";
         const match = script.match(/PAPERCLIP_PROCESS_SESSION_COMMAND_B64='([^']+)'/);
         if (match) {
@@ -2603,10 +2603,10 @@ describe("ACPX engine remote sandbox staging seam (PR 1: workspace + cwd)", () =
       string,
       unknown
     >;
-    expect(payloadEnv).toMatchObject({ PAPERCLIP_API_BRIDGE_MODE: "queue_v1" });
-    expect(String(payloadEnv.PAPERCLIP_API_URL ?? "")).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
-    expect(payloadEnv.PAPERCLIP_API_KEY).toBeTruthy();
-    expect(payloadEnv.PAPERCLIP_API_KEY).not.toBe("real-run-jwt");
+    expect(payloadEnv).toMatchObject({ PILOT_API_BRIDGE_MODE: "queue_v1" });
+    expect(String(payloadEnv.PILOT_API_URL ?? "")).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+    expect(payloadEnv.PILOT_API_KEY).toBeTruthy();
+    expect(payloadEnv.PILOT_API_KEY).not.toBe("real-run-jwt");
   });
 
   it("publishes referenced-project workspace hints repointed at their staged sandbox directories", async () => {
@@ -2620,7 +2620,7 @@ describe("ACPX engine remote sandbox staging seam (PR 1: workspace + cwd)", () =
     // Decode the process-session LAUNCH payload — the in-sandbox process env is carried there.
     let launchPayload: Record<string, unknown> | null = null;
     (executionTarget as { runner: unknown }).runner = createLocalSandboxRunner((input) => {
-      if (input.env?.PAPERCLIP_SANDBOX_EXEC_CHANNEL === "bridge") {
+      if (input.env?.PILOT_SANDBOX_EXEC_CHANNEL === "bridge") {
         const script = input.args?.[1] ?? "";
         const match = script.match(/PAPERCLIP_PROCESS_SESSION_COMMAND_B64='([^']+)'/);
         if (match) {
@@ -2673,7 +2673,7 @@ describe("ACPX engine remote sandbox staging seam (PR 1: workspace + cwd)", () =
       string,
       unknown
     >;
-    const workspacesJson = payloadEnv.PAPERCLIP_WORKSPACES_JSON;
+    const workspacesJson = payloadEnv.PILOT_WORKSPACES_JSON;
     expect(typeof workspacesJson).toBe("string");
     const hints = JSON.parse(String(workspacesJson)) as Array<Record<string, unknown>>;
     const referencedHint = hints.find((hint) => hint.projectId === "a");

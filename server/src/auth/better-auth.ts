@@ -169,7 +169,7 @@ export function resolveWorkspaceHandoffIdentity(
   const key = resolveWorkspaceHandoffLocalKey(env);
   if (!key) return null;
   const configuredOrigin =
-    normalizeWorkspaceHandoffOrigin(env.PAPERCLIP_PUBLIC_URL)
+    normalizeWorkspaceHandoffOrigin(env.PILOT_PUBLIC_URL)
     ?? (config.authBaseUrlMode === "explicit"
       ? normalizeWorkspaceHandoffOrigin(config.authPublicBaseUrl)
       : null);
@@ -184,8 +184,8 @@ export function resolveWorkspaceHandoffIdentity(
 
 export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins: string[]): BetterAuthInstance {
   const baseUrl = config.authBaseUrlMode === "explicit" ? config.authPublicBaseUrl : undefined;
-  const publicUrl = process.env.PAPERCLIP_PUBLIC_URL?.trim() || baseUrl;
-  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.PAPERCLIP_AGENT_JWT_SECRET;
+  const publicUrl = process.env.PILOT_PUBLIC_URL?.trim() || baseUrl;
+  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.PILOT_AGENT_JWT_SECRET;
   if (!secret) {
     throw new Error(
       "BETTER_AUTH_SECRET (or PAPERCLIP_AGENT_JWT_SECRET) must be set. " +
@@ -221,7 +221,7 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins:
     rateLimit: buildBetterAuthRateLimitOptions({
       deploymentMode: config.deploymentMode,
       deploymentExposure: config.deploymentExposure,
-      override: process.env.PAPERCLIP_AUTH_RATE_LIMIT_ENABLED,
+      override: process.env.PILOT_AUTH_RATE_LIMIT_ENABLED,
     }),
     advanced: buildBetterAuthAdvancedOptions({ disableSecureCookies }),
     // Registered only for a managed workspace instance: the plugin is what makes

@@ -754,7 +754,7 @@ describe("run phase timing telemetry", () => {
       const serialized = JSON.stringify(event);
       expect(serialized).not.toContain("/usr/bin/node");
       expect(serialized).not.toContain("/secret/path");
-      expect(serialized).not.toContain("PAPERCLIP_API_KEY");
+      expect(serialized).not.toContain("PILOT_API_KEY");
       expect(serialized).not.toContain("abc123");
       expect(serialized).not.toContain("run-7f3a-agent-42");
     }

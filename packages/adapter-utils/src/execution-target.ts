@@ -279,15 +279,15 @@ function resolveHostForUrl(rawHost: string): string {
 
 function resolveDefaultPilotApiUrl(): string {
   const runtimeHost = resolveHostForUrl(
-    process.env.PAPERCLIP_LISTEN_HOST ?? process.env.HOST ?? "localhost",
+    process.env.PILOT_LISTEN_HOST ?? process.env.HOST ?? "localhost",
   );
   // 3100 matches the default Paperclip dev server port when the runtime does not provide one.
-  const runtimePort = process.env.PAPERCLIP_LISTEN_PORT ?? process.env.PORT ?? "3100";
+  const runtimePort = process.env.PILOT_LISTEN_PORT ?? process.env.PORT ?? "3100";
   return `http://${runtimeHost}:${runtimePort}`;
 }
 
 function isBridgeDebugEnabled(env: NodeJS.ProcessEnv): boolean {
-  const value = env.PAPERCLIP_BRIDGE_DEBUG?.trim().toLowerCase();
+  const value = env.PILOT_BRIDGE_DEBUG?.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes";
 }
 
@@ -1560,7 +1560,7 @@ export async function startAdapterExecutionTargetProcessSessionBridge(input: {
       ),
       cwd: target.remoteCwd,
       env: {
-        PAPERCLIP_SANDBOX_EXEC_CHANNEL: "bridge",
+        PILOT_SANDBOX_EXEC_CHANNEL: "bridge",
       },
       timeoutMs,
       // The wrapper launch is bridge plumbing. Keep it off the persistent
@@ -1858,9 +1858,9 @@ export async function startAdapterExecutionTargetProcessSessionBridge(input: {
             args: shellCommandArgs(`node ${shellQuote(remoteScriptPath)}`),
             cwd: target.remoteCwd,
             env: {
-              PAPERCLIP_PROCESS_SESSION_DIR: sessionDir,
-              PAPERCLIP_PROCESS_SESSION_COMMAND_B64: streamCommandPayload,
-              PAPERCLIP_SANDBOX_EXEC_CHANNEL: "bridge",
+              PILOT_PROCESS_SESSION_DIR: sessionDir,
+              PILOT_PROCESS_SESSION_COMMAND_B64: streamCommandPayload,
+              PILOT_SANDBOX_EXEC_CHANNEL: "bridge",
             },
             timeoutMs,
             useSession: true,
@@ -1990,7 +1990,7 @@ const PROCESS_SESSION_STDIN_POLL_TAIL = `child.stdin.on("error", () => {});
 // and write an error event, so a lost message fails loud, and let later files
 // run.
 const stdinMaxParseRetries = (() => {
-  const raw = Number.parseInt(process.env.PAPERCLIP_PROCESS_SESSION_STDIN_MAX_RETRIES || "", 10);
+  const raw = Number.parseInt((process.env.PILOT_PROCESS_SESSION_STDIN_MAX_RETRIES ?? process.env.PAPERCLIP_PROCESS_SESSION_STDIN_MAX_RETRIES) || "", 10);
   return Number.isFinite(raw) && raw > 0 ? raw : 100;
 })();
 const stdinParseRetries = new Map();
@@ -2098,8 +2098,8 @@ function getProcessSessionRemoteStreamSource(): string {
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-const sessionDir = process.env.PAPERCLIP_PROCESS_SESSION_DIR;
-const commandPayload = process.env.PAPERCLIP_PROCESS_SESSION_COMMAND_B64;
+const sessionDir = process.env.PILOT_PROCESS_SESSION_DIR ?? process.env.PAPERCLIP_PROCESS_SESSION_DIR;
+const commandPayload = process.env.PILOT_PROCESS_SESSION_COMMAND_B64 ?? process.env.PAPERCLIP_PROCESS_SESSION_COMMAND_B64;
 if (!sessionDir || !commandPayload) throw new Error("Missing process session bridge env.");
 
 const stdinDir = path.posix.join(sessionDir, "stdin");
@@ -2142,8 +2142,8 @@ function getProcessSessionRemoteEventFileSource(): string {
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-const sessionDir = process.env.PAPERCLIP_PROCESS_SESSION_DIR;
-const commandPayload = process.env.PAPERCLIP_PROCESS_SESSION_COMMAND_B64;
+const sessionDir = process.env.PILOT_PROCESS_SESSION_DIR ?? process.env.PAPERCLIP_PROCESS_SESSION_DIR;
+const commandPayload = process.env.PILOT_PROCESS_SESSION_COMMAND_B64 ?? process.env.PAPERCLIP_PROCESS_SESSION_COMMAND_B64;
 if (!sessionDir || !commandPayload) throw new Error("Missing process session bridge env.");
 
 const stdinDir = path.posix.join(sessionDir, "stdin");
@@ -2362,10 +2362,10 @@ export async function startAdapterExecutionTargetPilotBridge(input: {
 
   return {
     env: {
-      PAPERCLIP_API_URL: server.baseUrl,
-      PAPERCLIP_API_KEY: bridgeToken,
-      PAPERCLIP_API_BRIDGE_MODE: "queue_v1",
-      PAPERCLIP_BRIDGE_QUEUE_DIR: queueDir,
+      PILOT_API_URL: server.baseUrl,
+      PILOT_API_KEY: bridgeToken,
+      PILOT_API_BRIDGE_MODE: "queue_v1",
+      PILOT_BRIDGE_QUEUE_DIR: queueDir,
     },
     runLogTail,
     stop: async () => {

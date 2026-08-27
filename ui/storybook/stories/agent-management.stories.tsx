@@ -108,7 +108,7 @@ const agentManagementAgents: Agent[] = [
       extraArgs: ["--full-auto"],
       env: {
         OPENAI_API_KEY: { type: "secret_ref", secretId: "secret-openai", version: "latest" },
-        PAPERCLIP_TRACE: { type: "plain", value: "storybook" },
+        PILOT_TRACE: { type: "plain", value: "storybook" },
       } satisfies Record<string, EnvBinding>,
       timeoutSec: 7200,
       graceSec: 20,
@@ -494,7 +494,7 @@ function AgentConfigFormStory() {
     extraArgs: "--full-auto, --search",
     envBindings: {
       OPENAI_API_KEY: { type: "secret_ref", secretId: "secret-openai", version: "latest" },
-      PAPERCLIP_TRACE: { type: "plain", value: "storybook" },
+      PILOT_TRACE: { type: "plain", value: "storybook" },
     },
     runtimeServicesJson: JSON.stringify(
       [
@@ -663,7 +663,7 @@ function ConfigPrimitivesStory() {
     runtimeServices: [
       { name: "api", command: "pnpm dev:once", healthUrl: "http://localhost:3100/api/health" },
     ],
-    env: { PAPERCLIP_BIND: "lan" },
+    env: { PILOT_BIND: "lan" },
   }, null, 2));
 
   return (

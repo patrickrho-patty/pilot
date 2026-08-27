@@ -33,13 +33,13 @@ const HANDLE = "handle-abcdef1234567890";
 // back in and restores the harness value afterwards.
 let previousHttpsMode: string | undefined;
 beforeEach(() => {
-  previousHttpsMode = process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS;
-  process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS = "auto";
+  previousHttpsMode = process.env.PILOT_MANAGED_RUNTIME_HTTPS;
+  process.env.PILOT_MANAGED_RUNTIME_HTTPS = "auto";
 });
 
 afterEach(async () => {
-  if (previousHttpsMode === undefined) delete process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS;
-  else process.env.PAPERCLIP_MANAGED_RUNTIME_HTTPS = previousHttpsMode;
+  if (previousHttpsMode === undefined) delete process.env.PILOT_MANAGED_RUNTIME_HTTPS;
+  else process.env.PILOT_MANAGED_RUNTIME_HTTPS = previousHttpsMode;
   // These tests spawn real loopback backends on dedicated-range ports; reap them
   // rather than leaving one squatting 42xxx/52xxx for every test in the file.
   await resetRuntimeServicesForTests({ terminateProcesses: true });

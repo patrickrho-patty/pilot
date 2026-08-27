@@ -13,11 +13,11 @@ import {
   writeHotRestartIntent,
 } from "./hot-restart.js";
 
-const originalInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
+const originalInstanceId = process.env.PILOT_INSTANCE_ID;
 
 afterEach(() => {
-  if (originalInstanceId === undefined) delete process.env.PAPERCLIP_INSTANCE_ID;
-  else process.env.PAPERCLIP_INSTANCE_ID = originalInstanceId;
+  if (originalInstanceId === undefined) delete process.env.PILOT_INSTANCE_ID;
+  else process.env.PILOT_INSTANCE_ID = originalInstanceId;
 });
 
 async function withTempHome<T>(fn: (homeDir: string) => Promise<T>) {
@@ -197,7 +197,7 @@ describe("hot-restart path compatibility", () => {
 
   it("reclaims a live recycled PID when server boot identities differ", async () => {
     await withTempHome(async (homeDir) => {
-      process.env.PAPERCLIP_INSTANCE_ID = "blue";
+      process.env.PILOT_INSTANCE_ID = "blue";
       await writeHotRestartIntent({
         homeDir,
         previousServerPid: process.pid,
@@ -205,7 +205,7 @@ describe("hot-restart path compatibility", () => {
         requestedByRunId: "blue-deploy",
       });
 
-      process.env.PAPERCLIP_INSTANCE_ID = "green";
+      process.env.PILOT_INSTANCE_ID = "green";
       await expect(writeHotRestartIntent({
         homeDir,
         previousServerPid: process.pid,
@@ -219,7 +219,7 @@ describe("hot-restart path compatibility", () => {
   });
 
   it("writes both paths but does not merge a legacy snapshot from another request", async () => {
-    process.env.PAPERCLIP_INSTANCE_ID = "blue";
+    process.env.PILOT_INSTANCE_ID = "blue";
 
     await withTempHome(async (homeDir) => {
       await writeHotRestartIntent({
@@ -262,7 +262,7 @@ describe("hot-restart path compatibility", () => {
   });
 
   it("does not let a non-default instance consume an uncorrelated legacy-only marker", async () => {
-    process.env.PAPERCLIP_INSTANCE_ID = "green";
+    process.env.PILOT_INSTANCE_ID = "green";
 
     await withTempHome(async (homeDir) => {
       await fs.writeFile(
@@ -283,7 +283,7 @@ describe("hot-restart path compatibility", () => {
   });
 
   it("ignores a malformed legacy marker when the instance marker is valid", async () => {
-    process.env.PAPERCLIP_INSTANCE_ID = "blue";
+    process.env.PILOT_INSTANCE_ID = "blue";
 
     await withTempHome(async (homeDir) => {
       await writeHotRestartIntent({
@@ -304,7 +304,7 @@ describe("hot-restart path compatibility", () => {
 
   it("does not overwrite another instance's active legacy handoff", async () => {
     await withTempHome(async (homeDir) => {
-      process.env.PAPERCLIP_INSTANCE_ID = "blue";
+      process.env.PILOT_INSTANCE_ID = "blue";
       await writeHotRestartIntent({
         homeDir,
         previousServerPid: process.pid,
@@ -312,7 +312,7 @@ describe("hot-restart path compatibility", () => {
         requestedByRunId: "blue-deploy",
       });
 
-      process.env.PAPERCLIP_INSTANCE_ID = "green";
+      process.env.PILOT_INSTANCE_ID = "green";
       await expect(writeHotRestartIntent({
         homeDir,
         previousServerPid: 502,
@@ -336,7 +336,7 @@ describe("hot-restart path compatibility", () => {
 
   it("reclaims an abandoned legacy handoff after its target process exits", async () => {
     await withTempHome(async (homeDir) => {
-      process.env.PAPERCLIP_INSTANCE_ID = "blue";
+      process.env.PILOT_INSTANCE_ID = "blue";
       await writeHotRestartIntent({
         homeDir,
         previousServerPid: 2_147_483_647,
@@ -345,7 +345,7 @@ describe("hot-restart path compatibility", () => {
         requestedByRunId: "abandoned-deploy",
       });
 
-      process.env.PAPERCLIP_INSTANCE_ID = "green";
+      process.env.PILOT_INSTANCE_ID = "green";
       await expect(writeHotRestartIntent({
         homeDir,
         previousServerPid: process.pid,
@@ -362,7 +362,7 @@ describe("hot-restart path compatibility", () => {
 
   it("reclaims an abandoned handoff when its PID belongs to a newer process", async () => {
     await withTempHome(async (homeDir) => {
-      process.env.PAPERCLIP_INSTANCE_ID = "blue";
+      process.env.PILOT_INSTANCE_ID = "blue";
       await writeHotRestartIntent({
         homeDir,
         previousServerPid: process.pid,
@@ -380,7 +380,7 @@ describe("hot-restart path compatibility", () => {
         "utf8",
       );
 
-      process.env.PAPERCLIP_INSTANCE_ID = "green";
+      process.env.PILOT_INSTANCE_ID = "green";
       await expect(writeHotRestartIntent({
         homeDir,
         previousServerPid: process.pid,
@@ -395,7 +395,7 @@ describe("hot-restart path compatibility", () => {
 
   it("keeps an old handoff while its original target process is alive", async () => {
     await withTempHome(async (homeDir) => {
-      process.env.PAPERCLIP_INSTANCE_ID = "blue";
+      process.env.PILOT_INSTANCE_ID = "blue";
       await writeHotRestartIntent({
         homeDir,
         previousServerPid: process.pid,
@@ -405,7 +405,7 @@ describe("hot-restart path compatibility", () => {
 
       vi.useFakeTimers({ now: Date.now() + 10 * 60_000 });
       try {
-        process.env.PAPERCLIP_INSTANCE_ID = "green";
+        process.env.PILOT_INSTANCE_ID = "green";
         await expect(writeHotRestartIntent({
           homeDir,
           previousServerPid: process.pid,
@@ -419,7 +419,7 @@ describe("hot-restart path compatibility", () => {
 
   it("does not let matching cleanup delete replacement intent markers", async () => {
     await withTempHome(async (homeDir) => {
-      process.env.PAPERCLIP_INSTANCE_ID = "blue";
+      process.env.PILOT_INSTANCE_ID = "blue";
       const abandonedIntent = await writeHotRestartIntent({
         homeDir,
         previousServerPid: 2_147_483_647,

@@ -33,8 +33,8 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     if (isPilotRuntimeEnvKey(k) && k in env) continue;
     env[k] = v;
   }
-  env.PAPERCLIP_RUN_ID = runId;
-  if (authToken) env.PAPERCLIP_API_KEY = authToken;
+  env.PILOT_RUN_ID = runId;
+  if (authToken) env.PILOT_API_KEY = authToken;
   // runtimeEnv is only used to resolve the command path and log HOME below;
   // the child env is built inside runChildProcess from
   // sanitizeInheritedPaperclipEnv(process.env) + env, so a PAPERCLIP_API_KEY

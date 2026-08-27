@@ -51,7 +51,7 @@ type SeedManifestSummary = {
  * with; the cwd fallback covers a guest launched without it.
  */
 export function resolveWorkspaceSeedMarkerDir(env: NodeJS.ProcessEnv = process.env): string {
-  const configPath = env.PAPERCLIP_CONFIG?.trim();
+  const configPath = env.PILOT_CONFIG?.trim();
   if (configPath) return path.dirname(path.resolve(configPath));
   return path.resolve(process.cwd(), ".paperclip");
 }

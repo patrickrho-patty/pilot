@@ -55,8 +55,8 @@ function findConfigFileFromAncestors(startDir: string): string | null {
 }
 
 function resolvePilotConfigPath(): string {
-  if (process.env.PAPERCLIP_CONFIG?.trim()) {
-    return path.resolve(process.env.PAPERCLIP_CONFIG.trim());
+  if (process.env.PILOT_CONFIG?.trim()) {
+    return path.resolve(process.env.PILOT_CONFIG.trim());
   }
   return findConfigFileFromAncestors(process.cwd()) ?? resolvePilotConfigPathForInstance();
 }

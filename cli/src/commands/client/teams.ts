@@ -383,7 +383,7 @@ function shouldRequestInstallApproval(error: unknown, opts: TeamInstallOptions):
 }
 
 function isPilotTaskRun(): boolean {
-  return Boolean(process.env.PAPERCLIP_TASK_ID?.trim());
+  return Boolean(process.env.PILOT_TASK_ID?.trim());
 }
 
 async function requestInstallApproval(
@@ -453,7 +453,7 @@ function redactInstallSecretValues(options: CatalogTeamInstallOptions): CatalogT
 }
 
 function resolveApprovalIssueIds(opts: TeamInstallOptions): string[] | undefined {
-  const issueId = opts.approvalIssueId?.trim() || process.env.PAPERCLIP_TASK_ID?.trim();
+  const issueId = opts.approvalIssueId?.trim() || process.env.PILOT_TASK_ID?.trim();
   if (!issueId) return undefined;
   return isUuidLike(issueId) ? [issueId] : undefined;
 }

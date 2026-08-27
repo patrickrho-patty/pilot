@@ -23,9 +23,9 @@ describe("env file editor", () => {
     const updated = updateEnvFileContents(
       original,
       {
-        PAPERCLIP_HOME: "/new path",
-        PAPERCLIP_DUPLICATE: "current",
-        PAPERCLIP_WORKTREE_COLOR: "#439edb",
+        PILOT_HOME: "/new path",
+        PILOT_DUPLICATE: "current",
+        PILOT_WORKTREE_COLOR: "#439edb",
       },
       { valueEncoding: "minimal" },
     );
@@ -56,9 +56,9 @@ describe("env file editor", () => {
       updateEnvFileContents(
         original,
         {
-          PAPERCLIP_CURRENT: "plain-value",
-          PAPERCLIP_CHANGED: "new",
-          PAPERCLIP_ADDED: "added",
+          PILOT_CURRENT: "plain-value",
+          PILOT_CHANGED: "new",
+          PILOT_ADDED: "added",
         },
         { valueEncoding: "json" },
       ),
@@ -76,8 +76,8 @@ describe("env file editor", () => {
       updateEnvFileContents(
         ["PAPERCLIP_COLOR=#439edb", "PAPERCLIP_HOME=old# keep this comment"].join("\n"),
         {
-          PAPERCLIP_COLOR: "#439edb",
-          PAPERCLIP_HOME: "new",
+          PILOT_COLOR: "#439edb",
+          PILOT_HOME: "new",
         },
         { valueEncoding: "minimal" },
       ),
@@ -93,6 +93,6 @@ describe("env file editor", () => {
       "UNKNOWN=value",
     ].join("\n");
 
-    expect(updateEnvFileContents(original, { PAPERCLIP_HOME: "/same path" })).toBe(original);
+    expect(updateEnvFileContents(original, { PILOT_HOME: "/same path" })).toBe(original);
   });
 });

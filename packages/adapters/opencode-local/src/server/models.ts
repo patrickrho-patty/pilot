@@ -22,9 +22,9 @@ function sleep(ms: number): Promise<void> {
 
 function resolveOpenCodeCommand(input: unknown): string {
   const envOverride =
-    typeof process.env.PAPERCLIP_OPENCODE_COMMAND === "string" &&
-    process.env.PAPERCLIP_OPENCODE_COMMAND.trim().length > 0
-      ? process.env.PAPERCLIP_OPENCODE_COMMAND.trim()
+    typeof process.env.PILOT_OPENCODE_COMMAND === "string" &&
+    process.env.PILOT_OPENCODE_COMMAND.trim().length > 0
+      ? process.env.PILOT_OPENCODE_COMMAND.trim()
       : "opencode";
   return asString(input, envOverride);
 }

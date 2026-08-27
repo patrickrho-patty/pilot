@@ -48,7 +48,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         # Full history so git describe can compute a version if needed; .git
-        # is dockerignored but PAPERCLIP_BUILD_COMMIT is passed explicitly.
+        # is dockerignored but PILOT_BUILD_COMMIT is passed explicitly.
         with:
           fetch-depth: 0
 
@@ -124,8 +124,8 @@ jobs:
           platforms: linux/amd64
           push: true
           build-args: |
-            PAPERCLIP_BUILD_VERSION=${{ inputs.tag }}
-            PAPERCLIP_BUILD_COMMIT=${{ github.sha }}
+            PILOT_BUILD_VERSION=${{ inputs.tag }}
+            PILOT_BUILD_COMMIT=${{ github.sha }}
             CLI_TOOLS_CACHE_EPOCH=${{ steps.tools-epoch.outputs.epoch }}
           tags: |
             ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ inputs.tag }}

@@ -65,9 +65,9 @@ function sortModels(models: AdapterModel[]): AdapterModel[] {
 
 function resolvePiCommand(input: unknown): string {
   const envOverride =
-    typeof process.env.PAPERCLIP_PI_COMMAND === "string" &&
-    process.env.PAPERCLIP_PI_COMMAND.trim().length > 0
-      ? process.env.PAPERCLIP_PI_COMMAND.trim()
+    typeof process.env.PILOT_PI_COMMAND === "string" &&
+    process.env.PILOT_PI_COMMAND.trim().length > 0
+      ? process.env.PILOT_PI_COMMAND.trim()
       : "pi";
   return asString(input, envOverride);
 }

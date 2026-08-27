@@ -46,8 +46,8 @@ describe("codex managed-home auth fail-fast", () => {
     await fs.mkdir(workspaceDir, { recursive: true });
 
     // Source home has no auth.json, so nothing is symlinked into the managed home.
-    vi.stubEnv("PAPERCLIP_HOME", pilotHome);
-    vi.stubEnv("PAPERCLIP_INSTANCE_ID", "default");
+    vi.stubEnv("PILOT_HOME", pilotHome);
+    vi.stubEnv("PILOT_INSTANCE_ID", "default");
     vi.stubEnv("CODEX_HOME", emptySharedHome);
 
     await expect(
@@ -114,8 +114,8 @@ describe("codex sandbox-target credential gate", () => {
       "codex-home",
     );
     const env = {
-      PAPERCLIP_HOME: pilotHome,
-      PAPERCLIP_INSTANCE_ID: "default",
+      PILOT_HOME: pilotHome,
+      PILOT_INSTANCE_ID: "default",
       CODEX_HOME: emptySharedHome,
     } as NodeJS.ProcessEnv;
     return { env, managedAgentHome };

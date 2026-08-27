@@ -721,10 +721,10 @@ describe("instance settings routes", () => {
     };
 
     beforeEach(() => {
-      process.env.PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN = "test-server-token";
+      process.env.PILOT_CLOUD_TENANT_SERVER_TOKEN = "test-server-token";
     });
     afterEach(() => {
-      delete process.env.PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN;
+      delete process.env.PILOT_CLOUD_TENANT_SERVER_TOKEN;
     });
 
     it("rejects a write that changes executionMode", async () => {
@@ -789,7 +789,7 @@ describe("instance settings routes", () => {
     });
 
     it("keeps executionMode writable on self-hosted instances", async () => {
-      delete process.env.PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN;
+      delete process.env.PILOT_CLOUD_TENANT_SERVER_TOKEN;
       const app = await createApp({
         type: "board",
         userId: "admin-1",
@@ -816,11 +816,11 @@ describe("instance settings routes", () => {
     };
 
     afterEach(() => {
-      delete process.env.PAPERCLIP_HIDDEN_SETTINGS;
+      delete process.env.PILOT_HIDDEN_SETTINGS;
     });
 
     it("rejects a write that changes a hidden general field", async () => {
-      process.env.PAPERCLIP_HIDDEN_SETTINGS = "instance.general.censorUsernameInLogs";
+      process.env.PILOT_HIDDEN_SETTINGS = "instance.general.censorUsernameInLogs";
       const app = await createApp(adminActor);
 
       const res = await request(app)
@@ -833,7 +833,7 @@ describe("instance settings routes", () => {
     });
 
     it("allows a same-value echo of a hidden general field", async () => {
-      process.env.PAPERCLIP_HIDDEN_SETTINGS = "instance.general.censorUsernameInLogs";
+      process.env.PILOT_HIDDEN_SETTINGS = "instance.general.censorUsernameInLogs";
       const app = await createApp(adminActor);
 
       const res = await request(app)
@@ -848,7 +848,7 @@ describe("instance settings routes", () => {
     });
 
     it("deep-compares hidden backupRetention echoes instead of rejecting them", async () => {
-      process.env.PAPERCLIP_HIDDEN_SETTINGS = "instance.general.backupRetention";
+      process.env.PILOT_HIDDEN_SETTINGS = "instance.general.backupRetention";
       mockInstanceSettingsService.getGeneral.mockResolvedValue({
         censorUsernameInLogs: false,
         keyboardShortcuts: false,
@@ -870,7 +870,7 @@ describe("instance settings routes", () => {
     });
 
     it("rejects a write that changes a hidden experimental toggle", async () => {
-      process.env.PAPERCLIP_HIDDEN_SETTINGS = "instance.experimental.enableEnvironments";
+      process.env.PILOT_HIDDEN_SETTINGS = "instance.experimental.enableEnvironments";
       const app = await createApp(adminActor);
 
       const res = await request(app)
@@ -883,7 +883,7 @@ describe("instance settings routes", () => {
     });
 
     it("allows writes to non-hidden experimental toggles while others are hidden", async () => {
-      process.env.PAPERCLIP_HIDDEN_SETTINGS =
+      process.env.PILOT_HIDDEN_SETTINGS =
         "instance.experimental.enableEnvironments,instance.experimental.enableServerInfoDebugView";
       const app = await createApp(adminActor);
 
@@ -898,7 +898,7 @@ describe("instance settings routes", () => {
     });
 
     it("floors every experimental toggle when the whole Experimental page is hidden", async () => {
-      process.env.PAPERCLIP_HIDDEN_SETTINGS = "instance.experimental";
+      process.env.PILOT_HIDDEN_SETTINGS = "instance.experimental";
       const app = await createApp(adminActor);
 
       const res = await request(app)

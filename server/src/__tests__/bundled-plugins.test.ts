@@ -85,7 +85,7 @@ describe("resolveBundledPluginInstalls", () => {
     expect(() =>
       resolveBundledPluginInstalls(["kubernetes"], {
         catalogRoot: CATALOG_ROOT,
-        env: { PAPERCLIP_KUBERNETES_PLUGIN_PATH: "/srv/evil/plugin" },
+        env: { PILOT_KUBERNETES_PLUGIN_PATH: "/srv/evil/plugin" },
         enforceCatalogRoot: true,
       }),
     ).toThrow(/outside the bundled catalog root.*refusing to start/);
@@ -96,7 +96,7 @@ describe("resolveBundledPluginInstalls", () => {
       resolveBundledPluginInstalls(["kubernetes"], {
         catalogRoot: CATALOG_ROOT,
         env: {
-          PAPERCLIP_KUBERNETES_PLUGIN_PATH: path.join(
+          PILOT_KUBERNETES_PLUGIN_PATH: path.join(
             CATALOG_ROOT,
             "sandbox-providers/../../../../etc/kubernetes",
           ),
@@ -123,7 +123,7 @@ describe("resolveBundledPluginInstalls", () => {
   it("honors the legacy kubernetes path override without enforcement (self-hosted)", () => {
     const resolved = resolveBundledPluginInstalls(["kubernetes"], {
       catalogRoot: CATALOG_ROOT,
-      env: { PAPERCLIP_KUBERNETES_PLUGIN_PATH: "/somewhere/else/kubernetes" },
+      env: { PILOT_KUBERNETES_PLUGIN_PATH: "/somewhere/else/kubernetes" },
       enforceCatalogRoot: false,
     });
     expect(resolved).toEqual([
@@ -139,7 +139,7 @@ describe("resolveBundledPluginInstalls", () => {
     const inside = path.join(CATALOG_ROOT, "sandbox-providers", "kubernetes");
     const resolved = resolveBundledPluginInstalls(["kubernetes"], {
       catalogRoot: CATALOG_ROOT,
-      env: { PAPERCLIP_KUBERNETES_PLUGIN_PATH: inside },
+      env: { PILOT_KUBERNETES_PLUGIN_PATH: inside },
       enforceCatalogRoot: true,
     });
     expect(resolved[0]!.localPath).toBe(inside);
@@ -186,7 +186,7 @@ describe("resolveBundledCatalogRoot", () => {
   });
 
   it("honors PAPERCLIP_BUNDLED_PLUGIN_ROOT", () => {
-    expect(resolveBundledCatalogRoot({ PAPERCLIP_BUNDLED_PLUGIN_ROOT: "/custom/root" })).toBe(
+    expect(resolveBundledCatalogRoot({ PILOT_BUNDLED_PLUGIN_ROOT: "/custom/root" })).toBe(
       "/custom/root",
     );
   });

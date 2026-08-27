@@ -25,9 +25,9 @@ afterEach(() => {
 
 describe("GET /health dev-server supervisor access", () => {
   it("exposes dev-server metadata to the supervising dev runner in authenticated mode", async () => {
-    const previousFile = process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE;
-    const previousToken = process.env.PAPERCLIP_DEV_SERVER_STATUS_TOKEN;
-    process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE = createDevServerStatusFile({
+    const previousFile = process.env.PILOT_DEV_SERVER_STATUS_FILE;
+    const previousToken = process.env.PILOT_DEV_SERVER_STATUS_TOKEN;
+    process.env.PILOT_DEV_SERVER_STATUS_FILE = createDevServerStatusFile({
       dirty: true,
       lastChangedAt: "2026-03-20T12:00:00.000Z",
       changedPathCount: 1,
@@ -35,7 +35,7 @@ describe("GET /health dev-server supervisor access", () => {
       pendingMigrations: [],
       lastRestartAt: "2026-03-20T11:30:00.000Z",
     });
-    process.env.PAPERCLIP_DEV_SERVER_STATUS_TOKEN = "dev-runner-token";
+    process.env.PILOT_DEV_SERVER_STATUS_TOKEN = "dev-runner-token";
 
     let selectCall = 0;
     const db = {
@@ -122,14 +122,14 @@ describe("GET /health dev-server supervisor access", () => {
       });
     } finally {
       if (previousFile === undefined) {
-        delete process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE;
+        delete process.env.PILOT_DEV_SERVER_STATUS_FILE;
       } else {
-        process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE = previousFile;
+        process.env.PILOT_DEV_SERVER_STATUS_FILE = previousFile;
       }
       if (previousToken === undefined) {
-        delete process.env.PAPERCLIP_DEV_SERVER_STATUS_TOKEN;
+        delete process.env.PILOT_DEV_SERVER_STATUS_TOKEN;
       } else {
-        process.env.PAPERCLIP_DEV_SERVER_STATUS_TOKEN = previousToken;
+        process.env.PILOT_DEV_SERVER_STATUS_TOKEN = previousToken;
       }
     }
   });
@@ -137,8 +137,8 @@ describe("GET /health dev-server supervisor access", () => {
 
 describe("POST /health/dev-server/restart", () => {
   it("records a manual restart request for the dev runner", async () => {
-    const previousFile = process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE;
-    process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE = createDevServerStatusFile({
+    const previousFile = process.env.PILOT_DEV_SERVER_STATUS_FILE;
+    process.env.PILOT_DEV_SERVER_STATUS_FILE = createDevServerStatusFile({
       dirty: true,
       lastChangedAt: "2026-03-20T12:00:00.000Z",
       changedPathCount: 1,
@@ -157,7 +157,7 @@ describe("POST /health/dev-server/restart", () => {
       expect(res.body).toEqual({ status: "restart_requested" });
 
       const requestPath = path.join(
-        path.dirname(process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE),
+        path.dirname(process.env.PILOT_DEV_SERVER_STATUS_FILE),
         "dev-server-restart-request.json",
       );
       expect(existsSync(requestPath)).toBe(true);
@@ -166,16 +166,16 @@ describe("POST /health/dev-server/restart", () => {
       });
     } finally {
       if (previousFile === undefined) {
-        delete process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE;
+        delete process.env.PILOT_DEV_SERVER_STATUS_FILE;
       } else {
-        process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE = previousFile;
+        process.env.PILOT_DEV_SERVER_STATUS_FILE = previousFile;
       }
     }
   });
 
   it("rejects unauthenticated manual restarts in authenticated mode", async () => {
-    const previousFile = process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE;
-    process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE = createDevServerStatusFile({
+    const previousFile = process.env.PILOT_DEV_SERVER_STATUS_FILE;
+    process.env.PILOT_DEV_SERVER_STATUS_FILE = createDevServerStatusFile({
       dirty: true,
       changedPathCount: 1,
       changedPathsSample: ["server/src/routes/health.ts"],
@@ -204,9 +204,9 @@ describe("POST /health/dev-server/restart", () => {
       expect(res.body).toEqual({ error: "board_access_required" });
     } finally {
       if (previousFile === undefined) {
-        delete process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE;
+        delete process.env.PILOT_DEV_SERVER_STATUS_FILE;
       } else {
-        process.env.PAPERCLIP_DEV_SERVER_STATUS_FILE = previousFile;
+        process.env.PILOT_DEV_SERVER_STATUS_FILE = previousFile;
       }
     }
   });

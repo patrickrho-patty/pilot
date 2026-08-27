@@ -78,7 +78,7 @@ function resolveHomeAwarePath(value: string): string {
 }
 
 function resolveDefaultWorktreeHome(env: NodeJS.ProcessEnv): string {
-  return path.resolve(expandHomePrefix(env.PAPERCLIP_WORKTREES_DIR?.trim() || "~/.paperclip-worktrees"));
+  return path.resolve(expandHomePrefix(env.PILOT_WORKTREES_DIR?.trim() || "~/.paperclip-worktrees"));
 }
 
 function repairStaleMigratedWorktreeEnvEntries(
@@ -87,7 +87,7 @@ function repairStaleMigratedWorktreeEnvEntries(
   env: NodeJS.ProcessEnv,
 ): Record<string, string> {
   const localConfigPath = path.resolve(rootDir, ".paperclip", "config.json");
-  const configuredPath = entries.PAPERCLIP_CONFIG?.trim();
+  const configuredPath = entries.PILOT_CONFIG?.trim();
   if (!configuredPath) return entries;
 
   const resolvedConfiguredPath = resolveHomeAwarePath(configuredPath);
@@ -100,9 +100,9 @@ function repairStaleMigratedWorktreeEnvEntries(
   const homeDir = resolveDefaultWorktreeHome(env);
   return {
     ...entries,
-    PAPERCLIP_HOME: homeDir,
-    PAPERCLIP_CONFIG: localConfigPath,
-    PAPERCLIP_CONTEXT: path.resolve(homeDir, "context.json"),
+    PILOT_HOME: homeDir,
+    PILOT_CONFIG: localConfigPath,
+    PILOT_CONTEXT: path.resolve(homeDir, "context.json"),
   };
 }
 
@@ -125,9 +125,24 @@ export function bootstrapDevRunnerWorktreeEnv(
     };
   }
 
+/**
+ * Env files written before the brand rename carry PAPERCLIP_* keys; map them
+ * onto unset PILOT_* equivalents at load (same policy as the boot shim).
+ */
+function normalizeLegacyEnvEntries(entries: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = { ...entries };
+  for (const key of Object.keys(out)) {
+    if (key.startsWith("PAPERCLIP_") && key !== "PAPERCLIP_") {
+      const target = "PILOT_" + key.slice("PAPERCLIP_".length);
+      if (out[target] === undefined) out[target] = out[key];
+    }
+  }
+  return out;
+}
+
   const entries = repairStaleMigratedWorktreeEnvEntries(
     rootDir,
-    parseEnvFile(readFileSync(envPath, "utf8")),
+    normalizeLegacyEnvEntries(parseEnvFile(readFileSync(envPath, "utf8"))),
     env,
   );
   for (const [key, value] of Object.entries(entries)) {

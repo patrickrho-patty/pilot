@@ -121,7 +121,7 @@ function loadOrCreateGeneratedSecret(): string {
 }
 
 export function resolveDecisionSigningSecret(): string {
-  const fromEnv = process.env.PAPERCLIP_DECISION_SIGNING_SECRET?.trim();
+  const fromEnv = process.env.PILOT_DECISION_SIGNING_SECRET?.trim();
   if (fromEnv) {
     if (fromEnv.length < MIN_SECRET_LENGTH) {
       throw new Error(

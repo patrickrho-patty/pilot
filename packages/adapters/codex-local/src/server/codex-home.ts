@@ -100,7 +100,7 @@ export function resolveSharedCodexHomeDir(
 }
 
 function isWorktreeMode(env: NodeJS.ProcessEnv): boolean {
-  return TRUTHY_ENV_RE.test(env.PAPERCLIP_IN_WORKTREE ?? "");
+  return TRUTHY_ENV_RE.test(env.PILOT_IN_WORKTREE ?? "");
 }
 
 export function resolveManagedCodexHomeDir(
@@ -108,8 +108,8 @@ export function resolveManagedCodexHomeDir(
   companyId?: string,
 ): string {
   const instanceRoot = resolvePilotInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   return companyId
@@ -131,8 +131,8 @@ export function isManagedCodexHomePath(
 ): boolean {
   if (!companyId) return false;
   const instanceRoot = resolvePilotInstanceRootForAdapter({
-    homeDir: nonEmpty(env.PAPERCLIP_HOME) ?? undefined,
-    instanceId: nonEmpty(env.PAPERCLIP_INSTANCE_ID) ?? undefined,
+    homeDir: nonEmpty(env.PILOT_HOME) ?? undefined,
+    instanceId: nonEmpty(env.PILOT_INSTANCE_ID) ?? undefined,
     env,
   });
   const companyRoot = path.resolve(instanceRoot, "companies", companyId);

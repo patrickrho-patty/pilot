@@ -43,8 +43,8 @@ const DEFAULT_PILOT_EMBEDDED_POSTGRES_PORT = 54329;
 function getReservedTestPorts(): Set<number> {
   const configuredPorts = [
     DEFAULT_PILOT_EMBEDDED_POSTGRES_PORT,
-    Number.parseInt(process.env.PAPERCLIP_EMBEDDED_POSTGRES_PORT ?? "", 10),
-    ...String(process.env.PAPERCLIP_TEST_POSTGRES_RESERVED_PORTS ?? "")
+    Number.parseInt(process.env.PILOT_EMBEDDED_POSTGRES_PORT ?? "", 10),
+    ...String(process.env.PILOT_TEST_POSTGRES_RESERVED_PORTS ?? "")
       .split(",")
       .map((value) => Number.parseInt(value.trim(), 10)),
   ];

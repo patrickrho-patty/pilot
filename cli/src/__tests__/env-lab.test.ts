@@ -231,13 +231,13 @@ describe("env-lab cleanup command hint", () => {
 });
 
 describe("env-lab doctor cleanup hint instance", () => {
-  const originalInstanceId = process.env.PAPERCLIP_INSTANCE_ID;
+  const originalInstanceId = process.env.PILOT_INSTANCE_ID;
 
   afterEach(() => {
     if (originalInstanceId === undefined) {
-      delete process.env.PAPERCLIP_INSTANCE_ID;
+      delete process.env.PILOT_INSTANCE_ID;
     } else {
-      process.env.PAPERCLIP_INSTANCE_ID = originalInstanceId;
+      process.env.PILOT_INSTANCE_ID = originalInstanceId;
     }
     vi.restoreAllMocks();
   });
@@ -258,7 +258,7 @@ describe("env-lab doctor cleanup hint instance", () => {
   it("pins the PAPERCLIP_INSTANCE_ID instance when opts.instance is absent", async () => {
     // The doctor diagnoses the instance that `PAPERCLIP_INSTANCE_ID` selects.
     // The cleanup hint must target that instance, not the default instance.
-    process.env.PAPERCLIP_INSTANCE_ID = "env-selected-instance";
+    process.env.PILOT_INSTANCE_ID = "env-selected-instance";
     const messages = captureDoctorMessages();
 
     await envLabDoctorCommand({ instance: undefined });
@@ -273,7 +273,7 @@ describe("env-lab doctor cleanup hint instance", () => {
   it("pins the explicit instance over PAPERCLIP_INSTANCE_ID", async () => {
     // An explicit `--instance` flag overrides the environment variable, so the
     // hint targets the explicit instance the doctor inspected.
-    process.env.PAPERCLIP_INSTANCE_ID = "env-selected-instance";
+    process.env.PILOT_INSTANCE_ID = "env-selected-instance";
     const messages = captureDoctorMessages();
 
     await envLabDoctorCommand({ instance: "explicit-instance" });

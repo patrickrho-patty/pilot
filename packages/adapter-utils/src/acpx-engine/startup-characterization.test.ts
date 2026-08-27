@@ -236,7 +236,7 @@ describe("ACPX engine startup characterization", () => {
       // in-sandbox process env rides there, not in the exec's own `env`.
       let launchPayload: Record<string, unknown> | null = null;
       (executionTarget as { runner: unknown }).runner = createLocalSandboxRunner((input) => {
-        if (input.env?.PAPERCLIP_SANDBOX_EXEC_CHANNEL === "bridge") {
+        if (input.env?.PILOT_SANDBOX_EXEC_CHANNEL === "bridge") {
           const script = input.args?.[1] ?? "";
           const match = script.match(/PAPERCLIP_PROCESS_SESSION_COMMAND_B64='([^']+)'/);
           if (match) {
@@ -259,11 +259,11 @@ describe("ACPX engine startup characterization", () => {
         string,
         unknown
       >;
-      expect(payloadEnv).toMatchObject({ PAPERCLIP_API_BRIDGE_MODE: "queue_v1" });
-      expect(String(payloadEnv.PAPERCLIP_API_URL ?? "")).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      expect(payloadEnv).toMatchObject({ PILOT_API_BRIDGE_MODE: "queue_v1" });
+      expect(String(payloadEnv.PILOT_API_URL ?? "")).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
       // The minted bridge token is present and is NOT the host run JWT.
-      expect(payloadEnv.PAPERCLIP_API_KEY).toBeTruthy();
-      expect(payloadEnv.PAPERCLIP_API_KEY).not.toBe("real-run-jwt");
+      expect(payloadEnv.PILOT_API_KEY).toBeTruthy();
+      expect(payloadEnv.PILOT_API_KEY).not.toBe("real-run-jwt");
     });
 
     it("finalizes the launch env at the bridge merge: the process env carries the merged bridge values", async () => {
@@ -272,7 +272,7 @@ describe("ACPX engine startup characterization", () => {
       let launchPayload: Record<string, unknown> | null = null;
       let bridgeExecEnv: Record<string, string> | undefined;
       (executionTarget as { runner: unknown }).runner = createLocalSandboxRunner((input) => {
-        if (input.env?.PAPERCLIP_SANDBOX_EXEC_CHANNEL === "bridge") {
+        if (input.env?.PILOT_SANDBOX_EXEC_CHANNEL === "bridge") {
           bridgeExecEnv = input.env;
           const script = input.args?.[1] ?? "";
           const match = script.match(/PAPERCLIP_PROCESS_SESSION_COMMAND_B64='([^']+)'/);
@@ -297,13 +297,13 @@ describe("ACPX engine startup characterization", () => {
         string,
         unknown
       >;
-      expect(payloadEnv.PAPERCLIP_API_BRIDGE_MODE).toBe("queue_v1");
-      expect(payloadEnv.PAPERCLIP_API_KEY).toBeTruthy();
+      expect(payloadEnv.PILOT_API_BRIDGE_MODE).toBe("queue_v1");
+      expect(payloadEnv.PILOT_API_KEY).toBeTruthy();
       // The bridge-channel exec's OWN env is the sandbox transport channel, not the
       // agent process env: it does not carry the minted agent bridge key. This pins
       // that the merged agent env lives only in the finalized launch payload.
-      expect(bridgeExecEnv?.PAPERCLIP_SANDBOX_EXEC_CHANNEL).toBe("bridge");
-      expect(bridgeExecEnv?.PAPERCLIP_API_KEY).toBeUndefined();
+      expect(bridgeExecEnv?.PILOT_SANDBOX_EXEC_CHANNEL).toBe("bridge");
+      expect(bridgeExecEnv?.PILOT_API_KEY).toBeUndefined();
     });
   });
 

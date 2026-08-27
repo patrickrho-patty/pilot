@@ -52,7 +52,7 @@ const MAX_BACKSTOP_WRITE_ATTEMPTS = 3;
 const BACKSTOP_WRITE_RETRY_MS = 50;
 const REMOTE_WRITE_BASE64_CHUNK_SIZE = 32 * 1024;
 const SANDBOX_CALLBACK_BRIDGE_ENTRYPOINT = "paperclip-bridge-server.mjs";
-const SANDBOX_EXEC_CHANNEL_ENV = "PAPERCLIP_SANDBOX_EXEC_CHANNEL";
+const SANDBOX_EXEC_CHANNEL_ENV = "PILOT_SANDBOX_EXEC_CHANNEL";
 const SANDBOX_EXEC_CHANNEL_BRIDGE = "bridge";
 
 // The two bridge modes the generated gateway supports. The file mode polls a
@@ -435,21 +435,21 @@ export function buildSandboxCallbackBridgeEnv(input: {
   maxBodyBytes?: number | null;
 }): Record<string, string> {
   return {
-    PAPERCLIP_API_BRIDGE_MODE: SANDBOX_CALLBACK_BRIDGE_FILE_MODE,
-    PAPERCLIP_BRIDGE_QUEUE_DIR: input.queueDir,
-    PAPERCLIP_BRIDGE_TOKEN: input.bridgeToken,
-    PAPERCLIP_BRIDGE_HOST: input.host?.trim() || "127.0.0.1",
-    PAPERCLIP_BRIDGE_PORT: String(input.port && input.port > 0 ? Math.trunc(input.port) : 0),
-    PAPERCLIP_BRIDGE_POLL_INTERVAL_MS: String(
+    PILOT_API_BRIDGE_MODE: SANDBOX_CALLBACK_BRIDGE_FILE_MODE,
+    PILOT_BRIDGE_QUEUE_DIR: input.queueDir,
+    PILOT_BRIDGE_TOKEN: input.bridgeToken,
+    PILOT_BRIDGE_HOST: input.host?.trim() || "127.0.0.1",
+    PILOT_BRIDGE_PORT: String(input.port && input.port > 0 ? Math.trunc(input.port) : 0),
+    PILOT_BRIDGE_POLL_INTERVAL_MS: String(
       normalizeTimeoutMs(input.pollIntervalMs, DEFAULT_BRIDGE_POLL_INTERVAL_MS),
     ),
-    PAPERCLIP_BRIDGE_RESPONSE_TIMEOUT_MS: String(
+    PILOT_BRIDGE_RESPONSE_TIMEOUT_MS: String(
       normalizeTimeoutMs(input.responseTimeoutMs, DEFAULT_BRIDGE_RESPONSE_TIMEOUT_MS),
     ),
-    PAPERCLIP_BRIDGE_MAX_QUEUE_DEPTH: String(
+    PILOT_BRIDGE_MAX_QUEUE_DEPTH: String(
       normalizeTimeoutMs(input.maxQueueDepth, DEFAULT_BRIDGE_MAX_QUEUE_DEPTH),
     ),
-    PAPERCLIP_BRIDGE_MAX_BODY_BYTES: String(
+    PILOT_BRIDGE_MAX_BODY_BYTES: String(
       normalizeTimeoutMs(input.maxBodyBytes, DEFAULT_BRIDGE_MAX_BODY_BYTES),
     ),
   };
@@ -1917,28 +1917,28 @@ import { createServer } from "node:http";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-const bridgeMode = process.env.PAPERCLIP_API_BRIDGE_MODE || "${SANDBOX_CALLBACK_BRIDGE_FILE_MODE}";
-const queueDir = process.env.PAPERCLIP_BRIDGE_QUEUE_DIR;
-const bridgeToken = process.env.PAPERCLIP_BRIDGE_TOKEN;
-const host = process.env.PAPERCLIP_BRIDGE_HOST || "127.0.0.1";
-const port = Number(process.env.PAPERCLIP_BRIDGE_PORT || "0");
-const pollIntervalMs = Number(process.env.PAPERCLIP_BRIDGE_POLL_INTERVAL_MS || "100");
+const bridgeMode = (process.env.PILOT_API_BRIDGE_MODE ?? process.env.PAPERCLIP_API_BRIDGE_MODE) || "${SANDBOX_CALLBACK_BRIDGE_FILE_MODE}";
+const queueDir = process.env.PILOT_BRIDGE_QUEUE_DIR ?? process.env.PAPERCLIP_BRIDGE_QUEUE_DIR;
+const bridgeToken = process.env.PILOT_BRIDGE_TOKEN ?? process.env.PILOT_BRIDGE_TOKEN ?? process.env.PAPERCLIP_BRIDGE_TOKEN;
+const host = (process.env.PILOT_BRIDGE_HOST ?? process.env.PAPERCLIP_BRIDGE_HOST) || "127.0.0.1";
+const port = Number((process.env.PILOT_BRIDGE_PORT ?? process.env.PAPERCLIP_BRIDGE_PORT) || "0");
+const pollIntervalMs = Number((process.env.PILOT_BRIDGE_POLL_INTERVAL_MS ?? process.env.PAPERCLIP_BRIDGE_POLL_INTERVAL_MS) || "100");
 const responseTimeoutMs = Number(
-  process.env.PAPERCLIP_BRIDGE_RESPONSE_TIMEOUT_MS ||
+  (process.env.PILOT_BRIDGE_RESPONSE_TIMEOUT_MS ?? process.env.PAPERCLIP_BRIDGE_RESPONSE_TIMEOUT_MS) ||
     (bridgeMode === "${SANDBOX_CALLBACK_BRIDGE_DUPLEX_MODE}"
       ? "${DEFAULT_DUPLEX_GATEWAY_WAIT_BUDGET_MS}"
       : "${DEFAULT_BRIDGE_RESPONSE_TIMEOUT_MS}"),
 );
-const maxQueueDepth = Number(process.env.PAPERCLIP_BRIDGE_MAX_QUEUE_DEPTH || "${DEFAULT_BRIDGE_MAX_QUEUE_DEPTH}");
-const maxBodyBytes = Number(process.env.PAPERCLIP_BRIDGE_MAX_BODY_BYTES || "${DEFAULT_BRIDGE_MAX_BODY_BYTES}");
+const maxQueueDepth = Number((process.env.PILOT_BRIDGE_MAX_QUEUE_DEPTH ?? process.env.PAPERCLIP_BRIDGE_MAX_QUEUE_DEPTH) || "${DEFAULT_BRIDGE_MAX_QUEUE_DEPTH}");
+const maxBodyBytes = Number((process.env.PILOT_BRIDGE_MAX_BODY_BYTES ?? process.env.PAPERCLIP_BRIDGE_MAX_BODY_BYTES) || "${DEFAULT_BRIDGE_MAX_BODY_BYTES}");
 const heartbeatIntervalMs = Number(
-  process.env.PAPERCLIP_BRIDGE_HEARTBEAT_INTERVAL_MS || "${DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_INTERVAL_MS}",
+  (process.env.PILOT_BRIDGE_HEARTBEAT_INTERVAL_MS ?? process.env.PAPERCLIP_BRIDGE_HEARTBEAT_INTERVAL_MS) || "${DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_INTERVAL_MS}",
 );
 const heartbeatTimeoutMs = Number(
-  process.env.PAPERCLIP_BRIDGE_HEARTBEAT_TIMEOUT_MS || "${DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_TIMEOUT_MS}",
+  (process.env.PILOT_BRIDGE_HEARTBEAT_TIMEOUT_MS ?? process.env.PAPERCLIP_BRIDGE_HEARTBEAT_TIMEOUT_MS) || "${DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_TIMEOUT_MS}",
 );
 const lossExitGraceMs = Number(
-  process.env.PAPERCLIP_BRIDGE_LOSS_EXIT_GRACE_MS || "${DEFAULT_DUPLEX_GATEWAY_LOSS_EXIT_GRACE_MS}",
+  (process.env.PILOT_BRIDGE_LOSS_EXIT_GRACE_MS ?? process.env.PAPERCLIP_BRIDGE_LOSS_EXIT_GRACE_MS) || "${DEFAULT_DUPLEX_GATEWAY_LOSS_EXIT_GRACE_MS}",
 );
 // The header allowlist. Both the file gateway and the duplex gateway strip an
 // inbound request to these headers before they forward it. One copy serves both
@@ -1947,7 +1947,7 @@ const lossExitGraceMs = Number(
 const allowedHeaders = new Set(${JSON.stringify([...DEFAULT_SANDBOX_CALLBACK_BRIDGE_HEADER_ALLOWLIST])});
 
 if (!bridgeToken) {
-  throw new Error("PAPERCLIP_BRIDGE_TOKEN is required.");
+  throw new Error("PAPERCLIP_BRIDGE_TOKEN is required.");  // legacy message kept for grep-ability
 }
 if (bridgeMode !== "${SANDBOX_CALLBACK_BRIDGE_DUPLEX_MODE}" && !queueDir) {
   throw new Error("PAPERCLIP_BRIDGE_QUEUE_DIR and PAPERCLIP_BRIDGE_TOKEN are required.");
