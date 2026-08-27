@@ -1,0 +1,18 @@
+id: identifier-upper-tsx
+language: TSX
+# TIER 2 — renames identifier nodes containing 'PAPERCLIP' -> 'PILOT'. Strings, comments,
+# and import path literals are untouched by construction.
+severity: info
+rule:
+  kind: identifier
+  pattern: $ID
+constraints:
+  ID:
+    regex: PAPERCLIP
+transform:
+  NEW:
+    replace:
+      source: $ID
+      replace: PAPERCLIP
+      by: PILOT
+fix: $NEW

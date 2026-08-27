@@ -1,0 +1,16 @@
+id: env-var-access-rename-ts
+language: TypeScript
+# Rewrites process.env.PAPERCLIP_X member accesses only (language: ts files).
+# TIER 3 — requires the entrypoint alias shim to land first (see plan doc).
+severity: info
+rule:
+  pattern: process.env.$VAR
+constraints:
+  VAR:
+    regex: ^PAPERCLIP_[A-Z0-9_]+$
+transform:
+  SUFFIX:
+    substring:
+      source: $VAR
+      startChar: 10
+fix: process.env.PILOT_$SUFFIX
