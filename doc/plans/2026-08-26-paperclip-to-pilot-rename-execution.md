@@ -430,6 +430,44 @@ wc -l /tmp/js-tier-inventory.txt
 
 ---
 
+## Task 6d: Tier DB — sentinel values + plugin SQL schema renames
+
+**Files:**
+- Modify: `packages/db/src/schema/company_secrets.ts:20`, `packages/db/src/schema/user_secret_definitions.ts:17` (`.default("paperclip_managed")`)
+- Modify: ~36 code sites comparing the `"paperclip_managed"` sentinel (grep `paperclip_managed` in `server/` `packages/` incl. tests)
+- Create: new drizzle migration via `pnpm db:generate` (+ appended data UPDATE)
+- Create: `packages/plugins/plugin-llm-wiki/migrations/004_rename_paperclip_distillation.sql`
+
+**Facts established:** core schema has ZERO paperclip-named tables/columns. The paperclip-named DB surface is (a) the `managed_mode` sentinel VALUE `"paperclip_managed"` (default + existing rows) and (b) plugin-llm-wiki's `paperclip_distillation_{cursors,work_items,runs}` tables + `'paperclip_issue_history'` source_kind value. Historical migration files (001/002/003, packages/db/drizzle/*) are FROZEN — never string-edit them.
+
+**Step 1:** Dual-read sentinel — write failing tests where `managed_mode` comparisons live, make code accept both `"paperclip_managed"` and `"pilot_managed"` (mirror the env alias shim pattern; keep the comparison sites centralized if they aren't).
+
+**Step 2:** Flip schema defaults to `"pilot_managed"` (2 sites) — verify with `grep -rn 'paperclip_managed' packages/db/src/schema` → `0`.
+
+**Step 3:** Generate core migration: `pnpm db:generate`. VERIFY the emitted SQL is `ALTER TABLE ... ALTER COLUMN managed_mode SET DEFAULT 'pilot_managed'` — NOT drop/create. Hand-append the data rewrite to the same migration:
+```sql
+UPDATE company_secrets SET managed_mode = 'pilot_managed' WHERE managed_mode = 'paperclip_managed';
+UPDATE user_secret_definitions SET managed_mode = 'pilot_managed' WHERE managed_mode = 'paperclip_managed';
+```
+NOTE: verify how migrations apply to EXISTING databases (`packages/db/src/index.ts` references `migratePostgresIfEmpty` — confirm startup applies pending migrations to non-empty DBs via `PAPERCLIP_MIGRATION_AUTO_APPLY` before shipping; if not, the EKS pilot needs a manual migrate step).
+
+**Step 4:** llm-wiki plugin migration `004_rename_paperclip_distillation.sql`:
+```sql
+ALTER TABLE plugin_llm_wiki_8f50da974f.paperclip_distillation_cursors RENAME TO pilot_distillation_cursors;
+ALTER TABLE plugin_llm_wiki_8f50da974f.paperclip_distillation_work_items RENAME TO pilot_distillation_work_items;
+ALTER TABLE plugin_llm_wiki_8f50da974f.paperclip_distillation_runs RENAME TO pilot_distillation_runs;
+UPDATE plugin_llm_wiki_8f50da974f.pilot_distillation_cursors SET source_kind = 'pilot_issue_history' WHERE source_kind = 'paperclip_issue_history';
+```
+(Check plugin migration runner is append-ordered; update plugin code's table refs — tier 2/4b rules already renamed TS identifiers; verify no string-built SQL references old names: `grep -rn 'paperclip_distillation' packages/plugins` → 0 outside migrations 001–003.)
+
+**Step 5:** Rename remaining sentinel string literals in code/tests via ast-grep double-quoted-string rule scoped to server/packages (dual-read keeps old rows working).
+
+**Step 6:** Gates: `pnpm -r typecheck && pnpm test:run` parity; fresh-DB boot smoke (`rm -rf data/pglite && pnpm dev` style per AGENTS.md) proves new defaults; existing-DB smoke: boot old data dir, confirm migration + dual-read path.
+
+**Step 7:** Commit: `refactor(rename): tier DB — managed_mode sentinel + llm-wiki table renames via migrations`
+
+---
+
 ## Task 7: Tier 1 — docs last
 
 **Files:** 363 `*.md` files
