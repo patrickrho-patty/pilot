@@ -2669,6 +2669,22 @@ describe("buildPilotEnv", () => {
     );
   });
 
+  it("emits a legacy PAPERCLIP_ twin for every PILOT_ key (rename alias window)", () => {
+    withEnv({}, () => {
+      const env = buildPilotEnv({ id: "agent-1", companyId: "company-1" });
+      const pilotKeys = Object.keys(env).filter((k) => k.startsWith("PILOT_"));
+      // Today the builder emits legacy names only; once tier 3 flips the
+      // object keys to PILOT_*, every one of them must carry a same-value
+      // PAPERCLIP_ twin so pre-rename spawned CLIs keep working.
+      for (const key of pilotKeys) {
+        expect(env[`PAPERCLIP_${key.slice("PILOT_".length)}`]).toBe(env[key]);
+      }
+      // And the legacy contract itself holds regardless of internal spelling.
+      expect(env.PAPERCLIP_AGENT_ID ?? env.PILOT_AGENT_ID).toBe("agent-1");
+      expect(env.PAPERCLIP_COMPANY_ID ?? env.PILOT_COMPANY_ID).toBe("company-1");
+    });
+  });
+
   it("falls back to the derived runtime URL when no explicit override is set", () => {
     withEnv({ PAPERCLIP_RUNTIME_API_URL: "http://203.0.113.7:3100" }, () => {
       const env = buildPilotEnv({ id: "agent-1", companyId: "company-1" });

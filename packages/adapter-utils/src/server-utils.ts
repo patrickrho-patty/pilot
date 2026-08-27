@@ -2091,6 +2091,15 @@ export function buildPilotEnv(agent: { id: string; companyId: string }): Record<
     process.env.PAPERCLIP_RUNTIME_API_URL ??
     `http://${runtimeHost}:${runtimePort}`;
   vars.PAPERCLIP_API_URL = apiUrl;
+  // Brand-rename alias window: emit legacy PAPERCLIP_* alongside every
+  // PILOT_* key (same value, never clobbering an existing legacy key) so
+  // spawned agents and CLIs running pre-rename code keep working.
+  for (const [key, value] of Object.entries(vars)) {
+    if (key.startsWith("PILOT_")) {
+      const legacy = "PAPERCLIP_" + key.slice("PILOT_".length);
+      if (vars[legacy] === undefined) vars[legacy] = value;
+    }
+  }
   return vars;
 }
 

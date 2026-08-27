@@ -2553,3 +2553,4 @@ export {
   isPilotDevRunnerCommand,
   rewriteUrlHostToLoopback,
 } from "./runtime-exposure/loopback-bind.js";
+export { applyLegacyPaperclipEnvAliases } from "./env-alias.js";

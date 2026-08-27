@@ -3,6 +3,7 @@
 // OTEL_EXPORTER_OTLP_ENDPOINT is set). startServer() awaits
 // instrumentationReady before opening DB connections or constructing the
 // HTTP server, so trace coverage does not depend on incidental timing.
+import { applyLegacyPaperclipEnvAliases } from "@paperclipai/shared";
 import { instrumentationReady, shutdownInstrumentation } from "./instrumentation.js";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:http";
@@ -150,6 +151,13 @@ export async function startServer(): Promise<StartedServer> {
   // connection or the HTTP server exists — see instrumentation.ts.
   await instrumentationReady;
   ensureDecisionSigningSecret();
+  // Brand-rename alias window: map any legacy PAPERCLIP_* env onto unset
+  // PILOT_* before any config read, so existing deployments (k8s secrets,
+  // user shells, CI) keep working through the rename.
+  const legacyEnvMapped = applyLegacyPaperclipEnvAliases();
+  if (legacyEnvMapped.length > 0) {
+    console.warn(`[pilot] ${legacyEnvMapped.length} PAPERCLIP_* env var(s) mapped to PILOT_* (legacy alias window)`);
+  }
   let config = loadConfig();
   initTelemetry({ enabled: config.telemetryEnabled });
   if (process.env.PAPERCLIP_SECRETS_PROVIDER === undefined) {

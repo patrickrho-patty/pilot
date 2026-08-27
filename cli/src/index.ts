@@ -1,3 +1,4 @@
+import { applyLegacyPaperclipEnvAliases } from "@paperclipai/shared";
 import { Command } from "commander";
 import { warnIfUnsupportedNodeVersion } from "@paperclipai/shared/node-version";
 import { onboard } from "./commands/onboard.js";
@@ -48,6 +49,14 @@ import { installCommand } from "./commands/install.js";
 import { uninstallCommand } from "./commands/uninstall.js";
 import { updateCommand } from "./commands/update.js";
 import { registerServiceCommands } from "./commands/service.js";
+
+// Brand-rename alias window: map legacy PAPERCLIP_* env onto unset PILOT_*
+// before any command reads config, so existing user shells keep working.
+const legacyEnvMapped = applyLegacyPaperclipEnvAliases();
+if (legacyEnvMapped.length > 0) {
+  console.warn(`[pilot] ${legacyEnvMapped.length} PAPERCLIP_* env var(s) mapped to PILOT_* (legacy alias window)`);
+}
+
 
 const program = new Command();
 const DATA_DIR_OPTION_HELP =
