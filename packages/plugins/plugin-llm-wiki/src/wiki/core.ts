@@ -2421,7 +2421,7 @@ async function upsertPilotDistillationCursor(ctx: PluginContext, input: {
   await ctx.db.execute(
     `INSERT INTO ${distillationCursorTable(ctx)} AS paperclip_distillation_cursors
        (id, company_id, wiki_id, space_id, source_scope, scope_key, project_id, root_issue_id, source_kind, last_observed_at, pending_event_count, metadata)
-     VALUES ($1, $2, $3, $11, $4, $5, $6, $7, 'paperclip_issue_history', $8::timestamptz, $9, $10::jsonb)
+     VALUES ($1, $2, $3, $11, $4, $5, $6, $7, 'pilot_issue_history', $8::timestamptz, $9, $10::jsonb)
      ON CONFLICT (company_id, wiki_id, space_id, source_scope, scope_key, source_kind)
      DO UPDATE SET last_observed_at = GREATEST(
                        COALESCE(paperclip_distillation_cursors.last_observed_at, EXCLUDED.last_observed_at),
@@ -2452,7 +2452,7 @@ async function upsertPilotDistillationCursor(ctx: PluginContext, input: {
         AND space_id = $3
         AND source_scope = $4
         AND scope_key = $5
-        AND source_kind = 'paperclip_issue_history'
+        AND source_kind = 'pilot_issue_history'
       LIMIT 1`,
     [input.companyId, input.wikiId, input.spaceId, scope.sourceScope, scope.scopeKey],
   );
