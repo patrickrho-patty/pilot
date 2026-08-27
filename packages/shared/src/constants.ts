@@ -734,7 +734,20 @@ export type SecretStatus = (typeof SECRET_STATUSES)[number];
 export const SECRET_SCOPES = ["company", "user"] as const;
 export type SecretScope = (typeof SECRET_SCOPES)[number];
 
-export const SECRET_MANAGED_MODES = ["paperclip_managed", "external_reference"] as const;
+// "Managed mode" sentinel value used on `managedMode` columns.
+// During the brand-rename alias window both spellings are accepted by
+// isManagedMode(); the database default stays at the legacy value until the
+// backfill migration runs.
+export const MANAGED_MODE_SENTINEL_LEGACY = "paperclip_managed";
+export const MANAGED_MODE_SENTINEL_PILOT = "pilot_managed";
+export const MANAGED_MODE_SENTINELS: readonly string[] = [
+  MANAGED_MODE_SENTINEL_PILOT,
+  MANAGED_MODE_SENTINEL_LEGACY,
+];
+export const SECRET_MANAGED_MODES = [...MANAGED_MODE_SENTINELS, "external_reference"] as const;
+export function isManagedModeValue(value: unknown): boolean {
+  return typeof value === "string" && (MANAGED_MODE_SENTINELS as readonly string[]).includes(value);
+}
 export type SecretManagedMode = (typeof SECRET_MANAGED_MODES)[number];
 
 export const SECRET_VERSION_STATUSES = [

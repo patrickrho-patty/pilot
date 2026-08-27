@@ -1,3 +1,4 @@
+import { MANAGED_MODE_SENTINEL_LEGACY } from "@paperclipai/shared";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -342,11 +343,11 @@ function normalizeUserSecretKeyForPreview(input: string) {
 
 
 function modeLabel(managedMode: SecretManagedMode) {
-  return managedMode === "paperclip_managed" ? "Paperclip-managed" : "Linked external";
+  return managedMode === MANAGED_MODE_SENTINEL_LEGACY ? "Paperclip-managed" : "Linked external";
 }
 
 function modeDescription(managedMode: SecretManagedMode, canWriteExternalValue = false) {
-  if (managedMode === "paperclip_managed") {
+  if (managedMode === MANAGED_MODE_SENTINEL_LEGACY) {
     return "Paperclip owns create and rotation writes for this provider secret.";
   }
   return canWriteExternalValue

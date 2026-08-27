@@ -1773,7 +1773,7 @@ function buildInviteOnboardingManifest(
           "Adapter type for this runtime. Use 'openclaw_gateway' only for OpenClaw Gateway agents. Use 'hermes_gateway' only for Hermes Gateway agents.",
         capabilities: "Optional capability summary",
         agentDefaultsPayload:
-          "Runtime-specific adapter config. OpenClaw Gateway agents must include url (ws:// or wss://) and headers.x-openclaw-token. Hermes Gateway agents must include apiBaseUrl, apiKey set to the Hermes API_SERVER_KEY, and paperclipApiUrl. A default Hermes dashboard root or /chat URL such as http://127.0.0.1:9119/chat is accepted and maps to /api. Other runtimes should include the config their adapter expects."
+          "Runtime-specific adapter config. OpenClaw Gateway agents must include url (ws:// or wss://) and headers.x-openclaw-token. Hermes Gateway agents must include apiBaseUrl, apiKey set to the Hermes API_SERVER_KEY, and pilotApiUrl. A default Hermes dashboard root or /chat URL such as http://127.0.0.1:9119/chat is accepted and maps to /api. Other runtimes should include the config their adapter expects."
       },
       registrationEndpoint: {
         method: "POST",
@@ -1952,9 +1952,9 @@ export function buildInviteOnboardingTextDocument(
     }
 
     Hermes Gateway network examples:
-    - Local loopback API server: agentDefaultsPayload.apiBaseUrl = "http://127.0.0.1:8642" and agentDefaultsPayload.paperclipApiUrl = "http://127.0.0.1:3100".
-    - Local loopback dashboard root or chat URL: agentDefaultsPayload.apiBaseUrl = "http://127.0.0.1:9119" or "http://127.0.0.1:9119/chat"; Paperclip maps either one to "http://127.0.0.1:9119/api".
-    - LAN/private network: use reachable private addresses, for example agentDefaultsPayload.apiBaseUrl = "http://192.168.1.25:8642" and agentDefaultsPayload.paperclipApiUrl = "http://192.168.1.10:3100".
+    - Local loopback API server: agentDefaultsPayload.apiBaseUrl = "http://127.0.0.1:8642" and agentDefaultsPayload.pilotApiUrl = "http://127.0.0.1:3100".
+    - Local loopback dashboard root or chat URL: agentDefaultsPayload.apiBaseUrl = "http://127.0.0.1:9119" or "http://127.0.0.1:9119/chat"; Pilot maps either one to "http://127.0.0.1:9119/api".
+    - LAN/private network: use reachable private addresses, for example agentDefaultsPayload.apiBaseUrl = "http://192.168.1.25:8642" and agentDefaultsPayload.pilotApiUrl = "http://192.168.1.10:3100".
     - Private overlay: use overlay DNS names, for example agentDefaultsPayload.apiBaseUrl = "http://hermes-host.tailnet-name.ts.net:8642" and agentDefaultsPayload.paperclipApiUrl = "http://paperclip-host.tailnet-name.ts.net:3100".
     - Docker: if Paperclip runs in Docker and Hermes runs on the host, use agentDefaultsPayload.apiBaseUrl = "http://host.docker.internal:8642"; if both run in Compose, use the Hermes service name.
     - Reverse proxy/TLS: use HTTPS origins, for example agentDefaultsPayload.apiBaseUrl = "https://hermes-gateway.example" and agentDefaultsPayload.paperclipApiUrl = "https://paperclip.example".

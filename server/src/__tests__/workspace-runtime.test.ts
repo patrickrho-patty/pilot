@@ -4470,7 +4470,7 @@ describe("ensureRuntimeServicesForRun", () => {
                 },
                 expose: {
                   type: "url",
-                  urlTemplate: "http://not-a-real-paperclip-host.invalid:{{port}}",
+                  urlTemplate: "http://not-a-real-pilot-host.invalid:{{port}}",
                 },
                 lifecycle: "shared",
                 stopPolicy: {

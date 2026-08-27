@@ -20,7 +20,7 @@ function secret(
     name,
     provider: "local_encrypted",
     status: "active" as SecretStatus,
-    managedMode: "paperclip_managed",
+    managedMode: "pilot_managed",
     externalRef: null,
     providerConfigId: null,
     providerMetadata: null,

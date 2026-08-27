@@ -1,3 +1,4 @@
+import { MANAGED_MODE_SENTINEL_LEGACY } from "@paperclipai/shared";
 import { sql } from "drizzle-orm";
 import { check, pgTable, uuid, text, timestamp, integer, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { companies } from "./companies.js";
@@ -17,7 +18,7 @@ export const companySecrets = pgTable(
     name: text("name").notNull(),
     provider: text("provider").notNull().default("local_encrypted"),
     status: text("status").notNull().default("active"),
-    managedMode: text("managed_mode").notNull().default("paperclip_managed"),
+    managedMode: text("managed_mode").notNull().default(MANAGED_MODE_SENTINEL_LEGACY),
     externalRef: text("external_ref"),
     providerConfigId: uuid("provider_config_id").references(() => companySecretProviderConfigs.id, { onDelete: "set null" }),
     providerMetadata: jsonb("provider_metadata").$type<Record<string, unknown>>(),

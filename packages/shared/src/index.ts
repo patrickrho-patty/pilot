@@ -621,6 +621,13 @@ export {
 } from "./constants.js";
 
 export {
+  MANAGED_MODE_SENTINEL_LEGACY,
+  MANAGED_MODE_SENTINEL_PILOT,
+  MANAGED_MODE_SENTINELS,
+  isManagedModeValue,
+} from "./constants.js";
+
+export {
   generateSummarySlotSchema,
   summarySlotKeySchema,
   summarySlotQuerySchema,
