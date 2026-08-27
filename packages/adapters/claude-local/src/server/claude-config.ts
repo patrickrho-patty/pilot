@@ -258,7 +258,7 @@ function isNonEmptyString(value: unknown): value is string {
 /**
  * Prepare the sandbox runtime that a Claude hello probe needs. The step
  * installs the Claude CLI in the sandbox when the CLI is absent, and it
- * materializes the Paperclip-managed Claude config directory. Both the CLI
+ * materializes the Pilot-managed Claude config directory. Both the CLI
  * Test lane and the ACP Test lane call this helper, so the two lanes probe
  * the same login state. The Claude CLI and the Claude ACP engine share the
  * same stored Claude login.

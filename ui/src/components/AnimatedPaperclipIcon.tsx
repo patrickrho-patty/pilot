@@ -22,7 +22,7 @@ export function AnimatedPilotIcon({ className, ...props }: SVGProps<SVGSVGElemen
   );
 }
 
-/** Full-page loading state: a large, centered, gray animated paperclip. */
+/** Full-page loading state: a large, centered, gray animated pilot. */
 export function PilotLoading({ className }: { className?: string }) {
   return (
     <div

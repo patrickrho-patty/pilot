@@ -189,7 +189,7 @@ export interface AdapterExecutionTargetProcessOptions {
   onSpawn?: (meta: { pid: number; processGroupId: number | null; startedAt: string }) => Promise<void>;
   terminalResultCleanup?: TerminalResultCleanupOptions;
   /**
-   * Sandbox-only: factory from the Paperclip bridge handle that streams the
+   * Sandbox-only: factory from the Pilot bridge handle that streams the
    * CLI's stdout/stderr during the run. When provided, the batched provider
    * onLog is suppressed and incremental chunks flow through `onLog` instead.
    */
@@ -281,7 +281,7 @@ function resolveDefaultPilotApiUrl(): string {
   const runtimeHost = resolveHostForUrl(
     process.env.PILOT_LISTEN_HOST ?? process.env.HOST ?? "localhost",
   );
-  // 3100 matches the default Paperclip dev server port when the runtime does not provide one.
+  // 3100 matches the default Pilot dev server port when the runtime does not provide one.
   const runtimePort = process.env.PILOT_LISTEN_PORT ?? process.env.PORT ?? "3100";
   return `http://${runtimeHost}:${runtimePort}`;
 }
@@ -459,7 +459,7 @@ export function formatAdapterExecutionTimeoutErrorMessage(
 
 /**
  * One-line start-of-run statement of the effective wall-clock timeout and its
- * source. Callers prefix with `[paperclip] ` and append a newline.
+ * source. Callers prefix with `[pilot] ` and append a newline.
  */
 export function formatAdapterExecutionTimeoutStartLogLine(
   resolution: AdapterExecutionTargetTimeoutResolution,
@@ -1020,7 +1020,7 @@ export async function ensureAdapterExecutionTargetFile(
  * For local targets this delegates to the local `ensureAbsoluteDirectory` helper
  * (Node fs). For remote (SSH/sandbox) targets it shells out and runs
  * `mkdir -p` (when allowed) followed by a `[ -d ]` check so the result reflects
- * the directory state inside the environment, not on the Paperclip host.
+ * the directory state inside the environment, not on the Pilot host.
  *
  * Throws an Error with a human-readable message on failure.
  */
@@ -1375,7 +1375,7 @@ async function writeProcessSessionProxyScript(dir: string, port: number, token: 
 
 // Content-hash-skip the process-session remote script write, mirroring the
 // sandbox callback bridge entrypoint sha256 gate. The script is a static
-// Paperclip-authored `.mjs` that only changes when the build changes, so on a
+// Pilot-authored `.mjs` that only changes when the build changes, so on a
 // warm start (same sandbox, script already present) the single sha-gate exec
 // skips the ~3-exec base64 upload entirely. `syncRemoteTextFileWithHashSkip`
 // fails loud on a check error rather than silently re-uploading.
@@ -1452,7 +1452,7 @@ export async function startAdapterExecutionTargetProcessSessionBridge(input: {
   // The launch env is consumed ONLY when building the base64 `commandPayload`
   // below — never during the env-INDEPENDENT dir/script setup. Accepting a
   // resolver (in addition to a plain object) lets a caller overlap that setup
-  // with other work — e.g. starting the paperclip callback bridge — and hand the
+  // with other work — e.g. starting the pilot callback bridge — and hand the
   // merged env in right before the launch.
   env: Record<string, string> | (() => Promise<Record<string, string>>);
   timeoutSec?: number | null;
@@ -1532,7 +1532,7 @@ export async function startAdapterExecutionTargetProcessSessionBridge(input: {
   });
 
   // Resolve the launch env AFTER the env-independent setup above, so a caller
-  // can defer it until an upstream dependency (e.g. the paperclip bridge's env)
+  // can defer it until an upstream dependency (e.g. the pilot bridge's env)
   // is ready without blocking the dir/script setup.
   const launchEnv = typeof input.env === "function" ? await input.env() : input.env;
   const commandPayload = Buffer.from(JSON.stringify({
@@ -2231,7 +2231,7 @@ export async function startAdapterExecutionTargetPilotBridge(input: {
     typeof input.maxBodyBytes === "number" && Number.isFinite(input.maxBodyBytes) && input.maxBodyBytes > 0
       ? Math.trunc(input.maxBodyBytes)
       : DEFAULT_SANDBOX_CALLBACK_BRIDGE_MAX_BODY_BYTES;
-  // The bridge worker runs inside the same process that serves the Paperclip
+  // The bridge worker runs inside the same process that serves the Pilot
   // API, so forwarded sandbox calls must target the LOCAL listen origin. The
   // PAPERCLIP_RUNTIME_API_URL / PAPERCLIP_API_URL exports now prefer a
   // configured public base URL, which is the origin browsers and external
@@ -2239,7 +2239,7 @@ export async function startAdapterExecutionTargetPilotBridge(input: {
   // breaks deployments whose public origin sits behind a session-gated proxy
   // (every forwarded agent API call is rejected at the edge). Server boot
   // exports PAPERCLIP_LISTEN_HOST / PAPERCLIP_LISTEN_PORT before any run
-  // executes, and resolveDefaultPaperclipApiUrl() maps wildcard listen hosts
+  // executes, and resolveDefaultPilotApiUrl() maps wildcard listen hosts
   // to the loopback address of the same family (0.0.0.0 -> 127.0.0.1,
   // :: -> [::1]), so the fallback is always loopback-reachable.
   // input.hostApiUrl stays available as an explicit override seam.

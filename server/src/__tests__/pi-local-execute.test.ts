@@ -188,8 +188,8 @@ describe("pi_local execute", () => {
           cwd: workspace,
           model: "google/gemini-3-flash-preview",
           promptTemplate: "Keep working.",
-          // No explicit paperclipSkillSync preference →
-          // resolvePaperclipDesiredSkillNames returns [] → skill is not injected.
+          // No explicit pilotSkillSync preference →
+          // resolvePilotDesiredSkillNames returns [] → skill is not injected.
           paperclipRuntimeSkills: [
             { key: "not-injected", runtimeName: "not-injected", source: nonInjectedSkillDir },
           ],

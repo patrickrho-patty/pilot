@@ -253,7 +253,7 @@ describe("ACPX engine startup characterization", () => {
         { authToken: "real-run-jwt", executionTarget },
       );
 
-      // The launch payload carries the MERGED paperclip bridge env: the queue
+      // The launch payload carries the MERGED pilot bridge env: the queue
       // transport mode, a loopback bridge base URL, and a minted bridge token.
       const payloadEnv = ((launchPayload as Record<string, unknown> | null)?.env ?? {}) as Record<
         string,
@@ -529,7 +529,7 @@ describe("ACPX engine startup characterization", () => {
       );
 
       // The process-session bridge receives its launch env as a DEFERRED thunk, the
-      // seam that lets its env-independent setup overlap the paperclip bridge start.
+      // seam that lets its env-independent setup overlap the pilot bridge start.
       const processArgs = vi.mocked(startAdapterExecutionTargetProcessSessionBridge).mock.calls[0]![0];
       expect(typeof processArgs.env).toBe("function");
 

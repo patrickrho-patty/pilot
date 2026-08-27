@@ -1467,7 +1467,7 @@ describeEmbeddedPostgres("low-trust red-team HTTP route regression suite", () =>
       await waitFor(() => gateway.getAgentPayloads().length === 1, 30_000);
       const payload = gateway.getAgentPayloads()[0] ?? {};
       // The gateway rejects unknown root params, so the wake context rides in the
-      // generated message rather than a top-level `paperclip` field.
+      // generated message rather than a top-level `pilot` field.
       expect(payload.paperclip).toBeUndefined();
       const wake = parseWakePayloadFromMessage(payload.message);
       // Security-critical: low-trust quarantined output is redacted to the sanitized

@@ -52,7 +52,7 @@ import {
   pilotLabels,
 } from "./utils.js";
 
-// The namespace paperclip-server itself runs in. Used when building
+// The namespace pilot-server itself runs in. Used when building
 // NetworkPolicy manifests so the tenant namespace allows inbound traffic
 // from the server pod.
 const PILOT_SERVER_NAMESPACE = "paperclip";
@@ -79,7 +79,7 @@ function deriveTenantNamespace(config: KubernetesProviderConfig, companyId: stri
 
 function generateBootstrapToken(): string {
   // TODO: tighten once the agent runtime shim (companion images PR) lands its
-  // callback auth scheme; paperclip-server's callback auth is out of scope for
+  // callback auth scheme; pilot-server's callback auth is out of scope for
   // this plugin. For now this per-run random token is stored in the per-run
   // Secret and read by the runtime image entrypoint for initial registration.
   return randomBytes(32).toString("hex");
@@ -311,7 +311,7 @@ const plugin = definePlugin({
 
     // Emit a runtime warning if FQDNs are configured but egressMode=standard
     // cannot enforce them. Mirrors the validateConfig warning so operators see
-    // it in paperclip-server logs even if they missed the validation step.
+    // it in pilot-server logs even if they missed the validation step.
     const adapterDefaultsForWarn = getAdapterDefaults(effectiveAdapterType, config.adapters);
     const totalFqdnsForWarn = [...adapterDefaultsForWarn.allowFqdns, ...config.egressAllowFqdns];
     if (config.egressMode === "standard" && totalFqdnsForWarn.length > 0) {
@@ -932,7 +932,7 @@ const plugin = definePlugin({
       };
     } else {
       // ── Job backend (legacy / stable fallback) ──────────────────────────────
-      // The container entrypoint is baked into the Job spec (Tini + paperclip-agent-shim).
+      // The container entrypoint is baked into the Job spec (Tini + pilot-agent-shim).
       // We do NOT re-exec command/args — instead we wait for the Job to finish
       // and collect its logs.
       //

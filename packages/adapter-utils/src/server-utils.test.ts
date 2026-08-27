@@ -2597,7 +2597,7 @@ describe("refreshPaperclipWorkspaceEnvForExecution", () => {
       workspaceCwd: null,
     });
 
-    // Paperclip did not assign this PAPERCLIP_*-named key for the run, so the
+    // Pilot did not assign this PILOT_*-named key for the run, so the
     // configured value flows through to the spawned process.
     expect(env.PILOT_CLOUD_PROVIDER_TOKEN).toBe("cloud-token");
   });
@@ -2614,7 +2614,7 @@ describe("refreshPaperclipWorkspaceEnvForExecution", () => {
     });
 
     // The harness-minted run token is the only PAPERCLIP_API_KEY source;
-    // a configured value is dropped even when Paperclip has not set one.
+    // a configured value is dropped even when Pilot has not set one.
     expect(env.PILOT_API_KEY).toBeUndefined();
   });
 });

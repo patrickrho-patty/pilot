@@ -193,7 +193,7 @@ function isSafeSkillName(skillName: string): boolean {
   return /^[a-z0-9][a-z0-9._-]*$/.test(skillName);
 }
 
-/** Resolve the Paperclip repo skills directory (built-in / managed skills). */
+/** Resolve the Pilot repo skills directory (built-in / managed skills). */
 function resolvePilotSkillsDir(): string | null {
   const moduleDir = path.dirname(fileURLToPath(import.meta.url));
   const candidates = [
@@ -249,7 +249,7 @@ function listAvailableSkills(): AvailableSkill[] {
   const claudeSkillsDir = resolveClaudeSkillsDir();
   const pilotSkillsDir = resolvePilotSkillsDir();
 
-  // Build set of Paperclip-managed skill names
+  // Build set of Pilot-managed skill names
   const pilotSkillNames = new Set<string>();
   if (pilotSkillsDir) {
     try {

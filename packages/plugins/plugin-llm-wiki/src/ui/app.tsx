@@ -4712,7 +4712,7 @@ function aggregateLintFindings(findings: Record<string, unknown>[]): { total: nu
 }
 
 // ---------------------------------------------------------------------------
-// History tab: native Paperclip issue table for recent LLM Wiki operation
+// History tab: native Pilot issue table for recent LLM Wiki operation
 // issues. Each plugin run is represented by an issue, so the standard issue
 // history view is the right surface here.
 // ---------------------------------------------------------------------------

@@ -15,7 +15,7 @@
  *  - same-number: only the app port and its derived HMR companion are exposed.
  *  - idempotent stop/cleanup: a missing/already-removed lease is success, not an
  *    error; genuine cleanup failures quarantine the ports and never reuse them.
- *  - reconcile touches only Paperclip-owned mappings the broker reports; it can
+ *  - reconcile touches only Pilot-owned mappings the broker reports; it can
  *    never mutate an unknown/manual mapping or the primary `:443` route (the
  *    broker's `list` never returns those, and remove requires an owned handle).
  */
@@ -316,7 +316,7 @@ export interface ReconcileResult {
 /**
  * Startup / periodic reconciliation. Adopts owned mappings that are still
  * desired and removes owned mappings that are not. The broker's `list` only
- * ever returns Paperclip-owned listeners, so unknown/manual mappings and the
+ * ever returns Pilot-owned listeners, so unknown/manual mappings and the
  * primary `:443` route are structurally out of scope here — they can never be
  * enumerated, adopted, or removed by this routine.
  */

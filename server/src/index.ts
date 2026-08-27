@@ -365,7 +365,7 @@ export async function startServer(): Promise<StartedServer> {
     try {
       // embedded-postgres registers async-exit-hook handlers as an import side
       // effect. Those handlers stop PostgreSQL immediately on SIGINT/SIGTERM,
-      // racing Paperclip's later heartbeat snapshot query. Paperclip explicitly
+      // racing Pilot's later heartbeat snapshot query. Pilot explicitly
       // stops the managed cluster in its own ordered shutdown path instead.
       const mod = await loadWithoutCoordinatedShutdownSignalHooks(
         () => import(moduleName),
@@ -849,7 +849,7 @@ export async function startServer(): Promise<StartedServer> {
   setupLiveEventsWebSocketServer(server, db as any, {
     deploymentMode: config.deploymentMode,
     resolveSessionFromHeaders,
-    // Cloud-proxied browsers carry trusted x-paperclip-cloud-* headers instead
+    // Cloud-proxied browsers carry trusted x-pilot-cloud-* headers instead
     // of a local Better Auth session; without this lane every live-events
     // upgrade behind the Cloud front door 403s forever. The resolver is
     // self-gating: it returns null unless PAPERCLIP_CLOUD_TENANT_SERVER_TOKEN

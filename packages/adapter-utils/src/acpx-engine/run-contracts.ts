@@ -108,7 +108,7 @@ export interface StagingLeaseResource {
 }
 
 /**
- * Maps each resource id to its payload. The `control_bridge` is the Paperclip
+ * Maps each resource id to its payload. The `control_bridge` is the Pilot
  * control-plane bridge; the `agent_bridge` is the agent process-session bridge.
  */
 export interface RunResourcePayloads {
@@ -419,7 +419,7 @@ export interface McpServerIdentity {
   readonly connectionId: string;
 }
 
-/** The Paperclip Claude settings the fingerprint reads. */
+/** The Pilot Claude settings the fingerprint reads. */
 export interface PilotClaudeSettingsIdentity {
   readonly allow: readonly string[];
   readonly additionalDirectories: readonly string[];
@@ -454,7 +454,7 @@ export interface SessionFingerprintIdentity {
 
 /**
  * The company, agent, and task parts of the session key. The key form is
- * `paperclip:companyId:agentId:taskKey:fingerprint`. These parts stay out of
+ * `pilot:companyId:agentId:taskKey:fingerprint`. These parts stay out of
  * the fingerprint hash.
  */
 export interface SessionKeyIdentity {

@@ -5,7 +5,7 @@
  *
  * 1. **Discovery** — Scans the local plugin directory
  *    (`~/.paperclip/plugins/`) and `node_modules` for packages matching
- *    the `paperclip-plugin-*` naming convention. Aggregates results with
+ *    the `pilot-plugin-*` naming convention. Aggregates results with
  *    path-based deduplication.
  *
  * 2. **Installation** — `installPlugin()` downloads from npm (or reads a
@@ -65,8 +65,8 @@ const STANDALONE_BUNDLED_PLUGIN_SDK_PACKAGE = "@paperclipai/plugin-sdk";
 // ---------------------------------------------------------------------------
 
 /**
- * Naming convention for npm-published Paperclip plugins.
- * Packages matching this pattern are considered Paperclip plugins.
+ * Naming convention for npm-published Pilot plugins.
+ * Packages matching this pattern are considered Pilot plugins.
  *
  * @see PLUGIN_SPEC.md §10 — Package Contract
  */
@@ -219,7 +219,7 @@ export interface DiscoveredPlugin {
  */
 export type PluginSource =
   | "local-filesystem"  // ~/.paperclip/plugins/ local directory
-  | "npm"               // npm packages matching paperclip-plugin-* convention
+  | "npm"               // npm packages matching pilot-plugin-* convention
   | "registry";         // future: remote plugin registry URL
 
 type ParsedSemver = {
@@ -284,7 +284,7 @@ export interface PluginLoaderOptions {
   enableLocalFilesystem?: boolean;
 
   /**
-   * Whether to discover installed npm packages matching the paperclip-plugin-*
+   * Whether to discover installed npm packages matching the pilot-plugin-*
    * naming convention.
    * Defaults to true.
    */
@@ -307,7 +307,7 @@ export interface PluginLoaderOptions {
  */
 export interface PluginInstallOptions {
   /**
-   * npm package name to install (e.g. "paperclip-plugin-linear" or "@acme/plugin-linear").
+   * npm package name to install (e.g. "pilot-plugin-linear" or "@acme/plugin-linear").
    * Either packageName or localPath must be set.
    */
   packageName?: string;
@@ -482,8 +482,8 @@ export interface PluginLoader {
   discoverFromLocalFilesystem(dir?: string): Promise<PluginDiscoveryResult>;
 
   /**
-   * Discover Paperclip plugins installed as npm packages in the current
-   * Node.js environment matching the "paperclip-plugin-*" naming convention.
+   * Discover Pilot plugins installed as npm packages in the current
+   * Node.js environment matching the "pilot-plugin-*" naming convention.
    *
    * Looks for packages in node_modules that match the naming convention.
    *
@@ -495,11 +495,11 @@ export interface PluginLoader {
    * Load and parse the plugin manifest from a package directory.
    *
    * Reads the package.json, finds the manifest entrypoint declared under
-   * the "paperclipPlugin.manifest" key, loads the manifest module, and
+   * the "pilotPlugin.manifest" key, loads the manifest module, and
    * validates it against the plugin manifest schema.
    *
-   * Returns null if the package is not a Paperclip plugin.
-   * Throws if the package is a Paperclip plugin but the manifest is invalid.
+   * Returns null if the package is not a Pilot plugin.
+   * Throws if the package is a Pilot plugin but the manifest is invalid.
    *
    * @see PLUGIN_SPEC.md §10 — Package Contract
    */
@@ -646,8 +646,8 @@ export interface PluginLoader {
 // ---------------------------------------------------------------------------
 
 /**
- * Check whether a package name matches the Paperclip plugin naming convention.
- * Accepts both the "paperclip-plugin-" prefix and scoped "@scope/plugin-" packages.
+ * Check whether a package name matches the Pilot plugin naming convention.
+ * Accepts both the "pilot-plugin-" prefix and scoped "@scope/plugin-" packages.
  *
  * @see PLUGIN_SPEC.md §10 — Package Contract
  */
@@ -939,7 +939,7 @@ export async function ensureLocalPluginBuilt(
 /**
  * Resolve the manifest entrypoint from a package.json and package root.
  *
- * The spec defines a "paperclipPlugin" key in package.json with a "manifest"
+ * The spec defines a "pilotPlugin" key in package.json with a "manifest"
  * subkey pointing to the manifest module.  This helper resolves the path.
  *
  * @see PLUGIN_SPEC.md §10 — Package Contract
@@ -1098,7 +1098,7 @@ export function getPluginUiContributionMetadata(
  *
  * // Install a specific plugin
  * const discovered = await loader.installPlugin({
- *   packageName: "paperclip-plugin-linear",
+ *   packageName: "pilot-plugin-linear",
  *   version: "^1.0.0",
  * });
  * ```
@@ -1400,7 +1400,7 @@ export function pluginLoader(
 
   /**
    * Build a DiscoveredPlugin from a resolved package directory, or null
-   * if the package is not a Paperclip plugin.
+   * if the package is not a Pilot plugin.
    */
   async function buildDiscoveredPlugin(
     packagePath: string,

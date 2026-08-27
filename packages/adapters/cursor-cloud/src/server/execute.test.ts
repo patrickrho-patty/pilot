@@ -180,7 +180,7 @@ describe("cursor_cloud execute", () => {
       PILOT_API_KEY: "paperclip-run-jwt",
     });
     // When a run JWT is present the callback URL is retained so the worker can
-    // authenticate its Paperclip API calls.
+    // authenticate its Pilot API calls.
     expect(createMock.mock.calls[0]?.[0]?.cloud?.envVars).toHaveProperty("PILOT_API_URL");
     expect(createMock.mock.calls[0]?.[0]?.cloud?.envVars).not.toHaveProperty("CURSOR_API_KEY");
 
@@ -222,7 +222,7 @@ describe("cursor_cloud execute", () => {
     expect(envVars).not.toHaveProperty("PILOT_API_KEY");
     expect(envVars).not.toHaveProperty("PILOT_API_URL");
     expect(envVars).not.toHaveProperty("PILOT_API_BRIDGE_MODE");
-    // Informational Paperclip env (non-credential) still flows through.
+    // Informational Pilot env (non-credential) still flows through.
     expect(envVars).toMatchObject({
       PILOT_RUN_ID: "run-heartbeat-1",
       PILOT_AGENT_ID: "agent-1",

@@ -305,7 +305,7 @@ export type WorkspaceRuntimeExposureDeps = ExposureManagerDeps & {
   isPortAvailable: (port: number) => Promise<boolean>;
   /**
    * Whether this host can actually broker HTTPS exposures right now. Gating the
-   * automatic default on broker availability is what keeps a Paperclip install
+   * automatic default on broker availability is what keeps a Pilot install
    * without the host broker from failing every managed runtime start closed.
    * An explicit opt-in still bypasses this and fails loudly.
    */
@@ -371,7 +371,7 @@ export function setWorkspaceRuntimeExposureDepsForTests(deps: WorkspaceRuntimeEx
 /**
  * Deployment-level switch for the automatic default (PAP-17158).
  *
- *  - `auto` (default): eligible Paperclip-managed worktree runtimes get
+ *  - `auto` (default): eligible Pilot-managed worktree runtimes get
  *    `tailscale_https` without any project template or UI caller supplying an
  *    exposure block, provided the host broker is available.
  *  - `off`: no automatic default. Explicit opt-ins still work.
@@ -391,12 +391,12 @@ export function resolveManagedRuntimeHttpsMode(): ManagedRuntimeHttpsMode {
 /**
  * Whether a service would be defaulted to HTTPS if it declared nothing.
  *
- * Intentionally narrow: only the Paperclip-managed dev runtime. Unmanaged and
+ * Intentionally narrow: only the Pilot-managed dev runtime. Unmanaged and
  * custom external services are left exactly as they are, because the broker
- * only publishes allowlisted loopback ports it can prove Paperclip owns and we
+ * only publishes allowlisted loopback ports it can prove Pilot owns and we
  * do not want to relocate a service somebody else addresses by port.
  *
- * A *pinned* port is still a candidate. The pre-feature Paperclip App template
+ * A *pinned* port is still a candidate. The pre-feature Pilot App template
  * hard-codes `port: 45439`, which the broker's dedicated allowlist can never
  * publish, so defaulting it to HTTPS necessarily relocates it into the
  * dedicated range. "Keep existing runtime ports when safe" is honored one layer
@@ -460,7 +460,7 @@ async function resolveRuntimeServiceExposure(input: {
  *
  * Reads the service name and command straight off the raw config entry rather
  * than resolving the full reuse identity: templates never rewrite a service
- * name, and the substrings `isPaperclipDevRuntimeService` matches survive
+ * name, and the substrings `isPilotDevRuntimeService` matches survive
  * rendering, so this agrees with the per-service decision made during spawn.
  */
 async function anyRuntimeServiceUsesHttpsExposure(
@@ -492,7 +492,7 @@ type ProcessOutputAccumulator = {
  * Drops in-memory runtime state between tests.
  *
  * By default the spawned backend processes are deliberately left running: the
- * startup-reconciliation suites use this to simulate a Paperclip restart, where
+ * startup-reconciliation suites use this to simulate a Pilot restart, where
  * the point is that a live backend survives and has to be adopted.
  *
  * Suites that spawn real backends and do *not* need that must pass
@@ -514,7 +514,7 @@ export async function resetRuntimeServicesForTests(
     if (opts.simulateSupervisorExit) {
       // A real supervisor exit closes its side of every inherited pipe. Tests
       // use this to prove surviving request-logging services do not depend on
-      // Paperclip keeping an anonymous stdio peer alive.
+      // Pilot keeping an anonymous stdio peer alive.
       record.child?.stdout?.destroy();
       record.child?.stderr?.destroy();
     }
@@ -4387,7 +4387,7 @@ async function buildCompanyExposureReservationLedger(input: {
 }
 
 /**
- * Rows Paperclip reports stopped/removed whose reserved pair is still live on
+ * Rows Pilot reports stopped/removed whose reserved pair is still live on
  * the host or still mapped to someone else (PAP-17419 regression #3).
  *
  * The point is visibility. A false `stopped`/`removed` row used to be
@@ -4446,7 +4446,7 @@ async function detectPersistedExposureReservationDrift(input: {
   });
 }
 
-/** Paperclip-owned Serve mappings, or null when the broker cannot be read. */
+/** Pilot-owned Serve mappings, or null when the broker cannot be read. */
 async function readBrokerExposureMappings(): Promise<BrokerMappingSnapshot[] | null> {
   try {
     const owned = await workspaceRuntimeExposureDeps.broker.list();
@@ -5859,7 +5859,7 @@ async function spawnLocalRuntimeService(input: StartLocalRuntimeServiceInput): P
   // is honored when it is already an allowlisted app port whose HMR companion is
   // free — that keeps a restart on the same port and keeps a backfilled service
   // stable across deploys — and quietly relocated when it is not, which is the
-  // only way a legacy pinned port (the Paperclip App template's 45439) can be
+  // only way a legacy pinned port (the Pilot App template's 45439) can be
   // published at all. If the backend then fails to listen where we allocated,
   // the broker's /proc ownership proof refuses the mapping and the start fails
   // closed; it never falls back to HTTP.
@@ -5980,7 +5980,7 @@ async function spawnLocalRuntimeService(input: StartLocalRuntimeServiceInput): P
   }
 
   // Per-workspace handoff key, readiness token, and workspace id. Injected for
-  // the Paperclip dev runtime whether or not it is HTTPS-exposed, because the
+  // the Pilot dev runtime whether or not it is HTTPS-exposed, because the
   // password-independent login handoff and the protected readiness probe are
   // both needed for a plain-HTTP loopback workspace too (PAP-17572).
   const managedWorkspaceIdentity = isPilotDevRuntimeService({ serviceName, command })
@@ -5995,7 +5995,7 @@ async function spawnLocalRuntimeService(input: StartLocalRuntimeServiceInput): P
   }
 
   if (exposureConfig) {
-    // Paperclip dev-runtime-specific hardening. Other managed processes are
+    // Pilot dev-runtime-specific hardening. Other managed processes are
     // still rejected by the broker unless /proc proves loopback-only listeners.
     //
     // Three independent layers force the loopback bind, because a guest checkout
@@ -6220,7 +6220,7 @@ async function spawnLocalRuntimeService(input: StartLocalRuntimeServiceInput): P
       env,
       detached: process.platform !== "win32",
       // The service receives duplicate append-only file descriptors. Closing
-      // Paperclip (or this parent handle below) cannot strand a request logger
+      // Pilot (or this parent handle below) cannot strand a request logger
       // on an orphaned socketpair during startup reconciliation.
       stdio: ["ignore", serviceLog.handle.fd, serviceLog.handle.fd],
     });

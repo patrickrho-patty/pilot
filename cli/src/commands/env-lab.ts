@@ -215,7 +215,7 @@ export async function envLabDoctorCommand(opts: { instance?: string; json?: bool
   // paths, so it works from any working directory. It passes an inert `argv`
   // value, so no shell reads the argument. See `doc/CLI.md`, "safe invocation".
   //
-  // The doctor diagnoses the instance that `resolvePaperclipInstanceId` selects
+  // The doctor diagnoses the instance that `resolvePilotInstanceId` selects
   // from `opts.instance` or the `PAPERCLIP_INSTANCE_ID` environment variable.
   // The hint pins that resolved instance, so a contributor who pastes the hint
   // in a shell without `PAPERCLIP_INSTANCE_ID` stops the diagnosed fixture, not

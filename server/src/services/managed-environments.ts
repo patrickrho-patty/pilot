@@ -4,7 +4,7 @@
  * Managed-cloud instances may declare sandbox environments in the
  * `environments` section of `PAPERCLIP_MANAGED_CONFIG` (parsed fail-closed in
  * `managed-config.ts`). On boot, each declared environment is idempotently
- * ensured as the instance-level Paperclip-managed sandbox row via the
+ * ensured as the instance-level Pilot-managed sandbox row via the
  * provider-agnostic `ensureManagedSandboxEnvironment` — the control plane
  * provisions, tenants use, for any bundled sandbox provider plugin.
  *
@@ -179,7 +179,7 @@ export async function applyManagedEnvironments(
   if (managedConfig.environments.length === 0) return null;
 
   // The forced-execution-mode bootstrap (`PAPERCLIP_EXECUTION_MODE=kubernetes`)
-  // and this one both own the single Paperclip-managed sandbox row
+  // and this one both own the single Pilot-managed sandbox row
   // (`environments_managed_sandbox_idx`). Configuring both is contradictory;
   // refuse startup rather than let bootstrap ordering pick a winner.
   const env = opts.env ?? process.env;

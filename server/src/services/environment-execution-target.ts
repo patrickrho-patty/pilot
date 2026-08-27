@@ -118,7 +118,7 @@ interface SandboxExecSpanInput {
 /**
  * Assemble every `sandbox.exec` span attribute in one place. This is the single
  * producer-side boundary for the exec span: it sets only the closed
- * `paperclip.sandbox.startup.exec.*` allowlist. The command rides only as a
+ * `pilot.sandbox.startup.exec.*` allowlist. The command rides only as a
  * clamped label, so a full command line, an argument, a path, an environment
  * value, or any standard-stream text can never ride the span. A non-finite
  * numeric input yields no attribute (fail open — never `NaN`, never a
@@ -417,7 +417,7 @@ export async function resolveEnvironmentExecutionTarget(input: {
                 const finishedAt = new Date(finishedAtMs).toISOString();
                 const durationMs = finishedAtMs - startedAtMs;
                 // `setSandboxExecSpanAttributes` sets ONLY the closed
-                // `paperclip.sandbox.startup.exec.*` allowlist: the normalized
+                // `pilot.sandbox.startup.exec.*` allowlist: the normalized
                 // provider family, the clamped command label, the numeric exit
                 // code, the wall / wait-before / sandbox / network times, the
                 // critical-path flag, and the outcome. The full command, args,

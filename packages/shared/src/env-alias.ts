@@ -2,7 +2,7 @@ const LEGACY_PREFIX = "PAPERCLIP_";
 const TARGET_PREFIX = "PILOT_";
 
 /**
- * Boot-time compat shim for the Paperclip→Pilot env rename. Copies every set
+ * Boot-time compat shim for the Pilot→Pilot env rename. Copies every set
  * PAPERCLIP_X onto unset PILOT_X (never the reverse, never overwriting).
  * Call once at process entry before any config read; returns the mapped names
  * so callers can log that the alias window is active. Remove together with the

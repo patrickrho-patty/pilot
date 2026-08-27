@@ -18,7 +18,7 @@
  *     [--claude-config-dir ~/.claude] \
  *     [--dry-run] [--json]
  *
- * Or in a Paperclip checkout shell:
+ * Or in a Pilot checkout shell:
  *   pnpm --filter @paperclipai/db exec tsx scripts/clean-poisoned-claude-sessions.ts --dry-run
  *
  * Exits 0 on success even when nothing was healed. Idempotent.

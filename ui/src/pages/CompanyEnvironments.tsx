@@ -1846,7 +1846,7 @@ export function CompanyEnvironments({ mode = "list" }: CompanyEnvironmentsProps)
                         {(() => {
                           const summary = summarizeSandboxConfig(environment.config as Record<string, unknown>);
                           // The managed row's badge already says "Managed by
-                          // Paperclip"; repeating provider vocabulary like
+                          // Pilot"; repeating provider vocabulary like
                           // "sandbox provider" next to the default environment
                           // is noise the product avoids.
                           if (isPlatformManagedEnvironment(environment)) {

@@ -137,7 +137,7 @@ export const companiesApi = {
   // Submit an import as a server-side job: 202 with a job id to poll, or 409
   // with the already-running job. Board sessions opt in with the proxy-safe
   // `?async=1` query parameter — the Cloud harness strips the inbound
-  // `x-paperclip-cloud-*` header a browser would otherwise use, so that header
+  // `x-pilot-cloud-*` header a browser would otherwise use, so that header
   // never survives to engage the async path.
   importBundleAsync: (data: CompanyPortabilityImportRequest) =>
     api.post<CompanyImportJobAccepted>("/companies/import?async=1", data),

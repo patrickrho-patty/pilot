@@ -1,8 +1,8 @@
 /**
- * Hermes Agent adapter for Paperclip.
+ * Hermes Agent adapter for Pilot.
  *
  * Runs Hermes Agent (https://github.com/NousResearch/hermes-agent)
- * as a managed employee in a Paperclip company. Hermes Agent is a
+ * as a managed employee in a Pilot company. Hermes Agent is a
  * full-featured AI agent with 30+ native tools, persistent memory,
  * skills, session persistence, and MCP support.
  *
@@ -40,7 +40,7 @@ export {
 /**
  * Models available through Hermes Agent.
  *
- * Hermes supports any model via any provider. The Paperclip UI should
+ * Hermes supports any model via any provider. The Pilot UI should
  * prefer detectModel() plus manual entry over curated placeholder models,
  * since Hermes availability depends on the user's local configuration.
  */
@@ -67,7 +67,7 @@ function getRuntimeCommandSpec(config: Record<string, unknown>): AdapterRuntimeC
 }
 
 /**
- * Documentation shown in the Paperclip UI when configuring a Hermes agent.
+ * Documentation shown in the Pilot UI when configuring a Hermes agent.
  */
 export const agentConfigurationDoc = `# Hermes Agent Configuration
 
@@ -150,7 +150,7 @@ task-bridge surfaces.
 `;
 
 /**
- * External adapter plugin entrypoint expected by Paperclip's adapter manager.
+ * External adapter plugin entrypoint expected by Pilot's adapter manager.
  */
 export function createServerAdapter(): ServerAdapterModule {
   return {

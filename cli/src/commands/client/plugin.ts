@@ -39,7 +39,7 @@ interface TargetHealth {
   deploymentExposure?: string;
 }
 
-/** Result of probing the Paperclip instance the CLI is about to talk to. */
+/** Result of probing the Pilot instance the CLI is about to talk to. */
 interface TargetDiagnostics {
   apiBase: string;
   reachable: boolean;
@@ -183,7 +183,7 @@ export function renderLocalPluginInstallHint(packagePath: string): string {
 
 /**
  * Probe `GET /api/health` on the instance the CLI is configured to talk to so a
- * developer can confirm *which* Paperclip they are about to install into. This
+ * developer can confirm *which* Pilot they are about to install into. This
  * exists because a local-path plugin can otherwise be silently installed into a
  * stale control-plane host that does not serve the branch's routes; surfacing
  * the API URL plus the server version/status catches that mismatch before the

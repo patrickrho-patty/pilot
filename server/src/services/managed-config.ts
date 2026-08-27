@@ -1,7 +1,7 @@
 /**
  * Cloud managed-config bootstrap (harness → app contract).
  *
- * Instances managed by the Paperclip Cloud harness receive one environment
+ * Instances managed by the Pilot Cloud harness receive one environment
  * variable, `PAPERCLIP_MANAGED_CONFIG`, holding a single JSON document:
  *
  *   {
@@ -257,7 +257,7 @@ export function parseManagedConfigEnv(env: ManagedConfigEnv): ManagedInstanceCon
     if (!Array.isArray(doc.environments)) {
       fail(`"environments" must be an array of environment objects (got ${describeJsonValue(doc.environments)})`);
     }
-    // The DB enforces at most ONE Paperclip-managed sandbox row per instance
+    // The DB enforces at most ONE Pilot-managed sandbox row per instance
     // (partial unique index `environments_managed_sandbox_idx`); every entry
     // here provisions that row, so a longer list can never be satisfied.
     if (doc.environments.length > 1) {

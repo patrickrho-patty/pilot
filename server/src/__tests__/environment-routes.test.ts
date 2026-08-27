@@ -728,7 +728,7 @@ describe("environment routes", () => {
     it("allows a marker-clear-only patch to unblock a row with a stale legacy kubernetes marker", async () => {
       // A sandbox row carrying only the legacy wrapper marker does not hold
       // the managed sandbox slot (`environments_managed_sandbox_idx` keys on
-      // `managedByPaperclip`), and with the persisted execution mode not
+      // `managedByPilot`), and with the persisted execution mode not
       // forcing kubernetes nothing selects rows by that marker either — so
       // the marker is a stale leftover, not live platform state.
       const staleRow = {
@@ -769,7 +769,7 @@ describe("environment routes", () => {
 
     it("refuses the marker-clear patch on the sandbox slot row while managed provisioning is configured", async () => {
       // With a managed-config `environments` entry, driver=sandbox +
-      // managedByPaperclip is THE provisioner-owned slot row, adopted and
+      // managedByPilot is THE provisioner-owned slot row, adopted and
       // refreshed on every boot — clearing its markers would reclassify it
       // tenant-managed and let the next PATCH/DELETE bypass the write floor.
       process.env.PILOT_MANAGED_CONFIG = MANAGED_CONFIG_WITH_SANDBOX_ENTRY;

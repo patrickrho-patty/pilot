@@ -17,7 +17,7 @@ import { agentInstructionsService } from "../services/agent-instructions.js";
  * Seeds hand edits across every formerly-destructive setup/sync surface, reruns the
  * setup/sync mechanism, and asserts each edit survives. Each block drives the SAME
  * production code the writers/reconcilers use:
- *   - config.json          -> mergePaperclipConfig + paperclipConfigSchema (shared core
+ *   - config.json          -> mergePilotConfig + pilotConfigSchema (shared core
  *                             used by BOTH writers: cli/src/config/store.ts:writeConfig
  *                             and server/src/worktree-config.ts:writeConfigFile)
  *   - .env                 -> updateEnvFileContents + writeEnvFileAtomicallyIfChanged

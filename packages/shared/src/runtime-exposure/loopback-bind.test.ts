@@ -46,7 +46,7 @@ describe("forceLoopbackBindInCommand", () => {
   });
 
   it("keeps the legacy lan aliases so dev-service detection still matches", () => {
-    // `isPaperclipDevRuntimeService` matches `--tailscale-auth` as a substring;
+    // `isPilotDevRuntimeService` matches `--tailscale-auth` as a substring;
     // an explicit `--bind` already beats the alias in every dev-runner version.
     expect(forceLoopbackBindInCommand("pnpm dev:once --tailscale-auth")).toBe(
       "pnpm dev:once --tailscale-auth --bind loopback",

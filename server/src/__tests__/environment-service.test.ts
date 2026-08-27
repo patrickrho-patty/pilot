@@ -1640,7 +1640,7 @@ describeEmbeddedPostgres("environmentService leases", () => {
     });
 
     // Partial unique index environments_company_managed_sandbox_idx rejects a
-    // second row matching driver='sandbox' AND managedByPaperclip=true for the
+    // second row matching driver='sandbox' AND managedByPilot=true for the
     // same company. This is the DB-level invariant that replaced the previous
     // application-side post-insert convergence loop.
     const secondInsert = db.insert(environments).values({
@@ -1664,7 +1664,7 @@ describeEmbeddedPostgres("environmentService leases", () => {
     }
     expect(raisedConstraint).toBe("environments_managed_sandbox_idx");
 
-    // Index does NOT cover tenant-created sandbox rows (no managedByPaperclip
+    // Index does NOT cover tenant-created sandbox rows (no managedByPilot
     // marker) — operators must be able to keep multiple tenant sandbox envs.
     await db.insert(environments).values({
       name: "Tenant Sandbox",

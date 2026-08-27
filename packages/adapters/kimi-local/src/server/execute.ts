@@ -381,7 +381,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
       // from its isolated per-run location instead of copying it over the
       // shared $KIMI_CODE_HOME/skills home. Overwriting the shared home would
       // delete Kimi skills installed by the operator or other agents that
-      // Paperclip does not own.
+      // Pilot does not own.
       if (desiredKimiSkillNames.length > 0 && preparedExecutionTargetRuntime.assetDirs.skills) {
         remoteSkillsDir = preparedExecutionTargetRuntime.assetDirs.skills;
       }
@@ -543,7 +543,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     if (!executionTargetIsRemote && instructionsFilePath) {
       args.push("--add-dir", path.dirname(instructionsFilePath));
     }
-    // Load desired Paperclip skills from the dedicated per-run directory
+    // Load desired Pilot skills from the dedicated per-run directory
     // (local snapshot, or the synced remote snapshot) instead of the shared
     // skills home. Only passed when skills are desired so unconfigured agents
     // keep Kimi's default skill discovery.

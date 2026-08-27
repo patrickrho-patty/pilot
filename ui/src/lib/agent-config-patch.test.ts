@@ -223,7 +223,7 @@ describe("buildAgentUpdatePatch", () => {
 
   it("preserves paperclip skill-sync selections when changing adapter types", () => {
     // Desired skills are adapter-agnostic (company-level selections) but are
-    // persisted inside the per-adapter config under `paperclipSkillSync`. A
+    // persisted inside the per-adapter config under `pilotSkillSync`. A
     // patch that switches adapters must carry them over instead of wiping the
     // agent's skills.
     const agent = makeAgent();

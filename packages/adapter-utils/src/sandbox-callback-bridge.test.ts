@@ -1104,7 +1104,7 @@ describe("sandbox callback bridge", () => {
     ).resolves.toEqual([]);
   });
 
-  // The process-session remote script is a static, Paperclip-authored `.mjs`
+  // The process-session remote script is a static, Pilot-authored `.mjs`
   // written into the sandbox on every bridge start. `syncRemoteTextFileWithHashSkip`
   // (which now backs that write, mirroring the bridge-entrypoint sha256 gate)
   // content-hash-skips it so a warm start where the remote script already matches
@@ -1252,7 +1252,7 @@ describe("sandbox callback bridge", () => {
       { method: "GET", path: "/api/companies/co-1/approvals" },
       { method: "GET", path: "/api/companies/co-1/routines" },
       { method: "GET", path: "/api/companies/co-1/skills" },
-      // Hire skill (paperclip-create-agent): discovery + submit + issue linking
+      // Hire skill (pilot-create-agent): discovery + submit + issue linking
       { method: "GET", path: "/llms/agent-configuration.txt" },
       { method: "GET", path: "/llms/agent-configuration/claude_local.txt" },
       { method: "GET", path: "/llms/agent-icons.txt" },

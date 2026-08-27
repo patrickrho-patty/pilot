@@ -2356,7 +2356,7 @@ function resolveManagedSkillsRoot(companyId: string) {
 }
 
 /**
- * A rename target must be a true Paperclip-managed local skill: a `local_path`
+ * A rename target must be a true Pilot-managed local skill: a `local_path`
  * skill whose `managed_local` source directory lives directly under the
  * company managed-skills root (e.g. `<managedRoot>/<slug>`). This deliberately
  * excludes catalog (`__catalog__/...`), runtime (`__runtime__/...`) and other

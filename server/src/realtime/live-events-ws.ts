@@ -46,7 +46,7 @@ interface UpgradeContext {
   actorId: string;
 }
 
-/** Cloud-proxied browser identity resolved from trusted x-paperclip-cloud-* headers. */
+/** Cloud-proxied browser identity resolved from trusted x-pilot-cloud-* headers. */
 export interface CloudUpgradeActor {
   userId: string;
   /** Companies this actor may subscribe to (primary stack company + real memberships). */
@@ -147,7 +147,7 @@ async function authorizeUpgrade(
     }
 
     // Cloud-managed deployments authenticate proxied browsers with trusted
-    // x-paperclip-cloud-* headers, never a local Better Auth session — the
+    // x-pilot-cloud-* headers, never a local Better Auth session — the
     // session fallback below can only 403 them, which left the live-events
     // socket permanently unreachable behind the Cloud front door. A resolved
     // cloud actor is authoritative: authorize against its membership scope.
@@ -232,7 +232,7 @@ export function setupLiveEventsWebSocketServer(
     resolveSessionFromHeaders?: (headers: Headers) => Promise<BetterAuthSessionResult | null>;
     /**
      * Resolves a Cloud-proxied browser's identity from the trusted
-     * x-paperclip-cloud-* headers on the upgrade request. Wired by managed
+     * x-pilot-cloud-* headers on the upgrade request. Wired by managed
      * deployments; self-hosted instances leave it unset.
      */
     resolveCloudActor?: (req: IncomingMessage) => Promise<CloudUpgradeActor | null>;

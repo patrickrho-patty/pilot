@@ -2,7 +2,7 @@
  * CLI output formatting for Hermes Agent adapter.
  *
  * Pretty-prints Hermes output lines in the terminal when running
- * Paperclip's CLI tools.
+ * Pilot's CLI tools.
  */
 
 import pc from "picocolors";

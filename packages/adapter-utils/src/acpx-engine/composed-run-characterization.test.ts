@@ -531,7 +531,7 @@ describe("composed ACPX run: engine-boundary result form per exit path", () => {
 
   it("THROWS (does not return) on a partial bridge failure and stops the started sibling bridge once", async () => {
     const { stateDir, localCwd, executionTarget } = await setupRemoteSandbox();
-    // The paperclip bridge fails while the concurrently-started process-session
+    // The pilot bridge fails while the concurrently-started process-session
     // bridge resolves a live handle. This is the second engine-boundary throw path;
     // the abandon path must stop the started sibling so no bridge leaks.
     const stop = vi.fn(async () => {});

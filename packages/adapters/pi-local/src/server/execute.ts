@@ -327,7 +327,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   }
   try {
     // Prepend installed skill `bin/` dirs to PATH so an agent's bash tool can
-    // invoke skill binaries (e.g. `paperclip-get-issue`) by name. Without this,
+    // invoke skill binaries (e.g. `pilot-get-issue`) by name. Without this,
     // any pi_local agent whose AGENTS.md calls a skill command via bash hits
     // exit 127 "command not found". Only include skills that ensurePiSkillsInjected
     // actually linked — otherwise non-injected skills' binaries would be reachable

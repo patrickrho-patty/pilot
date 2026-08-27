@@ -1215,7 +1215,7 @@ export async function runSshCommand(
     // Mirror buildSshSpawnTarget: source the login profiles first, then run
     // `env KEY=VAL cmd` so user-supplied identity overrides win over anything a
     // profile re-exports. The SSH target is an operator-configured host, not a
-    // Paperclip sandbox image, so it can expose `node` or an agent CLI only
+    // Pilot sandbox image, so it can expose `node` or an agent CLI only
     // through a login profile; a non-login SSH command would miss that PATH.
     // Source `/etc/profile` first so a host that exposes the PATH through
     // `/etc/profile.d` scripts still resolves node and the agent CLI.
@@ -1279,7 +1279,7 @@ export async function buildSshSpawnTarget(input: {
   const remoteCommandParts = [shellQuote(input.command), ...input.args.map((arg) => shellQuote(arg))].join(" ");
   // Source the login profiles first, then run `env KEY=VAL cmd` so
   // user-supplied identity overrides win over anything a profile re-exports.
-  // The SSH target is an operator-configured host, not a Paperclip sandbox
+  // The SSH target is an operator-configured host, not a Pilot sandbox
   // image, so it can expose `node` or an agent CLI only through a login
   // profile; a non-login SSH command would miss that PATH. Source
   // `/etc/profile` first so a host that exposes the PATH through

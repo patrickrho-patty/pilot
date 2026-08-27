@@ -42,7 +42,7 @@ describe("agent instructions service", () => {
   });
 
   it("copies the existing bundle into the managed root when switching to managed mode", async () => {
-    const pilotHome = await makeTempDir("paperclip-agent-instructions-home-");
+    const pilotHome = await makeTempDir("pilot-agent-instructions-home-");
     const externalRoot = await makeTempDir("paperclip-agent-instructions-external-");
     cleanupDirs.add(pilotHome);
     cleanupDirs.add(externalRoot);
@@ -82,7 +82,7 @@ describe("agent instructions service", () => {
   });
 
   it("creates the target entry file when switching to a new external root", async () => {
-    const pilotHome = await makeTempDir("paperclip-agent-instructions-home-");
+    const pilotHome = await makeTempDir("pilot-agent-instructions-home-");
     const managedRoot = path.join(
       pilotHome,
       "instances",

@@ -28,7 +28,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
     if (typeof v !== "string") continue;
     // Runtime PAPERCLIP_* always wins over config, and PAPERCLIP_API_KEY is
     // never accepted from config — the harness-minted run token is the only
-    // source. Other PAPERCLIP_* keys Paperclip did not assign flow through.
+    // source. Other PILOT_* keys Pilot did not assign flow through.
     if (isForbiddenConfigEnvKey(k)) continue;
     if (isPilotRuntimeEnvKey(k) && k in env) continue;
     env[k] = v;
@@ -37,7 +37,7 @@ export async function execute(ctx: AdapterExecutionContext): Promise<AdapterExec
   if (authToken) env.PILOT_API_KEY = authToken;
   // runtimeEnv is only used to resolve the command path and log HOME below;
   // the child env is built inside runChildProcess from
-  // sanitizeInheritedPaperclipEnv(process.env) + env, so a PAPERCLIP_API_KEY
+  // sanitizeInheritedPilotEnv(process.env) + env, so a PILOT_API_KEY
   // on the server process never reaches the child.
   const runtimeEnv = ensurePathInEnv({ ...process.env, ...env });
   const resolvedCommand = await resolveCommandForLogs(command, cwd, runtimeEnv);

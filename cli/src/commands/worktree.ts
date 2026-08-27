@@ -1494,7 +1494,7 @@ export function resolveWorktreeSeedMigrationRevision(
 /**
  * Markerless worktrees predate the versioned seed manifest. Adopt one only
  * after proving that its configured database already has a compatible
- * migration journal and the core Paperclip tables. The physical PG_VERSION
+ * migration journal and the core Pilot tables. The physical PG_VERSION
  * check prevents this read-only probe from initializing a missing embedded
  * database and then mistaking that empty cluster for legacy evidence.
  */

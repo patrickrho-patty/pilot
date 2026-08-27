@@ -179,7 +179,7 @@ const GUEST_COMMAND =
       pilotHome = await fs.mkdtemp(path.join(os.tmpdir(), "pap17419-home-"));
       // Redirect the local-service registry into a throwaway instance. Without
       // this the suite would write runtime-service records into the real
-      // Paperclip instance on this host and could confuse a live server.
+      // Pilot instance on this host and could confuse a live server.
       previousPilotHome = process.env.PILOT_HOME;
       previousInstanceId = process.env.PILOT_INSTANCE_ID;
       process.env.PILOT_HOME = pilotHome;

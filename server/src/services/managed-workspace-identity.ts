@@ -56,7 +56,7 @@ export type ManagedWorkspaceIdentity = {
  * The worktree's `.paperclip/.env` pointer is authoritative because it is what
  * the guest process itself loads. The path-derived id is only a fallback for a
  * worktree provisioned before the pointer existed, and the two agree by
- * construction for anything Paperclip provisioned.
+ * construction for anything Pilot provisioned.
  */
 export function resolveManagedWorkspaceInstanceId(workspaceCwd: string): string | null {
   const recorded = readWorktreeInstanceId(workspaceCwd);

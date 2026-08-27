@@ -112,7 +112,7 @@ export class TelemetryClient {
   }
 
   /**
-   * Tracks first-party Paperclip telemetry events registered in the generated
+   * Tracks first-party Pilot telemetry events registered in the generated
    * backend event schema.
    */
   track<K extends TelemetryEventName>(eventName: K, ...args: TrackArgs<K>): void {

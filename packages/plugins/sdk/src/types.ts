@@ -1,5 +1,5 @@
 /**
- * Core types for the Paperclip plugin worker-side SDK.
+ * Core types for the Pilot plugin worker-side SDK.
  *
  * These types define the stable public API surface that plugin workers import
  * from `@paperclipai/plugin-sdk`.  The host provides a concrete implementation
@@ -160,7 +160,7 @@ export type {
  * @see PLUGIN_SPEC.md §21.3 `plugin_state`
  */
 export interface ScopeKey {
-  /** What kind of Paperclip object this state is scoped to. */
+  /** What kind of Pilot object this state is scoped to. */
   scopeKind: PluginStateScopeKind;
   /** UUID or text identifier for the scoped object. Omit for `instance` scope. */
   scopeId?: string;
@@ -292,7 +292,7 @@ export interface PluginEntityUpsert {
   scopeId?: string;
   /** External identifier in the remote system (e.g. Linear issue ID). */
   externalId?: string;
-  /** Human-readable title for display in the Paperclip UI. */
+  /** Human-readable title for display in the Pilot UI. */
   title?: string;
   /** Optional status string. */
   status?: string;
@@ -524,7 +524,7 @@ export interface PluginLocalFoldersClient {
 }
 
 /**
- * `ctx.events` — subscribe to and emit Paperclip domain events.
+ * `ctx.events` — subscribe to and emit Pilot domain events.
  *
  * Requires `events.subscribe` capability for `on()`.
  * Requires `events.emit` capability for `emit()`.
@@ -533,7 +533,7 @@ export interface PluginLocalFoldersClient {
  */
 export interface PluginEventsClient {
   /**
-   * Subscribe to a core Paperclip domain event or a plugin-namespaced event.
+   * Subscribe to a core Pilot domain event or a plugin-namespaced event.
    *
    * @param name - Event type, e.g. `"issue.created"` or `"plugin.@acme/linear.sync-done"`
    * @param fn - Async event handler
@@ -648,7 +648,7 @@ export interface PluginHttpClient {
  *
  * Plugins store shared `{ type: "secret_ref", secretId, version? }` bindings in
  * company-scoped config. This client resolves a bound ref through the
- * Paperclip secret provider system at execution time.
+ * Pilot secret provider system at execution time.
  *
  * @see PLUGIN_SPEC.md §22 — Secrets
  */
@@ -897,7 +897,7 @@ export interface PluginExecutionWorkspacesClient {
 }
 
 /**
- * `ctx.routines` — resolve and reconcile plugin-managed Paperclip routines.
+ * `ctx.routines` — resolve and reconcile plugin-managed Pilot routines.
  *
  * Requires `routines.managed` capability.
  */

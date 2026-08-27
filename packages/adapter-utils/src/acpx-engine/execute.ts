@@ -182,7 +182,7 @@ type AcpxRuntimeFactory = (options: PilotAcpRuntimeOptions) => AcpRuntime;
  * A remote runner-backed session's staged runtime, kept warm across runs so a
  * compatible resume reuses it instead of re-shipping the workspace / re-seeding
  * the managed home (PR 3: "stage once per session"). Keyed by the session's
- * `sessionKey` (`paperclip:companyId:agentId:taskKey:fingerprint`) — the SAME
+ * `sessionKey` (`pilot:companyId:agentId:taskKey:fingerprint`) — the SAME
  * fingerprint scoping the warm handle uses — so one session can never read
  * another session's staged credentials: a different agent/task/config hashes to
  * a different key, misses this cache, and stages its own home.
@@ -485,7 +485,7 @@ export function buildSessionFingerprint(identity: SessionFingerprintIdentity): s
 
 /**
  * Build the session key from the fingerprint and the outer-key identity. The key
- * form is `paperclip:companyId:agentId:taskKey:fingerprint`.
+ * form is `pilot:companyId:agentId:taskKey:fingerprint`.
  */
 export function buildSessionKey(identity: SessionKeyIdentity, fingerprint: string): string {
   return `paperclip:${identity.companyId}:${identity.agentId}:${identity.taskKey}:${fingerprint}`;
@@ -1297,7 +1297,7 @@ function uniqueSorted(values: Array<string | null | undefined>): string[] {
 // `.claude/settings.local.json` we override the user's potentially-restrictive
 // `~/.claude/settings.json` (e.g. `defaultMode: "dontAsk"`, which silently
 // denies every non-allowlisted tool and never reaches `canUseTool`), and we
-// widen the SDK's Read sandbox to include the Paperclip state dirs the agent
+// widen the SDK's Read sandbox to include the Pilot state dirs the agent
 // needs to talk to its own control plane.
 async function writePilotClaudeSettings(input: {
   cwd: string;
@@ -1697,9 +1697,9 @@ async function buildRuntime(input: {
   for (const [key, value] of Object.entries(shapedEnvConfig)) {
     if (typeof value !== "string") continue;
     // Runtime PAPERCLIP_* always wins over config: skip a PAPERCLIP_* key that
-    // Paperclip has already assigned this run. PAPERCLIP_API_KEY is never
+    // Pilot has already assigned this run. PILOT_API_KEY is never
     // accepted from config — the harness-minted run token is the only source.
-    // A PAPERCLIP_* key Paperclip did NOT set is stable per-run config, so it
+    // A PILOT_* key Pilot did NOT set is stable per-run config, so it
     // applies and feeds the fingerprint hash below.
     if (isForbiddenConfigEnvKey(key)) continue;
     if (isPilotRuntimeEnvKey(key) && key in env) continue;
@@ -2093,8 +2093,8 @@ async function buildRuntime(input: {
     sessionStagingLeaseRelease = sandboxSite.stagingLeaseRelease;
   }
   // Both bridge starts run under one try so a failure at EITHER — including the
-  // paperclip callback bridge — fires the same abandon-path cleanup. The
-  // paperclip bridge starts after the workspace + managed home were already
+  // pilot callback bridge — fires the same abandon-path cleanup. The
+  // pilot bridge starts after the workspace + managed home were already
   // staged and the per-session staging lease is already held, so leaving it
   // outside the catch would strand the lease (and the staged temp) on a
   // start failure and deadlock the next run of this session.
@@ -2105,7 +2105,7 @@ async function buildRuntime(input: {
   try {
     if (useRemoteProcessSession && sandboxSite) {
       // The sandbox run site brings up both host-side bridges concurrently, keeps
-      // the one paperclip-env → process-session-launch dependency at a single
+      // the one pilot-env → process-session-launch dependency at a single
       // sequencing point, settles both starts, and returns the started handles
       // plus the finalized launch env. On a partial failure it stops nothing and
       // rethrows; the catch below stops whichever bridge the site started.
@@ -2272,7 +2272,7 @@ async function applySessionConfigOptions(input: {
 
 /**
  * Build the process-session launch env: the host env overlaid with the run's
- * `env` (so the merged paperclip bridge vars win) and a guaranteed `PATH`,
+ * `env` (so the merged pilot bridge vars win) and a guaranteed `PATH`,
  * narrowed to string values. Shared by the remote concurrent bring-up and the
  * local / runner-less lane so both resolve the runtime env identically.
  */
@@ -2454,7 +2454,7 @@ async function emitAcpxLog(ctx: AdapterExecutionContext, payload: Record<string,
 }
 
 /**
- * Build the short run summary that Paperclip may auto-post as an issue comment
+ * Build the short run summary that Pilot may auto-post as an issue comment
  * when the agent leaves no comment of its own.
  *
  * Prefer the last non-empty *output* segment after a tool call. Intermediate

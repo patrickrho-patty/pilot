@@ -253,10 +253,10 @@ async function readImportZipArchive(zipBytes: Buffer) {
 }
 
 /**
- * Async job opt-in. Cloud tenants set the `x-paperclip-cloud-async-import`
+ * Async job opt-in. Cloud tenants set the `x-pilot-cloud-async-import`
  * header server-side (they are not a browser, so it is never stripped). Board
  * browsers cannot use that header — the Cloud harness proxy strips every
- * inbound `x-paperclip-cloud-*` header as anti-spoofing — so they opt in with
+ * inbound `x-pilot-cloud-*` header as anti-spoofing — so they opt in with
  * the proxy-safe `?async=1` query parameter instead. Either signal enters the
  * async path.
  */

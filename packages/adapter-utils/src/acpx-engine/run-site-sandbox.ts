@@ -129,7 +129,7 @@ export interface SandboxRunSiteOptions {
   readonly publishStagedProjectHints: (stagedProjectDirs: Record<string, string>) => void;
   readonly onReuseLog: () => Promise<void>;
 
-  /** Start the host-side paperclip callback bridge. */
+  /** Start the host-side pilot callback bridge. */
   readonly startPaperclipBridge: (
     runtimeRootDir: string | null,
   ) => Promise<AdapterExecutionTargetPilotBridgeHandle | null>;
@@ -173,7 +173,7 @@ export interface SandboxRunSite {
   /** The staged workspace the run installed or reused, or null before `placeWorkspace`. */
   readonly staged: StagedWorkspace | null;
   /**
-   * The paperclip callback bridge the run started, or null before
+   * The pilot callback bridge the run started, or null before
    * `startTransport` or on the host lane. `startTransport` sets it before it
    * rethrows a partial-bring-up failure, so an abandon path can stop the bridge
    * that started when its sibling threw.
@@ -328,14 +328,14 @@ export function createSandboxRunSite(options: SandboxRunSiteOptions): SandboxRun
     async startTransport(): Promise<SandboxRunSiteTransport> {
       // Bring up both host-side bridges concurrently. Their remote subtrees are
       // disjoint, so their env-independent setup overlaps. The one real
-      // dependency — the paperclip bridge's returned env must reach the
+      // dependency — the pilot bridge's returned env must reach the
       // process-session launch — is sequenced by `launchEnv`, a memoized thunk the
       // process-session bridge awaits right before its launch.
       const stagedRootDir = staged?.stagedRuntime.runtimeRootDir ?? null;
       const pilotStart = options.measureBridgeStep("bridge.paperclip", () =>
         options.startPaperclipBridge(stagedRootDir),
       );
-      // The single sequencing point (paperclip env → process-session launch),
+      // The single sequencing point (pilot env → process-session launch),
       // memoized so the merge runs exactly once whether the process-session bridge
       // consumes it at launch or `startTransport` finalizes it below.
       let launchEnvPromise: Promise<Record<string, string>> | null = null;
@@ -343,7 +343,7 @@ export function createSandboxRunSite(options: SandboxRunSiteOptions): SandboxRun
       const finalizeLaunchEnv = (): Promise<Record<string, string>> =>
         (launchEnvPromise ??= (async () => {
           const pilot = await pilotStart;
-          // The paperclip bridge token is run-scoped: it lives for this run only and
+          // The pilot bridge token is run-scoped: it lives for this run only and
           // never enters a reuse payload (Amendment B). The site hands it to the
           // engine's `finalizeLaunchEnv`, the sole consumer of a contribution, and
           // retains nothing.

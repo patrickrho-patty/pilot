@@ -77,7 +77,7 @@ const DEFAULT_DUPLEX_GATEWAY_HEARTBEAT_TIMEOUT_MS = 20_000;
 // the 409 for an outstanding request and a 503 for a new request.
 const DEFAULT_DUPLEX_GATEWAY_LOSS_EXIT_GRACE_MS = 1_000;
 
-/** Span name that wraps one Paperclip-API callback request — read the request,
+/** Span name that wraps one Pilot-API callback request — read the request,
  * write the response, and remove the request file. */
 const CALLBACK_BRIDGE_RELAY_REQUEST_SPAN = "sandbox.callbackBridge.relayRequest";
 
@@ -97,7 +97,7 @@ export interface SandboxCallbackBridgeRouteRule {
 // Routes the in-sandbox heartbeat skill is documented to call. The server
 // still enforces actor-level permissions on top of this allowlist; the list
 // exists to bound the surface area a compromised CLI could reach via the
-// reverse bridge. Keep this in sync with the Paperclip skill in
+// reverse bridge. Keep this in sync with the Pilot skill in
 // `skills/paperclip/SKILL.md` and `references/api-reference.md`.
 export const DEFAULT_SANDBOX_CALLBACK_BRIDGE_ROUTE_ALLOWLIST: readonly SandboxCallbackBridgeRouteRule[] = [
   // Identity, inbox, agent self-management
@@ -149,7 +149,7 @@ export const DEFAULT_SANDBOX_CALLBACK_BRIDGE_ROUTE_ALLOWLIST: readonly SandboxCa
   // Subtasks / delegation
   { method: "POST", path: /^\/api\/companies\/[^/]+\/issues$/ },
 
-  // Hiring (paperclip-create-agent skill): adapter/icon discovery, comparing
+  // Hiring (pilot-create-agent skill): adapter/icon discovery, comparing
   // existing agent configs, submitting the hire request, and linking the
   // resulting approval to its source issue. Direct agent creation
   // (POST /api/companies/:id/agents) stays denied — hires must go through the
@@ -769,7 +769,7 @@ export async function startSandboxCallbackBridgeWorker(input: {
   // otherwise). When it is absent, the request work runs with an empty store,
   // exactly like the earlier `runWithoutActiveStep` behavior.
   getRuntimeParentContext?: () => StartupSpanContext | undefined;
-  // Wrap each Paperclip-API callback request in a
+  // Wrap each Pilot-API callback request in a
   // `sandbox.callbackBridge.relayRequest` span, so the request's read, write, and
   // remove execs group under one named span. When it is absent, the request work
   // runs under the run parent with no wrapper span, exactly like the earlier
@@ -1446,7 +1446,7 @@ export async function startSandboxCallbackBridgeWorker(input: {
 }
 
 /**
- * Content-hash-skip write of a Paperclip-authored text file into the sandbox, in
+ * Content-hash-skip write of a Pilot-authored text file into the sandbox, in
  * a SINGLE remote exec. The body's sha256 is computed on the host; the one shell
  * round-trip skips the write entirely when the remote file already hashes to the
  * same value (warm start — 0 write execs), otherwise it uploads (base64 over

@@ -1399,10 +1399,10 @@ async function uploadAttachment(
   const form = new FormData();
   form.set("file", new Blob([bytes], { type: inferContentTypeFromPath(input.filePath) }), input.filePath.split(/[\\/]/).pop() ?? "attachment");
   if (input.commentId) form.set("issueCommentId", input.commentId);
-  // This multipart upload uses a hand-rolled fetch rather than PaperclipApiClient,
+  // This multipart upload uses a hand-rolled fetch rather than PilotApiClient,
   // so it must forward the agent run-id header itself — otherwise an
   // agent-authenticated upload is rejected with "401 Agent run id required"
-  // (the client injects x-paperclip-run-id automatically for JSON requests).
+  // (the client injects x-pilot-run-id automatically for JSON requests).
   const headers: Record<string, string> = {};
   if (apiKey) headers.authorization = `Bearer ${apiKey}`;
   if (input.runId) headers["x-paperclip-run-id"] = input.runId;

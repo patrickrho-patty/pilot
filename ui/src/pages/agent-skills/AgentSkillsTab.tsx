@@ -30,7 +30,7 @@ import { AgentSkillReleasePicker, releaseShortLabel } from "./AgentSkillReleaseP
 const MATERIALIZATION_NOTE =
   "Enabled skills are materialized into the stable Paperclip-managed prompt bundle on the agent's next run.";
 
-/** Company skill key of the Paperclip core skill that carries beta releases. */
+/** Company skill key of the Pilot core skill that carries beta releases. */
 const PILOT_CORE_SKILL_KEY = "paperclipai/paperclip/paperclip";
 
 /** Build the desired-skill sync payload, carrying any active version pins. */
@@ -98,7 +98,7 @@ export function AgentSkillsTab({ agent, companyId }: { agent: Agent; companyId?:
     [companySkills],
   );
 
-  // Seeded releases (release_id IS NOT NULL) for the paperclip core skill. Only
+  // Seeded releases (release_id IS NOT NULL) for the pilot core skill. Only
   // fetched when the flag is on and the skill is present in the library.
   const { data: pilotVersions } = useQuery({
     queryKey: queryKeys.companySkills.versions(companyId ?? "", pilotCoreSkill?.id ?? ""),
@@ -340,7 +340,7 @@ export function AgentSkillsTab({ agent, companyId }: { agent: Agent; companyId?:
     syncSkills.mutate(toDesiredSkillPayload(skillDraft, nextPins));
   };
 
-  // The release picker only applies to the enabled paperclip core skill while the
+  // The release picker only applies to the enabled pilot core skill while the
   // beta-skills flag is on and seeded releases exist.
   const releasePickerActive = betaSkillsEnabled && pilotReleases.length > 0;
 

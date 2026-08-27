@@ -460,7 +460,7 @@ describe("agent instructions bundle routes", () => {
 
   it("preserves paperclip skill-sync selections when switching adapters", async () => {
     // Desired skills live inside the per-adapter config under
-    // `paperclipSkillSync`, yet they are adapter-agnostic company-level
+    // `pilotSkillSync`, yet they are adapter-agnostic company-level
     // selections. Switching adapter type must not silently wipe them — the
     // server carries them over from the existing config the same way it
     // preserves env/cwd and the instructions bundle.

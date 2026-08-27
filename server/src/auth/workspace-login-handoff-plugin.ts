@@ -117,7 +117,7 @@ export function workspaceLoginHandoffPlugin(deps: {
               findClonedIdentity: async ({ userId, companyId }) => {
                 const user = await ctx.context.internalAdapter.findUserById(userId);
                 if (!user) return null;
-                // Membership lives in Paperclip's own schema, so it is read
+                // Membership lives in Pilot's own schema, so it is read
                 // through the app's `db` handle rather than the Better Auth
                 // adapter. Scoped to the ticket's company: an unscoped check
                 // would accept a clone where this user belongs to some *other*

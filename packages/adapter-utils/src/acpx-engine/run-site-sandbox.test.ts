@@ -182,14 +182,14 @@ describe("sandbox run site", () => {
 
     await site.placeWorkspace(makeContext("s"));
     const transportPromise = site.startTransport(makeContext("s"));
-    // Both bridges start before the paperclip env resolves: their setup overlaps.
+    // Both bridges start before the pilot env resolves: their setup overlaps.
     await Promise.resolve();
     await Promise.resolve();
     expect(events).toContain("paperclip:start");
     expect(events).toContain("process-session:start");
     expect(events).not.toContain("process-session:launch");
 
-    // Release the paperclip env; the process-session launch now observes the
+    // Release the pilot env; the process-session launch now observes the
     // merged run-scoped env (the single sequencing point).
     releasePilot();
     const transport = await transportPromise;

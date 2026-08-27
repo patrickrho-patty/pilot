@@ -36,7 +36,7 @@ type KeyRow = { id: number; value: string };
  *
  * Admin-only surface over P5a's command-template routes
  * (`POST /companies/:id/tools/stdio-templates`). Registers a command that
- * Paperclip will run in the company's isolated workspace and the keys it
+ * Pilot will run in the company's isolated workspace and the keys it
  * expects. One of the two M8 screens where "MCP" vocabulary is allowed.
  */
 export function RunYourOwnTab({ companyId }: { companyId: string }) {

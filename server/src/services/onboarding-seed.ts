@@ -239,7 +239,7 @@ export function onboardingSeedService(db: Db) {
     //
     //    No-first-task contract (PAP-67 r17.4): on the Cloud walk this branch
     //    never runs. The seed Cloud sends is mission-only — `agent` and
-    //    `firstTask` are unpopulated by the signup wizard and a paperclip-cloud
+    //    `firstTask` are unpopulated by the signup wizard and a pilot-cloud
     //    `node:test` in `src/onboarding/` pins that — so `firstTaskTitle` is
     //    null here and the first task stays owned by the tenant's own
     //    server-owned onboarding path (`POST /issues` with

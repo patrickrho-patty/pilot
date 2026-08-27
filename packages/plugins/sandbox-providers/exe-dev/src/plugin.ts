@@ -72,10 +72,10 @@ const EXE_DEV_SSH_INVALID_KEY_FORMAT = /Load key [^\n]*invalid format/i;
 const UUID_SECRET_REF_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // exe.dev's `--setup-script` runs at VM init as the unprivileged `exedev` user, which
-// has passwordless sudo. The Paperclip sandbox callback bridge is a Node script, so
-// every Paperclip workload on this provider needs node on PATH before the bridge can
+// has passwordless sudo. The Pilot sandbox callback bridge is a Node script, so
+// every Pilot workload on this provider needs node on PATH before the bridge can
 // start. When the operator hasn't supplied their own setup script, install Node 24 via
-// nodesource so the VM comes up ready for Paperclip out of the box.
+// nodesource so the VM comes up ready for Pilot out of the box.
 const DEFAULT_SETUP_SCRIPT =
   "(command -v node >/dev/null 2>&1 && " +
   "node -e 'const v=process.versions.node.split(\".\").map(Number);" +

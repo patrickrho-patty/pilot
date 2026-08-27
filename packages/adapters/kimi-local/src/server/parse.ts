@@ -52,7 +52,7 @@ function errorText(value: unknown): string {
 }
 
 /**
- * Build the run summary that Paperclip may auto-post as an issue comment.
+ * Build the run summary that Pilot may auto-post as an issue comment.
  *
  * Kimi emits many intermediate assistant content lines during a multi-step
  * agent loop ("Let me check…", tool plans, etc.). Joining all of them produced
