@@ -21,6 +21,23 @@
 
 **Collision check (done):** zero existing `PILOT_*` / `Pilot` / `pilot` identifiers, no `paperClip` camelCase.
 
+**Full file-type census (2026-08-26, excl. node_modules/dist):**
+
+| Type | Files w/ hits | Covered by | |
+|---|---|---|---|
+| `.ts` / `.tsx` | 1,782 / 531 | Tasks 1–6 | ✓ |
+| `.md` | 367 | Task 7 | ✓ |
+| `.json` | 106 | Task 6c (excluding npm `name`/`bin` → deferred) | new |
+| `.mjs`/`.cjs`/`.mts`/`.js` | 88 | Task 6b (JS not covered by TS ast-grep rules) | new |
+| `.sh` | 36 | Task 6b (skills + scripts; own tests exist) | new |
+| `.yml`/`.yaml` (non-workflow) | ~30 (docker compose ×6, evals/promptfoo ×5, etc.) | Task 6c | new |
+| `.sql` | 15 (plugin-llm-wiki migrations: `paperclip_distillation_*` TABLES + `paperclip_issue_history` enum values) | **DEFERRED** — persisted schema/data | new |
+| Dockerfiles (root + docker/ + agent-runtime ×8) | ~10 | Task 6c (labels/copy; `ghcr.io/paperclipai` refs → deferred wave) | new |
+| `.html` (ui/index.html title + `PAPERCLIP_RUNTIME_BRANDING` markers) | 1 | Task 6c — note `server/src/ui-branding.ts` rewrites at serve time; both sides must rename in the same commit | new |
+| `.svg`/`.css`/`.webmanifest` | 5 | Task 6c (brand text in assets) | new |
+| `.gitignore` entries (`/.paperclip*` paths) | 3 | **DEFERRED** with path tier | new |
+| workflows `.yml` (5 files) | Task 4 | scope: env vars + labels/names; keep `ghcr.io/paperclipai` action/image refs until tier-6 wave | updated |
+
 ---
 
 ## Task 0: Baseline gate capture
@@ -371,6 +388,46 @@ fix: '"{{ NEW | replace "paperclip" "pilot" }}"'  # note: pipe transform needs t
 
 **Step 4:** Commit: `refactor(rename): tier 4b — free strings (copy/telemetry), exclusions verified`
 
+## Task 6b: Tier 4c — JavaScript files (mjs/cjs/js/mts) + shell scripts
+
+**Files:** `scripts/**/*.mjs`, `.agents/skills/*/scripts/**` (incl. `.test.mjs`), `*.sh` (~124 files total)
+
+Note: ast-grep identifier rules are `language: TypeScript`/`TSX` — JavaScript files were **not** touched by Task 1. These include skill scripts with their own vitest suites.
+
+**Step 1:** Inventory JS-tier hits excluding deferred classes
+
+```bash
+grep -rn '[Pp]aperclip' --include='*.mjs' --include='*.cjs' --include='*.js' --include='*.mts' --include='*.sh' scripts .agents skills \
+  | grep -vE '(@paperclipai|/paperclip|\.paperclip|paperclip_managed|paperclips/)' > /tmp/js-tier-inventory.txt
+wc -l /tmp/js-tier-inventory.txt
+```
+
+**Step 2:** fastmod three-pass (Paperclip→Pilot, PAPERCLIP→PILOT, paperclip→pilot) over those dirs with `--fixed-strings`
+
+**Step 3:** Exclusion gate: `git diff -U0 | grep '^+' | grep -E '@paperclipai|/paperclip|\.paperclip|paperclip_managed|paperclips/' | wc -l` → expect `0`
+
+**Step 4:** Run the JS-tier test suites: `pnpm -C packages/skills-catalog test 2>/dev/null; node --test .agents/skills/*/scripts/*.test.mjs 2>/dev/null || true` — plus repo `pnpm test:run` parity (skills test files reference renamed symbols).
+
+**Step 5:** Commit: `refactor(rename): tier 4c — JS scripts + skills (exclusions verified, suites green)`
+
+---
+
+## Task 6c: Tier 4d — config, assets, HTML, Docker, evals
+
+**Files:** `ui/index.html`, `ui/public/*.webmanifest`, brand `svg`/`css` (in `ui/src/index.css`, storybook styles), root + `docker/**` Dockerfiles & compose files, `evals/promptfoo/**/*.yaml`, storybook fixture JSONs, `package.json` `description`/`keywords` fields (NOT `name`/`bin` — deferred), `.agents/skills` metadata `SKILL.md` frontmatter descriptions
+
+**Step 1:** `ui/index.html` + webmanifest + `server/src/ui-branding.ts` — SAME COMMIT (runtime branding rewrite pair: static fallback and server-side both flip together; Task 1 already renamed the `.ts` identifiers, tier 4b covers its strings; here just html/webmanifest)
+
+**Step 2:** Docker/compose/evals: fastmod three-pass, then exclusion gate for `ghcr.io/paperclipai`, `/paperclip` mount paths, `ECS task definition` image URIs — expect those unchanged
+
+**Step 3:** `package.json` metadata: rename `description`/`keywords`/`homepage` strings only; `"name"` and `"bin"` fields stay (npm wave). Gate: `git diff '**/package.json' | grep -E '^[-+].*"(name|bin)"' | wc -l` → `0`
+
+**Step 4:** Storybook fixtures: eyeball diff — sample data strings rename unless they encode persisted paths
+
+**Step 5:** Gates: `pnpm -r typecheck && pnpm test:run` parity; `pnpm build` (index.html is a build input — confirms html survived)
+
+**Step 6:** Commit: `refactor(rename): tier 4d — config/assets/html/docker branding (npm names + registry refs deferred)`
+
 ---
 
 ## Task 7: Tier 1 — docs last
@@ -408,7 +465,8 @@ Expected: `0` (everything else renamed)
 
 | Deferred item | Why |
 |---|---|
-| `@paperclipai/*` npm scope (10 packages) | npm publish wave + `npm deprecate`; breaking for external installs |
+| `@paperclipai/*` npm scope (10 packages), `"name"`/`"bin"` fields, `ghcr.io/paperclipai` image refs, GitHub Action `uses:` refs | npm/GitHub wave: publish new + `npm deprecate` old; breaking for external installs |
+| `paperclip_distillation_*` SQL tables + `paperclip_issue_history` enum values (plugin-llm-wiki migrations) | persisted schema + row data; needs a real `ALTER ... RENAME` migration with data backfill, not string edits |
 | `/paperclip` mount path + EBS PVC data | live embedded-Postgres data; chart-level, invisible to users |
 | `~/.paperclip*`, `.paperclip-runtime`, worktrees | persisted state on user machines; needs `mcp-global-migration-v1`-style marker migration |
 | `paperclip_managed` DB markers (36 refs) | persisted DB state; needs a data migration |
