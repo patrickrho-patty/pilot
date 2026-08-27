@@ -5,17 +5,17 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  paperclip-upload-artifact.sh FILE [options]
+  pilot-upload-artifact.sh FILE [options]
 
-Uploads a generated file from the current workspace to the current Paperclip
+Uploads a generated file from the current workspace to the current Pilot
 issue, then creates an attachment-backed artifact work product by default.
 
 Required environment for live uploads:
-  PAPERCLIP_API_URL, PAPERCLIP_API_KEY, PAPERCLIP_COMPANY_ID, PAPERCLIP_TASK_ID, PAPERCLIP_RUN_ID
+  PILOT_API_URL, PILOT_API_KEY, PILOT_COMPANY_ID, PILOT_TASK_ID, PILOT_RUN_ID
 
 Options:
-  --issue-id ID          Issue id to attach to (default: PAPERCLIP_TASK_ID)
-  --company-id ID        Company id (default: PAPERCLIP_COMPANY_ID)
+  --issue-id ID          Issue id to attach to (default: PILOT_TASK_ID)
+  --company-id ID        Company id (default: PILOT_COMPANY_ID)
   --title TEXT           Work product title (default: file basename)
   --summary TEXT         Work product summary
   --content-type TYPE    Override detected upload content type
@@ -95,8 +95,8 @@ request_json() {
     status_code="$(
       curl -sS -X "$method" -w '%{http_code}' -o "$response_file" \
         "$url" \
-        -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-        -H "X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID" \
+        -H "Authorization: Bearer $PILOT_API_KEY" \
+        -H "X-Pilot-Run-Id: $PILOT_RUN_ID" \
         -H 'Content-Type: application/json' \
         --data-binary "$body"
     )"
@@ -104,8 +104,8 @@ request_json() {
     status_code="$(
       curl -sS -X "$method" -w '%{http_code}' -o "$response_file" \
         "$url" \
-        -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-        -H "X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID"
+        -H "Authorization: Bearer $PILOT_API_KEY" \
+        -H "X-Pilot-Run-Id: $PILOT_RUN_ID"
     )"
   fi
 
@@ -135,8 +135,8 @@ upload_file() {
   status_code="$(
     curl -sS -X POST -w '%{http_code}' -o "$response_file" \
       "$url" \
-      -H "Authorization: Bearer $PAPERCLIP_API_KEY" \
-      -H "X-Paperclip-Run-Id: $PAPERCLIP_RUN_ID" \
+      -H "Authorization: Bearer $PILOT_API_KEY" \
+      -H "X-Pilot-Run-Id: $PILOT_RUN_ID" \
       -F "file=@\"${escaped_path}\";type=${content_type}"
   )"
 
@@ -153,8 +153,8 @@ upload_file() {
 }
 
 file_path=""
-issue_id="${PAPERCLIP_TASK_ID:-}"
-company_id="${PAPERCLIP_COMPANY_ID:-}"
+issue_id="${PILOT_TASK_ID:-}"
+company_id="${PILOT_COMPANY_ID:-}"
 title=""
 summary=""
 content_type=""
@@ -271,17 +271,17 @@ if [[ "$dry_run" == "1" ]]; then
   exit 0
 fi
 
-if [[ -z "${PAPERCLIP_API_URL:-}" || -z "${PAPERCLIP_API_KEY:-}" || -z "${PAPERCLIP_RUN_ID:-}" ]]; then
-  printf 'Missing PAPERCLIP_API_URL, PAPERCLIP_API_KEY, or PAPERCLIP_RUN_ID.\n' >&2
+if [[ -z "${PILOT_API_URL:-}" || -z "${PILOT_API_KEY:-}" || -z "${PILOT_RUN_ID:-}" ]]; then
+  printf 'Missing PILOT_API_URL, PILOT_API_KEY, or PILOT_RUN_ID.\n' >&2
   exit 1
 fi
 
 if [[ -z "$issue_id" || -z "$company_id" ]]; then
-  printf 'Missing issue or company id. Pass --issue-id/--company-id or set PAPERCLIP_TASK_ID/PAPERCLIP_COMPANY_ID.\n' >&2
+  printf 'Missing issue or company id. Pass --issue-id/--company-id or set PILOT_TASK_ID/PILOT_COMPANY_ID.\n' >&2
   exit 1
 fi
 
-api_base="${PAPERCLIP_API_URL%/}/api"
+api_base="${PILOT_API_URL%/}/api"
 attachment="$(
   upload_file \
     "$api_base/companies/$company_id/issues/$issue_id/attachments" \
@@ -310,7 +310,7 @@ if [[ "$create_work_product" == "1" ]]; then
       --arg title "$title" \
       --arg summary "$summary" \
       --arg status "$status" \
-      --arg runId "$PAPERCLIP_RUN_ID" \
+      --arg runId "$PILOT_RUN_ID" \
       --arg attachmentId "$attachment_id" \
       --arg contentType "$content_type" \
       --argjson byteSize "$byte_size" \
@@ -321,7 +321,7 @@ if [[ "$create_work_product" == "1" ]]; then
       --argjson isPrimary "$is_primary_json" \
       '{
         type: "artifact",
-        provider: "paperclip",
+        provider: "pilot",
         title: $title,
         status: $status,
         reviewState: "none",

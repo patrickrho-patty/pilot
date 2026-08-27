@@ -36,7 +36,7 @@ const publishPackageJson = {
   types: publishConfig.types,
   publishConfig,
   files: packageJson.files,
-  paperclipPlugin: packageJson.paperclipPlugin,
+  pilotPlugin: packageJson.pilotPlugin,
   keywords: packageJson.keywords,
   dependencies,
 };

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Kill all local Paperclip workspace runtime service processes.
+# Kill all local Pilot workspace runtime service processes.
 #
 # This targets managed workspace services such as preview/dev commands started
-# from project or execution workspaces. Use scripts/kill-dev.sh for Paperclip
+# from project or execution workspaces. Use scripts/kill-dev.sh for Pilot
 # server processes.
 #
 # Usage:
@@ -62,11 +62,11 @@ append_runtime_dir() {
   fi
 }
 
-paperclip_home="$(expand_home "${PAPERCLIP_HOME:-$HOME/.paperclip}")"
-paperclip_instance_id="${PAPERCLIP_INSTANCE_ID:-default}"
-append_runtime_dir "$paperclip_home/instances/$paperclip_instance_id/runtime-services"
+pilot_home="$(expand_home "${PILOT_HOME:-$HOME/.paperclip}")"
+pilot_instance_id="${PILOT_INSTANCE_ID:-default}"
+append_runtime_dir "$pilot_home/instances/$pilot_instance_id/runtime-services"
 
-if [[ "${PAPERCLIP_KILL_WORKSPACES_ONLY_CURRENT:-}" != "1" ]]; then
+if [[ "${PILOT_KILL_WORKSPACES_ONLY_CURRENT:-}" != "1" ]]; then
   for dir in \
     "$HOME"/.paperclip/instances/*/runtime-services \
     "$HOME"/.paperclip-worktrees/instances/*/runtime-services \
@@ -219,12 +219,12 @@ for line in "${record_lines[@]}"; do
 done
 
 if [[ ${#active_files[@]} -eq 0 && ${#stale_files[@]} -eq 0 ]]; then
-  echo "No Paperclip workspace runtime services found."
+  echo "No Pilot workspace runtime services found."
   exit 0
 fi
 
 if [[ ${#active_files[@]} -gt 0 ]]; then
-  echo "Found ${#active_files[@]} Paperclip workspace runtime service record(s):"
+  echo "Found ${#active_files[@]} Pilot workspace runtime service record(s):"
   echo ""
   printf '%s\n' "${display_lines[@]}"
   echo ""

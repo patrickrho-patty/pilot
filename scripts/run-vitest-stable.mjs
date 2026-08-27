@@ -27,9 +27,9 @@ const nonServerProjects = [
   "@paperclipai/adapter-openclaw-gateway",
   "@paperclipai/adapter-opencode-local",
   "@paperclipai/plugin-sdk",
-  "@paperclipai/create-paperclip-plugin",
+  "@paperclipai/create-pilot-plugin",
   "@paperclipai/ui",
-  "paperclipai",
+  "pilotai",
 ];
 const routeTestPattern = /[^/]*(?:route|routes|authz)[^/]*\.test\.ts$/;
 const additionalSerializedServerTests = new Set([
@@ -66,7 +66,7 @@ const allModeName = "all";
 const generalServerGroupName = "general-server";
 const generalWorkspacesAGroupName = "general-workspaces-a";
 const generalWorkspacesBGroupName = "general-workspaces-b";
-const generalWorkspacesAProjects = ["@paperclipai/ui", "paperclipai"];
+const generalWorkspacesAProjects = ["@paperclipai/ui", "pilotai"];
 const generalWorkspacesBProjects = nonServerProjects.filter((project) => !generalWorkspacesAProjects.includes(project));
 const generalGroupNames = [generalServerGroupName, generalWorkspacesAGroupName, generalWorkspacesBGroupName];
 const serializedServerVitestArgs = [
@@ -278,11 +278,11 @@ function runVitest(args, label) {
   const env = {
     ...process.env,
     NODE_ENV: "test",
-    PAPERCLIP_HOME: path.join(testRoot, "h"),
-    PAPERCLIP_INSTANCE_ID: `vt-${process.pid}-${invocationIndex}`,
+    PILOT_HOME: path.join(testRoot, "h"),
+    PILOT_INSTANCE_ID: `vt-${process.pid}-${invocationIndex}`,
     TMPDIR: path.join(testRoot, "t"),
   };
-  mkdirSync(env.PAPERCLIP_HOME, { recursive: true });
+  mkdirSync(env.PILOT_HOME, { recursive: true });
   mkdirSync(env.TMPDIR, { recursive: true });
   const result = spawnSync("pnpm", ["exec", "vitest", "run", ...sourceOnlyVitestArgs, ...args], {
     cwd: repoRoot,

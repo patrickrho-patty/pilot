@@ -9,7 +9,7 @@ const script = new URL("../provision-worktree.sh", import.meta.url).pathname;
 const runtimeScript = new URL("../provision-worktree-runtime.sh", import.meta.url).pathname;
 
 // Keep the PATH minimal so the fallback ladder is deterministic: node must be
-// reachable, but a globally installed `paperclipai` must not shadow the paths
+// reachable, but a globally installed `pilotai` must not shadow the paths
 // under test.
 const testPath = [path.dirname(process.execPath), "/usr/bin", "/bin"].join(":");
 
@@ -26,7 +26,7 @@ function makeTempDir(prefix) {
  * instance config of its own, so this is the seed source the scripts fall back to.
  */
 function makeInstanceHome() {
-  const home = makeTempDir("paperclip-provision-instance-home-");
+  const home = makeTempDir("pilot-provision-instance-home-");
   fs.mkdirSync(path.join(home, "instances", "default"), { recursive: true });
   fs.writeFileSync(path.join(home, "instances", "default", "config.json"), "{}\n");
   return home;
@@ -47,7 +47,7 @@ test.after(() => {
  *           writes a marker config so tests can tell CLI init from fallback.
  */
 function makeBaseWorkspace({ helpExit, initExit, ensureExit = 0 }) {
-  const baseCwd = makeTempDir("paperclip-provision-base-");
+  const baseCwd = makeTempDir("pilot-provision-base-");
   const runnerPath = path.join(baseCwd, "cli", "node_modules", "tsx", "dist", "cli.mjs");
   const entryPath = path.join(baseCwd, "cli", "src", "index.ts");
   fs.mkdirSync(path.dirname(runnerPath), { recursive: true });
@@ -70,7 +70,7 @@ if (cliArgs[0] === "worktree" && cliArgs[1] === "init") {
   }
   fs.mkdirSync(".paperclip", { recursive: true });
   fs.writeFileSync(".paperclip/config.json", JSON.stringify({ $meta: { source: "fake-cli" } }));
-  fs.writeFileSync(".paperclip/.env", "PAPERCLIP_IN_WORKTREE=true\\n");
+  fs.writeFileSync(".paperclip/.env", "PILOT_IN_WORKTREE=true\\n");
   process.exit(0);
 }
 if (cliArgs[0] === "worktree" && cliArgs[1] === "ensure-seeded") {
@@ -103,43 +103,43 @@ process.exit(0);
 }
 
 function runProvision(baseCwd, { pathPrefix } = {}) {
-  const worktreeCwd = makeTempDir("paperclip-provision-worktree-");
-  const worktreesHome = makeTempDir("paperclip-provision-home-");
-  const paperclipHome = makeInstanceHome();
+  const worktreeCwd = makeTempDir("pilot-provision-worktree-");
+  const worktreesHome = makeTempDir("pilot-provision-home-");
+  const pilotHome = makeInstanceHome();
   const result = spawnSync("bash", [script], {
     cwd: worktreeCwd,
     encoding: "utf8",
     env: {
       PATH: pathPrefix ? `${pathPrefix}:${testPath}` : testPath,
       HOME: os.homedir(),
-      PAPERCLIP_WORKSPACE_BASE_CWD: baseCwd,
-      PAPERCLIP_WORKSPACE_CWD: worktreeCwd,
-      PAPERCLIP_WORKSPACE_BRANCH: "feature/provision-test",
-      PAPERCLIP_WORKTREES_DIR: worktreesHome,
-      PAPERCLIP_HOME: paperclipHome,
-      PAPERCLIP_PROJECT_WORKSPACE_ID: "project-workspace-1",
-      PAPERCLIP_SEED_EXPECTED_COMPANY_ID: "company-1",
+      PILOT_WORKSPACE_BASE_CWD: baseCwd,
+      PILOT_WORKSPACE_CWD: worktreeCwd,
+      PILOT_WORKSPACE_BRANCH: "feature/provision-test",
+      PILOT_WORKTREES_DIR: worktreesHome,
+      PILOT_HOME: pilotHome,
+      PILOT_PROJECT_WORKSPACE_ID: "project-workspace-1",
+      PILOT_SEED_EXPECTED_COMPANY_ID: "company-1",
     },
   });
-  return { result, worktreeCwd, worktreesHome, paperclipHome };
+  return { result, worktreeCwd, worktreesHome, pilotHome };
 }
 
 function runRuntimeProvision(baseCwd, worktreeCwd) {
-  const worktreesHome = makeTempDir("paperclip-provision-runtime-home-");
-  const paperclipHome = makeInstanceHome();
+  const worktreesHome = makeTempDir("pilot-provision-runtime-home-");
+  const pilotHome = makeInstanceHome();
   return spawnSync("bash", [runtimeScript], {
     cwd: worktreeCwd,
     encoding: "utf8",
     env: {
       PATH: testPath,
       HOME: os.homedir(),
-      PAPERCLIP_WORKSPACE_BASE_CWD: baseCwd,
-      PAPERCLIP_WORKSPACE_CWD: worktreeCwd,
-      PAPERCLIP_WORKSPACE_BRANCH: "feature/provision-runtime-test",
-      PAPERCLIP_WORKTREES_DIR: worktreesHome,
-      PAPERCLIP_HOME: paperclipHome,
-      PAPERCLIP_PROJECT_WORKSPACE_ID: "project-workspace-1",
-      PAPERCLIP_COMPANY_ID: "company-1",
+      PILOT_WORKSPACE_BASE_CWD: baseCwd,
+      PILOT_WORKSPACE_CWD: worktreeCwd,
+      PILOT_WORKSPACE_BRANCH: "feature/provision-runtime-test",
+      PILOT_WORKTREES_DIR: worktreesHome,
+      PILOT_HOME: pilotHome,
+      PILOT_PROJECT_WORKSPACE_ID: "project-workspace-1",
+      PILOT_COMPANY_ID: "company-1",
     },
   });
 }
@@ -222,7 +222,7 @@ test("falls back to an isolated config when the base CLI cannot boot", () => {
     `expected ${dataDir} to live under ${worktreesHome}`,
   );
   const env = fs.readFileSync(path.join(worktreeCwd, ".paperclip", ".env"), "utf8");
-  assert.match(env, /PAPERCLIP_IN_WORKTREE=true/);
+  assert.match(env, /PILOT_IN_WORKTREE=true/);
   assert.equal(
     JSON.parse(fs.readFileSync(path.join(worktreeCwd, ".paperclip", "seed-manifest.json"), "utf8")).state,
     "pending",
@@ -231,7 +231,7 @@ test("falls back to an isolated config when the base CLI cannot boot", () => {
 
 test("reconciles deployment mode from the registered source when reusing a guest config", () => {
   const baseCwd = makeBaseWorkspace({ helpExit: 1, initExit: 0 });
-  const { result: first, worktreeCwd, worktreesHome, paperclipHome } = runProvision(baseCwd);
+  const { result: first, worktreeCwd, worktreesHome, pilotHome } = runProvision(baseCwd);
   assert.equal(first.status, 0, first.stderr);
   assert.equal(readWorktreeConfig(worktreeCwd).server.deploymentMode, "local_trusted");
 
@@ -253,19 +253,19 @@ test("reconciles deployment mode from the registered source when reusing a guest
     env: {
       PATH: testPath,
       HOME: os.homedir(),
-      PAPERCLIP_WORKSPACE_BASE_CWD: baseCwd,
-      PAPERCLIP_WORKSPACE_CWD: worktreeCwd,
-      PAPERCLIP_WORKSPACE_BRANCH: "feature/provision-test",
-      PAPERCLIP_WORKTREES_DIR: worktreesHome,
-      PAPERCLIP_HOME: paperclipHome,
-      PAPERCLIP_PROJECT_WORKSPACE_ID: "project-workspace-1",
-      PAPERCLIP_SEED_EXPECTED_COMPANY_ID: "company-1",
+      PILOT_WORKSPACE_BASE_CWD: baseCwd,
+      PILOT_WORKSPACE_CWD: worktreeCwd,
+      PILOT_WORKSPACE_BRANCH: "feature/provision-test",
+      PILOT_WORKTREES_DIR: worktreesHome,
+      PILOT_HOME: pilotHome,
+      PILOT_PROJECT_WORKSPACE_ID: "project-workspace-1",
+      PILOT_SEED_EXPECTED_COMPANY_ID: "company-1",
     },
   });
 
   assert.equal(second.status, 0, second.stderr);
-  assert.match(second.stderr, /Reusing existing isolated Paperclip worktree config/);
-  assert.match(second.stderr, /Reconciled isolated Paperclip worktree deployment mode/);
+  assert.match(second.stderr, /Reusing existing isolated Pilot worktree config/);
+  assert.match(second.stderr, /Reconciled isolated Pilot worktree deployment mode/);
   assert.equal(readWorktreeConfig(worktreeCwd).server.deploymentMode, "authenticated");
   assert.equal(readWorktreeConfig(worktreeCwd).server.exposure, "private");
 });
@@ -281,7 +281,7 @@ test("repairs an unhealthy base install under the lock and then uses the CLI", (
 
   // The CLI's health is controlled by a flag file, and a fake `pnpm install`
   // creates that flag — modeling a forced reinstall that relinks the store.
-  const baseCwd = makeTempDir("paperclip-provision-repair-base-");
+  const baseCwd = makeTempDir("pilot-provision-repair-base-");
   const healthFlag = path.join(baseCwd, "cli-healthy.flag");
   const runnerPath = path.join(baseCwd, "cli", "node_modules", "tsx", "dist", "cli.mjs");
   const entryPath = path.join(baseCwd, "cli", "src", "index.ts");
@@ -299,7 +299,7 @@ if (cliArgs.includes("--help")) {
 if (cliArgs[0] === "worktree" && cliArgs[1] === "init") {
   fs.mkdirSync(".paperclip", { recursive: true });
   fs.writeFileSync(".paperclip/config.json", JSON.stringify({ $meta: { source: "fake-cli" } }));
-  fs.writeFileSync(".paperclip/.env", "PAPERCLIP_IN_WORKTREE=true\\n");
+  fs.writeFileSync(".paperclip/.env", "PILOT_IN_WORKTREE=true\\n");
   process.exit(0);
 }
 process.exit(0);
@@ -309,7 +309,7 @@ process.exit(0);
   fs.writeFileSync(path.join(baseCwd, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
   spawnSync("git", ["init", "-q", baseCwd], { env: { PATH: testPath } });
 
-  const fakeBin = makeTempDir("paperclip-provision-fakebin-");
+  const fakeBin = makeTempDir("pilot-provision-fakebin-");
   const installLog = path.join(baseCwd, "pnpm-invocations.log");
   fs.writeFileSync(
     path.join(fakeBin, "pnpm"),
@@ -334,7 +334,7 @@ exit 1
   assert.match(installs[0], /--force/);
   assert.match(installs[0], /--frozen-lockfile/);
   assert.ok(
-    fs.existsSync(path.join(baseCwd, ".git", "paperclip-provision-repair.lock")),
+    fs.existsSync(path.join(baseCwd, ".git", "pilot-provision-repair.lock")),
     "expected the repair lock file inside the resolved git dir",
   );
 });
@@ -354,7 +354,7 @@ test("a failed CLI init fails provisioning instead of being masked as success", 
 
 test("runtime provisioning invokes ensure-seeded once and fast-exits after success", () => {
   const baseCwd = makeBaseWorkspace({ helpExit: 0, initExit: 0 });
-  const worktreeCwd = makeTempDir("paperclip-provision-runtime-worktree-");
+  const worktreeCwd = makeTempDir("pilot-provision-runtime-worktree-");
   fs.mkdirSync(path.join(worktreeCwd, ".paperclip"), { recursive: true });
   fs.writeFileSync(path.join(worktreeCwd, ".paperclip", "config.json"), "{}\n");
   fs.writeFileSync(path.join(worktreeCwd, ".paperclip", "seed-pending"), "{}\n");
@@ -385,7 +385,7 @@ test("runtime provisioning omits the source override when the base config exists
   const baseCwd = makeBaseWorkspace({ helpExit: 0, initExit: 0 });
   fs.mkdirSync(path.join(baseCwd, ".paperclip"), { recursive: true });
   fs.writeFileSync(path.join(baseCwd, ".paperclip", "config.json"), "{}\n");
-  const worktreeCwd = makeTempDir("paperclip-provision-runtime-base-config-");
+  const worktreeCwd = makeTempDir("pilot-provision-runtime-base-config-");
   fs.mkdirSync(path.join(worktreeCwd, ".paperclip"), { recursive: true });
   fs.writeFileSync(path.join(worktreeCwd, ".paperclip", "config.json"), "{}\n");
 
@@ -416,7 +416,7 @@ test("runtime provisioning guards every optional source-config expansion for Bas
 
 test("runtime provisioning seeds a worktree config that has no seed markers", () => {
   const baseCwd = makeBaseWorkspace({ helpExit: 0, initExit: 0 });
-  const worktreeCwd = makeTempDir("paperclip-provision-runtime-unmarked-config-");
+  const worktreeCwd = makeTempDir("pilot-provision-runtime-unmarked-config-");
   fs.mkdirSync(path.join(worktreeCwd, ".paperclip"), { recursive: true });
   fs.writeFileSync(path.join(worktreeCwd, ".paperclip", "config.json"), "{}\n");
 
@@ -438,7 +438,7 @@ test("runtime provisioning bootstraps and seeds an empty .paperclip directory", 
   const baseCwd = makeBaseWorkspace({ helpExit: 0, initExit: 0 });
   fs.mkdirSync(path.join(baseCwd, "scripts"), { recursive: true });
   fs.copyFileSync(script, path.join(baseCwd, "scripts", "provision-worktree.sh"));
-  const worktreeCwd = makeTempDir("paperclip-provision-runtime-empty-state-");
+  const worktreeCwd = makeTempDir("pilot-provision-runtime-empty-state-");
   fs.mkdirSync(path.join(worktreeCwd, ".paperclip"), { recursive: true });
 
   const result = runRuntimeProvision(baseCwd, worktreeCwd);
@@ -462,7 +462,7 @@ test("runtime provisioning bootstraps and seeds an empty .paperclip directory", 
 
 test("runtime provisioning leaves seed-pending in place when ensure-seeded fails", () => {
   const baseCwd = makeBaseWorkspace({ helpExit: 0, initExit: 0, ensureExit: 4 });
-  const worktreeCwd = makeTempDir("paperclip-provision-runtime-failure-");
+  const worktreeCwd = makeTempDir("pilot-provision-runtime-failure-");
   fs.mkdirSync(path.join(worktreeCwd, ".paperclip"), { recursive: true });
   fs.writeFileSync(path.join(worktreeCwd, ".paperclip", "config.json"), "{}\n");
   fs.writeFileSync(path.join(worktreeCwd, ".paperclip", "seed-pending"), "{}\n");
@@ -476,7 +476,7 @@ test("runtime provisioning leaves seed-pending in place when ensure-seeded fails
 
 test("runtime provisioning does not trust a truncated verified manifest", () => {
   const baseCwd = makeBaseWorkspace({ helpExit: 0, initExit: 0, ensureExit: 4 });
-  const worktreeCwd = makeTempDir("paperclip-provision-runtime-truncated-");
+  const worktreeCwd = makeTempDir("pilot-provision-runtime-truncated-");
   fs.mkdirSync(path.join(worktreeCwd, ".paperclip"), { recursive: true });
   fs.writeFileSync(path.join(worktreeCwd, ".paperclip", "config.json"), "{}\n");
   fs.writeFileSync(

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Kill all local Paperclip dev server processes (across all worktrees).
+# Kill all local Pilot dev server processes (across all worktrees).
 #
 # Usage:
-#   scripts/kill-dev.sh        # kill all paperclip dev processes
+#   scripts/kill-dev.sh        # kill all pilot dev processes
 #   scripts/kill-dev.sh --dry  # preview what would be killed
 #
 
@@ -118,12 +118,12 @@ for pidfile in "${candidate_pidfiles[@]:-}"; do
 done
 
 if [[ ${#node_pids[@]} -eq 0 && ${#pg_pids[@]} -eq 0 && ${#browser_pids[@]} -eq 0 ]]; then
-  echo "No Paperclip dev processes found."
+  echo "No Pilot dev processes found."
   exit 0
 fi
 
 if [[ ${#node_pids[@]} -gt 0 ]]; then
-  echo "Found ${#node_pids[@]} Paperclip dev node process(es):"
+  echo "Found ${#node_pids[@]} Pilot dev node process(es):"
   echo ""
 
   for i in "${!node_pids[@]:-}"; do
@@ -176,7 +176,7 @@ if [[ "$DRY_RUN" == true ]]; then
 fi
 
 if [[ ${#node_pids[@]} -gt 0 ]]; then
-  echo "Sending SIGTERM to Paperclip node processes..."
+  echo "Sending SIGTERM to Pilot node processes..."
   for pid in "${node_pids[@]}"; do
     kill -TERM "$pid" 2>/dev/null && echo "  signaled $pid" || echo "  $pid already gone"
   done

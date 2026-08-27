@@ -12,9 +12,9 @@
  *   ast-grep scan        # report only — never modifies files
  *   ast-grep scan -U     # apply all rewrites (git-clean tree first!)
  *
- * __TARGET___ is stamped as <NAME>_ (env var prefix: PAPERCLIP_HOME ->
- * PILOT_HOME). __TARGET__ is PascalCase (PaperclipConfig -> PilotConfig)
- * and __target__ lowercase (buildPaperclipEnv -> buildPilotEnv) for
+ * __TARGET___ is stamped as <NAME>_ (env var prefix: PILOT_HOME ->
+ * PILOT_HOME). __TARGET__ is PascalCase (PilotConfig -> PilotConfig)
+ * and __target__ lowercase (buildPilotEnv -> buildPilotEnv) for
  * identifier rules. The generated dir is gitignored.
  */
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";

@@ -1125,7 +1125,8 @@ export function createPluginWorkerHandle(
   // stream pauses while two companies overlap.
   function routeExecuteLogNotification(notification: JsonRpcNotification): void {
     const invocationId = readNonEmptyString(
-      (notification as { paperclipInvocationId?: unknown }).paperclipInvocationId,
+      (notification as { pilotInvocationId?: unknown; paperclipInvocationId?: unknown }).pilotInvocationId
+        ?? (notification as { pilotInvocationId?: unknown; paperclipInvocationId?: unknown }).paperclipInvocationId,
     );
     const params = isRecord(notification.params) ? notification.params : {};
     const stream = params.stream;
@@ -1957,12 +1958,24 @@ export function createPluginWorkerHandle(
     if (method === "events.subscribe" && isRecord(params.filter)) {
       return readNonEmptyString(params.filter.companyId);
     }
+    if (method === "performAction" && isRecord(params.actorContext)) {
+      // The SDK passes the calling agent/board identity inside actorContext on
+      // performAction. If the plugin is authorized to act on that company
+      // proactively, resolve to it so nested worker→host calls inherit scope.
+      const actorCompanyId = readNonEmptyString(params.actorContext.companyId);
+      if (actorCompanyId) return actorCompanyId;
+    }
+    if (method === "executeTool" && isRecord(params.runContext)) {
+      const runCompanyId = readNonEmptyString(params.runContext.companyId);
+      if (runCompanyId) return runCompanyId;
+    }
     return null;
   }
 
   function contextForWorkerMessage(message: JsonRpcRequest | JsonRpcNotification): WorkerHostCallContext {
     const invocationId = readNonEmptyString(
-      (message as { paperclipInvocationId?: unknown }).paperclipInvocationId,
+      (message as { pilotInvocationId?: unknown; paperclipInvocationId?: unknown }).pilotInvocationId
+        ?? (message as { pilotInvocationId?: unknown; paperclipInvocationId?: unknown }).paperclipInvocationId,
     );
     if (!invocationId) {
       // No host-issued invocation is being echoed. This is a genuinely
@@ -2652,7 +2665,7 @@ export function createPluginWorkerHandle(
       try {
         const request = {
           ...createRequest(method, params, id),
-          ...(invocation ? { paperclipInvocation: invocation } : {}),
+          ...(invocation ? { pilotInvocation: invocation, paperclipInvocation: invocation } : {}),
         };
         sendMessage(request);
       } catch (err) {
@@ -2759,7 +2772,7 @@ export function createPluginWorkerHandle(
           jsonrpc: JSONRPC_VERSION,
           method,
           params,
-          ...(invocation ? { paperclipInvocation: invocation } : {}),
+          ...(invocation ? { pilotInvocation: invocation, paperclipInvocation: invocation } : {}),
         });
       } catch {
         clearInvocation(invocation);

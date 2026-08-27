@@ -80,28 +80,28 @@ if (process.env.npm_config_authenticated_private === "true") {
 
 const env = {
   ...process.env,
-  PAPERCLIP_UI_DEV_MIDDLEWARE: "true",
+  PILOT_UI_DEV_MIDDLEWARE: "true",
 };
 
 if (mode === "dev") {
-  env.PAPERCLIP_DEV_SERVER_STATUS_FILE = devServerStatusFilePath;
-  env.PAPERCLIP_DEV_SERVER_STATUS_TOKEN = devServerStatusToken ?? "";
+  env.PILOT_DEV_SERVER_STATUS_FILE = devServerStatusFilePath;
+  env.PILOT_DEV_SERVER_STATUS_TOKEN = devServerStatusToken ?? "";
 }
 
 if (mode === "watch") {
-  delete env.PAPERCLIP_DEV_SERVER_STATUS_TOKEN;
-  env.PAPERCLIP_MIGRATION_PROMPT ??= "never";
-  env.PAPERCLIP_MIGRATION_AUTO_APPLY ??= "true";
+  delete env.PILOT_DEV_SERVER_STATUS_TOKEN;
+  env.PILOT_MIGRATION_PROMPT ??= "never";
+  env.PILOT_MIGRATION_AUTO_APPLY ??= "true";
 }
 
 if (tailscaleAuth) {
-  env.PAPERCLIP_DEPLOYMENT_MODE = "authenticated";
-  env.PAPERCLIP_DEPLOYMENT_EXPOSURE = "private";
-  env.PAPERCLIP_AUTH_BASE_URL_MODE = "auto";
+  env.PILOT_DEPLOYMENT_MODE = "authenticated";
+  env.PILOT_DEPLOYMENT_EXPOSURE = "private";
+  env.PILOT_AUTH_BASE_URL_MODE = "auto";
   env.HOST = "0.0.0.0";
-  console.log("[paperclip] dev mode: authenticated/private (tailscale-friendly) on 0.0.0.0");
+  console.log("[pilot] dev mode: authenticated/private (tailscale-friendly) on 0.0.0.0");
 } else {
-  console.log("[paperclip] dev mode: local_trusted (default)");
+  console.log("[pilot] dev mode: local_trusted (default)");
 }
 
 const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
@@ -298,7 +298,7 @@ async function getMigrationStatusPayload() {
     process.stderr.write(
       status.stderr ||
         status.stdout ||
-        `[paperclip] Command failed with code ${status.code}: pnpm --filter @paperclipai/db exec tsx src/migration-status.ts --json\n`,
+        `[pilot] Command failed with code ${status.code}: pnpm --filter @paperclipai/db exec tsx src/migration-status.ts --json\n`,
     );
     process.exit(status.code);
   }
@@ -309,7 +309,7 @@ async function getMigrationStatusPayload() {
     process.stderr.write(
       status.stderr ||
         status.stdout ||
-        "[paperclip] migration-status returned invalid JSON payload\n",
+        "[pilot] migration-status returned invalid JSON payload\n",
     );
     throw toError(error, "Unable to parse migration-status JSON output");
   }
@@ -327,7 +327,7 @@ async function refreshPendingMigrations() {
 
 async function maybePreflightMigrations(options = {}) {
   const interactive = options.interactive ?? mode === "watch";
-  const autoApply = options.autoApply ?? env.PAPERCLIP_MIGRATION_AUTO_APPLY === "true";
+  const autoApply = options.autoApply ?? env.PILOT_MIGRATION_AUTO_APPLY === "true";
   const exitOnDecline = options.exitOnDecline ?? mode === "watch";
 
   const payload = await refreshPendingMigrations();
@@ -360,7 +360,7 @@ async function maybePreflightMigrations(options = {}) {
   if (!shouldApply) {
     if (exitOnDecline) {
       process.stderr.write(
-        `[paperclip] Pending migrations detected (${formatPendingMigrationSummary(pendingMigrations)}). ` +
+        `[pilot] Pending migrations detected (${formatPendingMigrationSummary(pendingMigrations)}). ` +
           "Refusing to start watch mode against a stale schema.\n",
       );
       process.exit(1);
@@ -388,7 +388,7 @@ async function maybePreflightMigrations(options = {}) {
 }
 
 async function buildPluginSdk() {
-  console.log("[paperclip] building plugin sdk...");
+  console.log("[pilot] building plugin sdk...");
   const result = await runPnpm(
     ["--filter", "@paperclipai/plugin-sdk", "build"],
     { stdio: "inherit" },
@@ -398,7 +398,7 @@ async function buildPluginSdk() {
     return;
   }
   if (result.code !== 0) {
-    console.error("[paperclip] plugin sdk build failed");
+    console.error("[pilot] plugin sdk build failed");
     process.exit(result.code);
   }
 }
