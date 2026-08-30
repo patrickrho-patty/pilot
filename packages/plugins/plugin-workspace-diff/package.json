@@ -1,0 +1,74 @@
+{
+  "name": "@pilotai/plugin-workspace-diff",
+  "version": "0.1.0",
+  "description": "First-party execution workspace Changes tab powered by plugin-local workspace metadata",
+  "license": "LicenseRef-Proprietary",
+  "homepage": "https://github.com/patty-io/pilot",
+  "bugs": {
+    "url": "https://github.com/patty-io/pilot/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/patty-io/pilot",
+    "directory": "packages/plugins/plugin-workspace-diff"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    },
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
+  "files": [
+    "dist"
+  ],
+  "pilotPlugin": {
+    "manifest": "./dist/manifest.js",
+    "worker": "./dist/worker.js",
+    "ui": "./dist/ui/"
+  },
+  "keywords": [
+    "pilot",
+    "plugin",
+    "workspace",
+    "diff"
+  ],
+  "scripts": {
+    "prebuild": "pnpm --filter @pilotai/plugin-sdk ensure-build-deps",
+    "build": "tsc && node ./scripts/build-ui.mjs",
+    "clean": "rm -rf dist",
+    "typecheck": "pnpm --filter @pilotai/plugin-sdk ensure-build-deps && tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "prepack": "rm -f package.dev.json && cp package.json package.dev.json && node ../../../scripts/generate-plugin-package-json.mjs",
+    "postpack": "if [ -f package.dev.json ]; then mv package.dev.json package.json; fi"
+  },
+  "dependencies": {
+    "@pilotai/plugin-sdk": "workspace:*",
+    "@pierre/diffs": "^1.2.11"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "esbuild": "^0.28.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "engines": {
+    "node": ">=24.11.0"
+  }
+}

@@ -1,0 +1,11 @@
+PILOT — PROPRIETARY NOTICE
+
+Copyright (c) 2026 Patty Co., Ltd. All rights reserved.
+
+This software is the proprietary and confidential property of Patty Co., Ltd.
+It is provided for use solely within Patty's internal operations. Any
+reproduction, modification, distribution, or disclosure of this software or
+any portion of it, in any form or by any means, without the prior written
+consent of Patty Co., Ltd., is strictly prohibited.
+
+Licensing inquiries: licensing@patty.io

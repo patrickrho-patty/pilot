@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pilot.fullname" . }}
+  labels:
+    {{- include "pilot.labels" . | nindent 4 }}
+spec:
+  # Recreate, not RollingUpdate: the RWO EBS volume backing /pilot
+  # (embedded PostgreSQL data) cannot attach to two pods at once.
+  strategy:
+    type: Recreate
+  {{- if not .Values.autoscaling }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "pilot.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "pilot.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "pilot.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        # Embedded PostgreSQL refuses any data-dir mode other than 0700/0750.
+        # A pod that once ran with fsGroup leaves the EBS-mounted tree with
+        # setgid+group-rwx dirs, which crashes the server on every start; this
+        # initContainer repairs ownership/modes before the server launches.
+        - name: db-perm-init
+          image: busybox:stable
+          command:
+            - sh
+            - -c
+            - >-
+              if [ -d /pilot/instances/default/db ]; then
+                chown -R 1000:1000 /pilot/instances/default/db;
+                chmod 700 /pilot/instances/default/db;
+                chmod -R go-rwx /pilot/instances/default/db;
+              fi;
+              echo "[db-perm-init] $(stat -c '%A %u:%g' /pilot/instances/default/db 2>/dev/null || echo no-db-dir)";
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /pilot
+      containers:
+        - name: pilot
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3100
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "pilot.fullname" . }}-config
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+          env:
+            # Fixed runtime paths; not user-tunable in this chart.
+            - name: NODE_ENV
+              value: production
+            - name: HOST
+              value: 0.0.0.0
+            - name: PORT
+              value: "3100"
+            - name: SERVE_UI
+              value: "true"
+            - name: PILOT_HOME
+              value: /pilot
+          # Exec probes, not httpGet: the private-hostname guard (403s any
+          # non-loopback Host header in authenticated/private mode) blocks
+          # kubelet httpGet probes, which arrive with Host=<pod-ip>.
+          startupProbe:
+            # Server + embedded PostgreSQL cold start can take a while.
+            exec:
+              command: ["curl", "-fsS", "-o", "/dev/null", "http://localhost:3100/api/health"]
+            periodSeconds: 10
+            failureThreshold: 60
+          livenessProbe:
+            exec:
+              command: ["curl", "-fsS", "-o", "/dev/null", "http://localhost:3100/api/health"]
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command: ["curl", "-fsS", "-o", "/dev/null", "http://localhost:3100/api/health"]
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /pilot
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "pilot.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

@@ -1,0 +1,26 @@
+[Unit]
+Description=Pilot Tailscale HTTPS broker
+After=tailscaled.service
+Requires=tailscaled.service
+
+[Service]
+Type=simple
+User=pilot-tsbroker
+Group=pilot-tsbroker-sock
+EnvironmentFile=/etc/pilot/tailscale-https-broker.env
+ExecStart=/usr/bin/node /opt/pilot/packages/tailscale-https-broker/dist/main.js
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RuntimeDirectory=pilot-tailscale-broker
+RuntimeDirectoryMode=0750
+StateDirectory=pilot-tailscale-broker
+StateDirectoryMode=0700
+LogsDirectory=pilot-tailscale-broker
+LogsDirectoryMode=0700
+ReadWritePaths=/run/pilot-tailscale-broker /var/lib/pilot-tailscale-broker /var/log/pilot-tailscale-broker
+
+[Install]
+WantedBy=multi-user.target

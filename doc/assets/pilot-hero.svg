@@ -1,0 +1,171 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 380" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <defs>
+    <linearGradient id="sweep" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0"/>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0.4"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#18181b" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- backdrop -->
+  <rect width="760" height="380" rx="12" fill="#09090b"/>
+  <rect width="760" height="380" rx="12" fill="url(#grid)"/>
+  <rect x="0.5" y="0.5" width="759" height="379" rx="12" fill="none" stroke="#27272a"/>
+
+  <!-- wordmark -->
+  <text x="380" y="44" text-anchor="middle" fill="#e4e4e7" font-size="26" letter-spacing="12" font-weight="600">PILOT</text>
+  <rect y="52" height="2" width="64" fill="#22d3ee" opacity="0.9">
+    <animate attributeName="x" values="288;428;288" dur="4s" repeatCount="indefinite"/>
+  </rect>
+  <text x="380" y="70" text-anchor="middle" fill="#71717a" font-size="11">에이전트 회사의 관제탑 · control plane for AI-agent companies</text>
+
+  <!-- ================= RADAR : control tower ================= -->
+  <g>
+    <circle cx="235" cy="205" r="100" fill="none" stroke="#27272a" stroke-width="1"/>
+    <circle cx="235" cy="205" r="66" fill="none" stroke="#27272a" stroke-width="1"/>
+    <circle cx="235" cy="205" r="33" fill="none" stroke="#27272a" stroke-width="1"/>
+    <line x1="135" y1="205" x2="335" y2="205" stroke="#27272a" stroke-width="1"/>
+    <line x1="235" y1="105" x2="235" y2="305" stroke="#27272a" stroke-width="1"/>
+
+    <!-- rotating sweep -->
+    <g>
+      <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 235 205" to="360 235 205" dur="6s" repeatCount="indefinite"/>
+      <line x1="235" y1="205" x2="235" y2="105" stroke="#22d3ee" stroke-width="1.5" opacity="0.7"/>
+      <path d="M235,205 L235,105 A100,100 0 0 1 291,122 Z" fill="url(#sweep)"/>
+    </g>
+
+    <!-- control-plane core -->
+    <circle cx="235" cy="205" r="10" fill="#09090b" stroke="#22d3ee" stroke-width="1.5"/>
+    <circle cx="235" cy="205" r="3" fill="#22d3ee"/>
+    <circle cx="235" cy="205" r="10" fill="none" stroke="#22d3ee" stroke-width="1">
+      <animate attributeName="r" values="10;22" dur="3s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.6;0" dur="3s" repeatCount="indefinite"/>
+    </circle>
+
+    <!-- uplink lines : agents reporting in -->
+    <line x1="235" y1="205" x2="170" y2="175" stroke="#3f3f46" stroke-width="1" stroke-dasharray="2 6">
+      <animate attributeName="stroke-dashoffset" values="0;32" dur="1.6s" repeatCount="indefinite"/>
+    </line>
+    <line x1="235" y1="205" x2="295" y2="155" stroke="#3f3f46" stroke-width="1" stroke-dasharray="2 6">
+      <animate attributeName="stroke-dashoffset" values="0;32" dur="1.3s" repeatCount="indefinite"/>
+    </line>
+    <line x1="235" y1="205" x2="166" y2="245" stroke="#3f3f46" stroke-width="1" stroke-dasharray="2 6">
+      <animate attributeName="stroke-dashoffset" values="0;32" dur="1.8s" repeatCount="indefinite"/>
+    </line>
+    <line x1="235" y1="205" x2="279" y2="267" stroke="#3f3f46" stroke-width="1" stroke-dasharray="2 6">
+      <animate attributeName="stroke-dashoffset" values="0;32" dur="1.5s" repeatCount="indefinite"/>
+    </line>
+    <line x1="235" y1="205" x2="227" y2="117" stroke="#3f3f46" stroke-width="1" stroke-dasharray="2 6">
+      <animate attributeName="stroke-dashoffset" values="0;32" dur="1.7s" repeatCount="indefinite"/>
+    </line>
+
+    <!-- agent blips : each pings on its own heartbeat cadence -->
+    <g>
+      <circle cx="170" cy="175" r="4" fill="#4ade80"/>
+      <circle cx="170" cy="175" r="4" fill="none" stroke="#4ade80" stroke-width="1.5">
+        <animate attributeName="r" values="5;22" dur="2.5s" begin="0s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.9;0" dur="2.5s" begin="0s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g>
+      <circle cx="166" cy="245" r="4" fill="#4ade80"/>
+      <circle cx="166" cy="245" r="4" fill="none" stroke="#4ade80" stroke-width="1.5">
+        <animate attributeName="r" values="5;22" dur="2.5s" begin="1s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.9;0" dur="2.5s" begin="1s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g>
+      <circle cx="279" cy="267" r="4" fill="#4ade80"/>
+      <circle cx="279" cy="267" r="4" fill="none" stroke="#4ade80" stroke-width="1.5">
+        <animate attributeName="r" values="5;22" dur="2.5s" begin="1.5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.9;0" dur="2.5s" begin="1.5s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <g>
+      <circle cx="227" cy="117" r="4" fill="#4ade80"/>
+      <circle cx="227" cy="117" r="4" fill="none" stroke="#4ade80" stroke-width="1.5">
+        <animate attributeName="r" values="5;22" dur="2.5s" begin="2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.9;0" dur="2.5s" begin="2s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+
+    <!-- approval agent : cycles green → amber (gated) → green (approved), synced with the kanban card -->
+    <g>
+      <circle cx="295" cy="155" r="4">
+        <animate attributeName="fill" values="#4ade80;#4ade80;#fbbf24;#fbbf24;#4ade80;#4ade80" keyTimes="0;0.30;0.34;0.60;0.66;1" calcMode="discrete" dur="8s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="295" cy="155" r="4" fill="none" stroke-width="1.5">
+        <animate attributeName="stroke" values="#4ade80;#4ade80;#fbbf24;#fbbf24;#4ade80;#4ade80" keyTimes="0;0.30;0.34;0.60;0.66;1" calcMode="discrete" dur="8s" repeatCount="indefinite"/>
+        <animate attributeName="r" values="5;22" dur="2.5s" begin="0.5s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.9;0" dur="2.5s" begin="0.5s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+    <text x="235" y="322" text-anchor="middle" fill="#52525b" font-size="9">heartbeat mesh</text>
+  </g>
+
+  <!-- ================= ISSUE FLOW : kanban + approval gate ================= -->
+  <g>
+    <text x="568" y="106" text-anchor="middle" fill="#52525b" font-size="9">issue flow</text>
+    <text x="447" y="120" text-anchor="middle" fill="#71717a" font-size="9">todo</text>
+    <text x="547" y="120" text-anchor="middle" fill="#71717a" font-size="9">doing</text>
+    <text x="647" y="120" text-anchor="middle" fill="#71717a" font-size="9">done</text>
+
+    <rect x="415" y="126" width="70" height="150" rx="4" fill="#0c0c0e" stroke="#27272a"/>
+    <rect x="515" y="126" width="70" height="150" rx="4" fill="#0c0c0e" stroke="#27272a"/>
+    <rect x="615" y="126" width="70" height="150" rx="4" fill="#0c0c0e" stroke="#27272a"/>
+
+    <!-- static pile cards -->
+    <rect x="423" y="134" width="54" height="14" rx="2" fill="#18181b" stroke="#27272a"/>
+    <rect x="423" y="152" width="54" height="14" rx="2" fill="#18181b" stroke="#27272a"/>
+    <rect x="623" y="134" width="54" height="14" rx="2" fill="#18181b" stroke="#27272a"/>
+
+    <!-- moving card : todo → approval (amber) → done (green) -->
+    <g>
+      <animateTransform attributeName="transform" attributeType="XML" type="translate"
+        values="0 0;0 0;100 8;100 8;200 0;200 0" keyTimes="0;0.28;0.34;0.58;0.64;1"
+        calcMode="discrete" dur="8s" repeatCount="indefinite"/>
+      <rect x="423" y="134" width="54" height="16" rx="2" fill="#18181b" stroke="#3f3f46">
+        <animate attributeName="stroke" values="#3f3f46;#3f3f46;#fbbf24;#fbbf24;#4ade80;#4ade80" keyTimes="0;0.30;0.34;0.60;0.66;1" calcMode="discrete" dur="8s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="428" y="139" width="30" height="2.5" fill="#52525b"/>
+      <rect x="428" y="144" width="18" height="2.5" fill="#3f3f46"/>
+      <circle cx="470" cy="142" r="2.5">
+        <animate attributeName="fill" values="#52525b;#52525b;#fbbf24;#fbbf24;#4ade80;#4ade80" keyTimes="0;0.30;0.34;0.60;0.66;1" calcMode="discrete" dur="8s" repeatCount="indefinite"/>
+      </circle>
+    </g>
+
+    <!-- approval gate : lock while amber, check once approved -->
+    <g>
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.34;0.38;0.56;0.60;1" calcMode="discrete" dur="8s" repeatCount="indefinite"/>
+      <rect x="556" y="150" width="12" height="9" rx="2" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+      <path d="M559,150 v-3 a3,3 0 0 1 6,0 v3" fill="none" stroke="#fbbf24" stroke-width="1.5"/>
+      <text x="562" y="172" text-anchor="middle" fill="#fbbf24" font-size="8">approval</text>
+    </g>
+    <g>
+      <animate attributeName="opacity" values="0;0;1;1;0;0" keyTimes="0;0.66;0.70;0.88;0.92;1" calcMode="discrete" dur="8s" repeatCount="indefinite"/>
+      <circle cx="650" cy="144" r="8" fill="#09090b" stroke="#4ade80" stroke-width="1.5"/>
+      <path d="M646,144 l3,3 l6,-7" fill="none" stroke="#4ade80" stroke-width="2"/>
+    </g>
+
+    <!-- budget hard-stop bar : drains, refills each cycle -->
+    <text x="568" y="292" text-anchor="middle" fill="#52525b" font-size="8">budget</text>
+    <rect x="445" y="258" width="246" height="6" rx="3" fill="#18181b"/>
+    <rect x="445" y="258" width="246" height="6" rx="3" fill="#4ade80">
+      <animate attributeName="width" values="246;60;60;246" keyTimes="0;0.6;0.66;1" dur="8s" repeatCount="indefinite"/>
+      <animate attributeName="fill" values="#4ade80;#4ade80;#fbbf24;#4ade80" keyTimes="0;0.55;0.6;0.66" calcMode="discrete" dur="8s" repeatCount="indefinite"/>
+    </rect>
+  </g>
+
+  <!-- ================= HEARTBEAT ECG ================= -->
+  <g>
+    <path d="M40,356 h58 l6,-10 6,20 6,-10 h44 l6,-14 8,26 6,-12 h52 l6,-9 6,18 6,-9 h50 l6,-12 8,24 6,-12 h52 l6,-9 6,18 6,-9 h48 l6,-11 6,20 6,-9 h40 l5,-7 5,14 5,-7 h30"
+      fill="none" stroke="#27272a" stroke-width="1.5" pathLength="1000"/>
+    <path d="M40,356 h58 l6,-10 6,20 6,-10 h44 l6,-14 8,26 6,-12 h52 l6,-9 6,18 6,-9 h50 l6,-12 8,24 6,-12 h52 l6,-9 6,18 6,-9 h48 l6,-11 6,20 6,-9 h40 l5,-7 5,14 5,-7 h30"
+      fill="none" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="1000" pathLength="1000">
+      <animate attributeName="stroke-dashoffset" values="1000;0" dur="4s" repeatCount="indefinite"/>
+    </path>
+    <text x="720" y="348" text-anchor="end" fill="#52525b" font-size="8">heartbeat</text>
+  </g>
+</svg>

@@ -1,0 +1,38 @@
+# Pilot on rho-cluster (EKS ap-northeast-2).
+#
+# Profile: embedded PostgreSQL persisted on an EBS gp2 PVC under /pilot,
+# matching the Docker quickstart contract (doc/DOCKER.md). Migrating to RDS
+# later is a values-only change: set DATABASE_URL in the pilot-secrets secret
+# and adjust persistence as needed.
+#
+# Image: built by .github/workflows/ecr-build-deploy.yml; CI overrides the
+# tag at upgrade time with `--set image.tag=<dispatched-tag>`.
+
+image:
+  repository: 361645878435.dkr.ecr.ap-northeast-2.amazonaws.com/pilot
+  tag: v0.1.0-pilot
+
+ingress:
+  enabled: true
+  className: alb
+  host: pilot.patty.io
+
+config:
+  PILOT_PUBLIC_URL: https://pilot.patty.io
+  PILOT_DEPLOYMENT_MODE: authenticated
+  TRUST_PROXY: loopback
+
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+persistence:
+  enabled: true
+  size: 20Gi
+  storageClass: ""   # gp2 (cluster default)
+
+existingSecret: pilot-secrets

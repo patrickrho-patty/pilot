@@ -1,0 +1,23 @@
+[Unit]
+Description=Pilot AI Agent Orchestrator
+Requires=pilot-db.service
+After=pilot-db.service
+
+[Container]
+Image=pilot-local
+ContainerName=pilot
+Pod=pilot.pod
+Volume=%h/.local/share/pilot:/pilot:Z
+Environment=HOST=0.0.0.0
+Environment=PILOT_HOME=/pilot
+Environment=PILOT_DEPLOYMENT_MODE=authenticated
+Environment=PILOT_DEPLOYMENT_EXPOSURE=private
+Environment=PILOT_PUBLIC_URL=http://localhost:3100
+EnvironmentFile=%h/.config/containers/systemd/pilot.env
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,86 @@
+# Default values for the Pilot chart.
+# Environment-specific values live in deploy/rho-eks.yaml; CI overrides
+# image.tag at upgrade time with the dispatched tag.
+
+image:
+  repository: 361645878435.dkr.ecr.ap-northeast-2.amazonaws.com/pilot
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 3100
+
+persistence:
+  enabled: true
+  # Holds /pilot: embedded PostgreSQL data, uploaded assets, local secrets
+  # key, agent workspace state (see doc/DOCKER.md persistence contract).
+  size: 20Gi
+  storageClass: ""   # cluster default (gp2)
+
+ingress:
+  enabled: true
+  className: alb
+  host: pilot.patty.io
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ap-northeast-2:361645878435:certificate/3c72e864-81b9-4257-804e-d904c1fbf635
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/group.name: rho-alb-group
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/success-codes: "403"
+    # The app's private-hostname guard 403s the ELB health checker's
+    # Host=<target-ip> requests (guard only allows loopback + configured
+    # hostnames), so treat 403 as healthy for target registration; real
+    # client traffic arrives via Host: pilot.patty.io and is served 200.
+
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    cpu: "2"
+    memory: 4Gi
+
+# Non-secret runtime configuration.
+config:
+  PILOT_PUBLIC_URL: https://pilot.patty.io
+  PILOT_DEPLOYMENT_MODE: authenticated
+  # The ALB is the TLS terminator; trust it so X-Forwarded-Host is honored
+  # by the private-hostname guard and auth origin checks.
+  TRUST_PROXY: loopback
+
+# Secret values are NEVER rendered by this chart. Create an Opaque secret
+# out-of-band and reference it:
+#   kubectl create secret generic pilot-secrets -n pilot \
+#     --from-literal=BETTER_AUTH_SECRET=$(openssl rand -hex 32) \
+#     --from-literal=PILOT_TOOL_ACTION_SIGNING_SECRET=$(openssl rand -hex 32)
+existingSecret: pilot-secrets
+existingSecretKeys:
+  betterAuth: BETTER_AUTH_SECRET
+  toolActionSigning: PILOT_TOOL_ACTION_SIGNING_SECRET
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,1109 @@
+import fsSync from "node:fs";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  applyRuntimePortSelectionToConfig,
+  maybePersistWorktreeRuntimePorts,
+  maybeRepairLegacyWorktreeConfigAndEnvFiles,
+} from "../worktree-config.js";
+
+const ORIGINAL_ENV = { ...process.env };
+const ORIGINAL_CWD = process.cwd();
+
+// The ambient shell can carry real PILOT_* settings (agent shells export
+// PILOT_CONFIG pointing at the live default instance). Repair helpers
+// resolve paths from these, so a test that forgets to override one would
+// otherwise rewrite the machine's real config/env files.
+beforeEach(() => {
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith("PILOT_") || key.startsWith("PILOT_") || key.startsWith("PILOT_")) {
+      delete process.env[key];
+    }
+  }
+  process.env.PILOT_INSTANCE_ID = "default";
+});
+
+afterEach(() => {
+  process.chdir(ORIGINAL_CWD);
+
+  for (const key of Object.keys(process.env)) {
+    if (!(key in ORIGINAL_ENV)) {
+      delete process.env[key];
+    }
+  }
+  for (const [key, value] of Object.entries(ORIGINAL_ENV)) {
+    process.env[key] = value;
+  }
+});
+
+function buildLegacyConfig(sharedRoot: string, publicBaseUrl = "http://127.0.0.1:3100") {
+  return {
+    $meta: {
+      version: 1,
+      updatedAt: "2026-03-26T00:00:00.000Z",
+      source: "configure",
+    },
+    database: {
+      mode: "embedded-postgres" as const,
+      embeddedPostgresDataDir: path.join(sharedRoot, "db"),
+      embeddedPostgresPort: 54329,
+      backup: {
+        enabled: true,
+        intervalMinutes: 60,
+        retentionDays: 30,
+        dir: path.join(sharedRoot, "data", "backups"),
+      },
+    },
+    logging: {
+      mode: "file" as const,
+      logDir: path.join(sharedRoot, "logs"),
+    },
+    server: {
+      deploymentMode: "local_trusted" as const,
+      exposure: "private" as const,
+      host: "127.0.0.1",
+      port: 3100,
+      allowedHostnames: [],
+      serveUi: true,
+    },
+    auth: {
+      baseUrlMode: "explicit" as const,
+      publicBaseUrl,
+      disableSignUp: false,
+    },
+    storage: {
+      provider: "local_disk" as const,
+      localDisk: {
+        baseDir: path.join(sharedRoot, "data", "storage"),
+      },
+      s3: {
+        bucket: "pilot",
+        region: "us-east-1",
+        prefix: "",
+        forcePathStyle: false,
+      },
+    },
+    secrets: {
+      provider: "local_encrypted" as const,
+      strictMode: false,
+      localEncrypted: {
+        keyFilePath: path.join(sharedRoot, "secrets", "master.key"),
+      },
+    },
+  };
+}
+
+function buildIsolatedConfig(instanceRoot: string, serverPort: number, databasePort: number) {
+  const config = buildLegacyConfig(instanceRoot, `http://127.0.0.1:${serverPort}`);
+  return {
+    ...config,
+    database: {
+      ...config.database,
+      embeddedPostgresPort: databasePort,
+      backup: {
+        ...config.database.backup,
+        enabled: false,
+      },
+    },
+    server: {
+      ...config.server,
+      port: serverPort,
+    },
+  };
+}
+
+describe("worktree config repair", () => {
+  it("repairs legacy repo-local worktree config and env files into an isolated instance", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-repair-"));
+    const worktreeRoot = path.join(tempRoot, "PIL-884-ai-commits-component");
+    const pilotDir = path.join(worktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
+    const sharedRoot = path.join(tempRoot, ".pilot", "instances", "default");
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    await fs.writeFile(configPath, JSON.stringify(buildLegacyConfig(sharedRoot), null, 2) + "\n", "utf8");
+    await fs.writeFile(
+      envPath,
+      [
+        "# Pilot environment variables",
+        "PILOT_IN_WORKTREE=true",
+        "PILOT_WORKTREE_NAME=PIL-884-ai-commits-component",
+        "PILOT_AGENT_JWT_SECRET=shared-secret",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    process.chdir(worktreeRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-884-ai-commits-component";
+    process.env.PILOT_WORKTREES_DIR = isolatedHome;
+    delete process.env.PORT;
+    delete process.env.PILOT_HOME;
+    delete process.env.PILOT_INSTANCE_ID;
+    delete process.env.PILOT_CONFIG;
+    delete process.env.PILOT_CONTEXT;
+
+    const result = maybeRepairLegacyWorktreeConfigAndEnvFiles();
+
+    expect(result).toEqual({
+      repairedConfig: true,
+      repairedEnv: true,
+    });
+
+    const repairedConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+    const repairedEnv = await fs.readFile(envPath, "utf8");
+    const instanceRoot = path.join(isolatedHome, "instances", "pil-884-ai-commits-component");
+
+    expect(repairedConfig.database.embeddedPostgresDataDir).toBe(path.join(instanceRoot, "db"));
+    expect(repairedConfig.database.backup.enabled).toBe(false);
+    expect(repairedConfig.database.backup.dir).toBe(path.join(instanceRoot, "data", "backups"));
+    expect(repairedConfig.logging.logDir).toBe(path.join(instanceRoot, "logs"));
+    expect(repairedConfig.storage.localDisk.baseDir).toBe(path.join(instanceRoot, "data", "storage"));
+    expect(repairedConfig.secrets.localEncrypted.keyFilePath).toBe(path.join(instanceRoot, "secrets", "master.key"));
+    expect(repairedEnv).toContain(`PILOT_HOME=${JSON.stringify(isolatedHome)}`);
+    expect(repairedEnv).toContain('PILOT_INSTANCE_ID="pil-884-ai-commits-component"');
+    expect(repairedEnv).toContain(`PILOT_CONFIG=${JSON.stringify(await fs.realpath(configPath))}`);
+    expect(repairedEnv).toContain(`PILOT_CONTEXT=${JSON.stringify(path.join(isolatedHome, "context.json"))}`);
+    expect(repairedEnv).toContain('PILOT_DB_BACKUP_ENABLED="false"');
+    expect(repairedEnv).toContain("PILOT_AGENT_JWT_SECRET=shared-secret");
+    expect(process.env.PILOT_HOME).toBe(isolatedHome);
+    expect(process.env.PORT).toBe("3101");
+    expect(process.env.PILOT_INSTANCE_ID).toBe("pil-884-ai-commits-component");
+    expect(process.env.PILOT_DB_BACKUP_ENABLED).toBe("false");
+  });
+
+  it("disables backups in an otherwise isolated existing worktree config", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-backup-migration-"));
+    const worktreeRoot = path.join(tempRoot, "disable-worktree-backups");
+    const pilotDir = path.join(worktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+    const instanceRoot = path.join(isolatedHome, "instances", "disable-worktree-backups");
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    const legacyIsolatedConfig = buildIsolatedConfig(instanceRoot, 3110, 54339);
+    legacyIsolatedConfig.database.backup.enabled = true;
+    await fs.writeFile(configPath, JSON.stringify(legacyIsolatedConfig, null, 2) + "\n", "utf8");
+    await fs.writeFile(
+      envPath,
+      [
+        "# Pilot environment variables",
+        "# Keep this operator note during repair",
+        `PILOT_HOME=${JSON.stringify(isolatedHome)}`,
+        'PILOT_INSTANCE_ID="disable-worktree-backups"',
+        `PILOT_CONFIG=${JSON.stringify(configPath)}`,
+        'PILOT_DB_BACKUP_ENABLED="true" # managed worktree policy',
+        'PILOT_IN_WORKTREE="true"',
+        'PILOT_WORKTREE_NAME="disable-worktree-backups"',
+        "# Keep this trailing note too",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    process.chdir(worktreeRoot);
+    process.env.PILOT_HOME = isolatedHome;
+    process.env.PILOT_INSTANCE_ID = "disable-worktree-backups";
+    process.env.PILOT_CONFIG = configPath;
+    process.env.PILOT_DB_BACKUP_ENABLED = "true";
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "disable-worktree-backups";
+
+    const result = maybeRepairLegacyWorktreeConfigAndEnvFiles();
+    const repairedConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+    const repairedEnv = await fs.readFile(envPath, "utf8");
+
+    expect(result).toEqual({ repairedConfig: true, repairedEnv: true });
+    expect(repairedConfig.database.backup.enabled).toBe(false);
+    expect(repairedEnv).toContain(
+      'PILOT_DB_BACKUP_ENABLED="false" # managed worktree policy',
+    );
+    expect(repairedEnv).toContain("# Keep this operator note during repair");
+    expect(repairedEnv).toContain("# Keep this trailing note too");
+    expect(process.env.PILOT_DB_BACKUP_ENABLED).toBe("false");
+  });
+
+  it("preserves an externally supplied PORT while repairing worktree config", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-repair-external-port-"));
+    const worktreeRoot = path.join(tempRoot, "PIL-10341-runtime-managed-port");
+    const pilotDir = path.join(worktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
+    const sharedRoot = path.join(tempRoot, ".pilot", "instances", "default");
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    await fs.writeFile(configPath, JSON.stringify(buildLegacyConfig(sharedRoot), null, 2) + "\n", "utf8");
+    await fs.writeFile(
+      envPath,
+      [
+        "# Pilot environment variables",
+        "PILOT_IN_WORKTREE=true",
+        "PILOT_WORKTREE_NAME=PIL-10341-runtime-managed-port",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    process.chdir(worktreeRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-10341-runtime-managed-port";
+    process.env.PILOT_WORKTREES_DIR = isolatedHome;
+    process.env.PORT = "32987";
+    delete process.env.PILOT_HOME;
+    delete process.env.PILOT_INSTANCE_ID;
+    delete process.env.PILOT_CONFIG;
+    delete process.env.PILOT_CONTEXT;
+
+    const result = maybeRepairLegacyWorktreeConfigAndEnvFiles();
+    const repairedConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+
+    expect(result.repairedConfig).toBe(true);
+    expect(repairedConfig.server.port).toBe(3101);
+    expect(process.env.PORT).toBe("32987");
+    expect(process.env.PILOT_HOME).toBe(isolatedHome);
+  });
+
+  it("never rewrites a main-instance env when ambient worktree flags leak into the process", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-leak-"));
+    const homeDir = path.join(tempRoot, ".pilot");
+    const instanceRoot = path.join(homeDir, "instances", "default");
+    const configPath = path.join(instanceRoot, "config.json");
+    const envPath = path.join(instanceRoot, ".env");
+
+    await fs.mkdir(instanceRoot, { recursive: true });
+    const originalConfig = JSON.stringify(buildLegacyConfig(instanceRoot), null, 2) + "\n";
+    await fs.writeFile(configPath, originalConfig, "utf8");
+    const cleanEnv = [
+      "# Pilot environment variables",
+      "# Generated by `pilot onboard`",
+      `PILOT_HOME=${JSON.stringify(homeDir)}`,
+      'PILOT_INSTANCE_ID="default"',
+      `PILOT_CONFIG=${JSON.stringify(configPath)}`,
+      "",
+    ].join("\n");
+    await fs.writeFile(envPath, cleanEnv, "utf8");
+
+    process.chdir(tempRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-884-ai-commits-component";
+    process.env.PILOT_HOME = homeDir;
+    process.env.PILOT_INSTANCE_ID = "default";
+    process.env.PILOT_CONFIG = configPath;
+    delete process.env.PILOT_CONTEXT;
+
+    const result = maybeRepairLegacyWorktreeConfigAndEnvFiles();
+
+    expect(result).toEqual({ repairedConfig: false, repairedEnv: false });
+    expect(await fs.readFile(envPath, "utf8")).toBe(cleanEnv);
+    expect(await fs.readFile(configPath, "utf8")).toBe(originalConfig);
+    expect(process.env.PILOT_HOME).toBe(homeDir);
+    expect(process.env.PILOT_INSTANCE_ID).toBe("default");
+  });
+
+  it("does not persist runtime ports into a main-instance config when ambient worktree flags leak in", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-leak-ports-"));
+    const homeDir = path.join(tempRoot, ".pilot");
+    const instanceRoot = path.join(homeDir, "instances", "default");
+    const configPath = path.join(instanceRoot, "config.json");
+
+    await fs.mkdir(instanceRoot, { recursive: true });
+    await fs.writeFile(configPath, JSON.stringify(buildLegacyConfig(instanceRoot), null, 2) + "\n", "utf8");
+
+    process.chdir(tempRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-884-ai-commits-component";
+    process.env.PILOT_HOME = homeDir;
+    process.env.PILOT_INSTANCE_ID = "default";
+    process.env.PILOT_CONFIG = configPath;
+    delete process.env.PORT;
+    delete process.env.DATABASE_URL;
+
+    maybePersistWorktreeRuntimePorts({ serverPort: 3999, databasePort: 54399 });
+
+    const writtenConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+    expect(writtenConfig.server.port).toBe(3100);
+    expect(writtenConfig.database.embeddedPostgresPort).toBe(54329);
+  });
+
+  it("does not adopt a .pilot config whose own env does not declare a worktree", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-unattested-"));
+    const repoRoot = path.join(tempRoot, "repo");
+    const pilotDir = path.join(repoRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    const originalConfig =
+      JSON.stringify(buildLegacyConfig(path.join(tempRoot, "shared")), null, 2) + "\n";
+    await fs.writeFile(configPath, originalConfig, "utf8");
+    const nonWorktreeEnv = [
+      "# Pilot environment variables",
+      `PILOT_CONFIG=${JSON.stringify(configPath)}`,
+      "",
+    ].join("\n");
+    await fs.writeFile(envPath, nonWorktreeEnv, "utf8");
+
+    process.chdir(repoRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-884-ai-commits-component";
+    process.env.PILOT_WORKTREES_DIR = path.join(tempRoot, ".pilot-worktrees");
+    delete process.env.PILOT_HOME;
+    delete process.env.PILOT_INSTANCE_ID;
+    delete process.env.PILOT_CONFIG;
+
+    const result = maybeRepairLegacyWorktreeConfigAndEnvFiles();
+
+    expect(result).toEqual({ repairedConfig: false, repairedEnv: false });
+    expect(await fs.readFile(envPath, "utf8")).toBe(nonWorktreeEnv);
+    expect(await fs.readFile(configPath, "utf8")).toBe(originalConfig);
+  });
+
+  it("avoids sibling worktree ports when repairing legacy configs", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-repair-ports-"));
+    const worktreeRoot = path.join(tempRoot, "PIL-880-thumbs-capture-for-evals-feature");
+    const pilotDir = path.join(worktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
+    const sharedRoot = path.join(tempRoot, ".pilot", "instances", "default");
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+    const siblingInstanceRoot = path.join(isolatedHome, "instances", "pil-878-create-a-mine-tab-in-inbox");
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    await fs.mkdir(siblingInstanceRoot, { recursive: true });
+    await fs.writeFile(configPath, JSON.stringify(buildLegacyConfig(sharedRoot), null, 2) + "\n", "utf8");
+    await fs.writeFile(
+      envPath,
+      [
+        "# Pilot environment variables",
+        "PILOT_IN_WORKTREE=true",
+        "PILOT_WORKTREE_NAME=PIL-880-thumbs-capture-for-evals-feature",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(siblingInstanceRoot, "config.json"),
+      JSON.stringify(
+        {
+          ...buildLegacyConfig(siblingInstanceRoot),
+          database: {
+            mode: "embedded-postgres",
+            embeddedPostgresDataDir: path.join(siblingInstanceRoot, "db"),
+            embeddedPostgresPort: 54330,
+            backup: {
+              enabled: true,
+              intervalMinutes: 60,
+              retentionDays: 30,
+              dir: path.join(siblingInstanceRoot, "data", "backups"),
+            },
+          },
+          server: {
+            deploymentMode: "local_trusted",
+            exposure: "private",
+            host: "127.0.0.1",
+            port: 3101,
+            allowedHostnames: [],
+            serveUi: true,
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+      "utf8",
+    );
+
+    process.chdir(worktreeRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-880-thumbs-capture-for-evals-feature";
+    process.env.PILOT_WORKTREES_DIR = isolatedHome;
+    delete process.env.PILOT_HOME;
+    delete process.env.PILOT_INSTANCE_ID;
+    delete process.env.PILOT_CONFIG;
+    delete process.env.PILOT_CONTEXT;
+
+    const result = maybeRepairLegacyWorktreeConfigAndEnvFiles();
+    const repairedConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+
+    expect(result.repairedConfig).toBe(true);
+    expect(repairedConfig.server.port).toBe(3102);
+    expect(repairedConfig.database.embeddedPostgresPort).toBe(54331);
+  });
+
+  it("serializes and persists cross-repo worktree port reservations", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-port-registry-"));
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+    const firstWorktreeRoot = path.join(tempRoot, "repo-one", "PIL-14013-import-bulk-skills");
+    const secondWorktreeRoot = path.join(tempRoot, "repo-two", "PIL-14069-port-conflicts");
+    const firstConfigPath = path.join(firstWorktreeRoot, ".pilot", "config.json");
+    const secondConfigPath = path.join(secondWorktreeRoot, ".pilot", "config.json");
+
+    const writeWorktree = async (
+      worktreeRoot: string,
+      name: string,
+      databaseMode: "embedded-postgres" | "postgres" = "embedded-postgres",
+    ) => {
+      const pilotDir = path.join(worktreeRoot, ".pilot");
+      const instanceRoot = path.join(isolatedHome, "instances", name.toLowerCase());
+      const config = buildIsolatedConfig(instanceRoot, 45439, 55439);
+      await fs.mkdir(pilotDir, { recursive: true });
+      await fs.writeFile(
+        path.join(pilotDir, "config.json"),
+        `${JSON.stringify({
+          ...config,
+          database: {
+            ...config.database,
+            mode: databaseMode,
+            ...(databaseMode === "postgres"
+              ? { connectionString: "postgres://pilot:pilot@127.0.0.1:55439/pilot" }
+              : {}),
+          },
+        }, null, 2)}\n`,
+        "utf8",
+      );
+      await fs.writeFile(
+        path.join(pilotDir, ".env"),
+        [
+          "# Pilot environment variables",
+          "PILOT_IN_WORKTREE=true",
+          `PILOT_WORKTREE_NAME=${name}`,
+          `PILOT_HOME=${JSON.stringify(isolatedHome)}`,
+          `PILOT_INSTANCE_ID=${name.toLowerCase()}`,
+          `PILOT_CONFIG=${JSON.stringify(path.join(pilotDir, "config.json"))}`,
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+    };
+
+    const activateWorktree = (worktreeRoot: string, name: string) => {
+      process.chdir(worktreeRoot);
+      process.env.PILOT_IN_WORKTREE = "true";
+      process.env.PILOT_WORKTREE_NAME = name;
+      process.env.PILOT_WORKTREES_DIR = isolatedHome;
+      process.env.PILOT_HOME = isolatedHome;
+      process.env.PILOT_INSTANCE_ID = name.toLowerCase();
+      process.env.PILOT_CONFIG = path.join(worktreeRoot, ".pilot", "config.json");
+      delete process.env.PORT;
+      delete process.env.DATABASE_URL;
+    };
+
+    await writeWorktree(firstWorktreeRoot, "PIL-14013-import-bulk-skills", "postgres");
+    await writeWorktree(secondWorktreeRoot, "PIL-14069-port-conflicts");
+    const staleLockPath = path.join(isolatedHome, ".worktree-port-reservations.lock");
+    await fs.mkdir(staleLockPath, { recursive: true });
+    const staleLockTime = new Date(Date.now() - 6_000);
+    await fs.utimes(staleLockPath, staleLockTime, staleLockTime);
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    activateWorktree(firstWorktreeRoot, "PIL-14013-import-bulk-skills");
+    expect(maybeRepairLegacyWorktreeConfigAndEnvFiles().repairedConfig).toBe(false);
+    await expect(fs.stat(staleLockPath)).rejects.toMatchObject({ code: "ENOENT" });
+
+    activateWorktree(secondWorktreeRoot, "PIL-14069-port-conflicts");
+    expect(maybeRepairLegacyWorktreeConfigAndEnvFiles().repairedConfig).toBe(true);
+
+    const firstConfig = JSON.parse(await fs.readFile(firstConfigPath, "utf8"));
+    const secondConfig = JSON.parse(await fs.readFile(secondConfigPath, "utf8"));
+    const registry = JSON.parse(
+      await fs.readFile(path.join(isolatedHome, "worktree-port-reservations.json"), "utf8"),
+    );
+
+    expect(firstConfig.server.port).toBe(45439);
+    expect(firstConfig.database.embeddedPostgresPort).toBe(55439);
+    expect(secondConfig.server.port).toBe(45440);
+    expect(secondConfig.database.embeddedPostgresPort).toBe(55440);
+    expect(secondConfig.auth.publicBaseUrl).toBe("http://127.0.0.1:45440/");
+    expect(registry.configPaths).toEqual([firstConfigPath, secondConfigPath].sort());
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining("Worktree port conflict detected"));
+    expect(warning).toHaveBeenCalledWith(expect.stringContaining("server: 45439 -> 45440"));
+
+    warning.mockClear();
+    expect(maybeRepairLegacyWorktreeConfigAndEnvFiles().repairedConfig).toBe(false);
+    const persistedConfig = JSON.parse(await fs.readFile(secondConfigPath, "utf8"));
+    expect(persistedConfig.server.port).toBe(45440);
+    expect(persistedConfig.database.embeddedPostgresPort).toBe(55440);
+    expect(warning).not.toHaveBeenCalled();
+  });
+
+  it("ignores stale migrated env paths when the dev runner resolved the local config", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-migrated-env-"));
+    const worktreeRoot = path.join(tempRoot, "PIL-9940-what-can-we-learn");
+    const pilotDir = path.join(worktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
+    const oldHome = "/old/home/.pilot-worktrees";
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    await fs.writeFile(configPath, JSON.stringify(buildLegacyConfig(oldHome), null, 2) + "\n", "utf8");
+    await fs.writeFile(
+      envPath,
+      [
+        "# Pilot environment variables",
+        "PILOT_HOME=/old/home/.pilot-worktrees",
+        "PILOT_INSTANCE_ID=pil-9940-what-can-we-learn",
+        "PILOT_CONFIG=/old/home/pilot/.pilot/worktrees/PIL-9940-what-can-we-learn/.pilot/config.json",
+        "PILOT_CONTEXT=/old/home/.pilot-worktrees/context.json",
+        "PILOT_IN_WORKTREE=true",
+        "PILOT_WORKTREE_NAME=PIL-9940-what-can-we-learn",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    process.chdir(worktreeRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_CONFIG = configPath;
+    process.env.PILOT_WORKTREES_DIR = isolatedHome;
+    delete process.env.PILOT_HOME;
+    delete process.env.PILOT_INSTANCE_ID;
+    delete process.env.PILOT_CONTEXT;
+
+    const result = maybeRepairLegacyWorktreeConfigAndEnvFiles();
+    const repairedConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+    const repairedEnv = await fs.readFile(envPath, "utf8");
+    const instanceRoot = path.join(isolatedHome, "instances", "pil-9940-what-can-we-learn");
+
+    expect(result).toEqual({
+      repairedConfig: true,
+      repairedEnv: true,
+    });
+    expect(repairedConfig.database.embeddedPostgresDataDir).toBe(path.join(instanceRoot, "db"));
+    expect(repairedConfig.secrets.localEncrypted.keyFilePath).toBe(path.join(instanceRoot, "secrets", "master.key"));
+    expect(repairedEnv).toContain(`PILOT_HOME=${JSON.stringify(isolatedHome)}`);
+    expect(repairedEnv).toContain(`PILOT_CONFIG=${JSON.stringify(configPath)}`);
+    expect(repairedEnv).not.toContain("/old/home");
+  });
+
+  it("does not persist transient runtime home overrides over repo-local worktree env", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-runtime-override-"));
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+    const transientHome = path.join(tempRoot, "tests", "e2e", ".tmp", "multiuser-authenticated");
+    const worktreeRoot = path.join(tempRoot, "PIL-989-multi-user-implementation-using-plan-from-pil-958");
+    const pilotDir = path.join(worktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
+    const instanceId = "pil-989-multi-user-implementation-using-plan-from-pil-958";
+    const stableInstanceRoot = path.join(isolatedHome, "instances", instanceId);
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    await fs.writeFile(
+      configPath,
+      JSON.stringify(
+        {
+          ...buildLegacyConfig(transientHome),
+          database: {
+            mode: "embedded-postgres",
+            embeddedPostgresDataDir: path.join(transientHome, "instances", instanceId, "db"),
+            embeddedPostgresPort: 54334,
+            backup: {
+              enabled: true,
+              intervalMinutes: 60,
+              retentionDays: 30,
+              dir: path.join(transientHome, "instances", instanceId, "data", "backups"),
+            },
+          },
+          logging: {
+            mode: "file",
+            logDir: path.join(transientHome, "instances", instanceId, "logs"),
+          },
+          server: {
+            deploymentMode: "local_trusted",
+            exposure: "private",
+            host: "127.0.0.1",
+            port: 3104,
+            allowedHostnames: [],
+            serveUi: true,
+          },
+          storage: {
+            provider: "local_disk",
+            localDisk: {
+              baseDir: path.join(transientHome, "instances", instanceId, "data", "storage"),
+            },
+            s3: {
+              bucket: "pilot",
+              region: "us-east-1",
+              prefix: "",
+              forcePathStyle: false,
+            },
+          },
+          secrets: {
+            provider: "local_encrypted",
+            strictMode: false,
+            localEncrypted: {
+              keyFilePath: path.join(transientHome, "instances", instanceId, "secrets", "master.key"),
+            },
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+      "utf8",
+    );
+    await fs.writeFile(
+      envPath,
+      [
+        "# Pilot environment variables",
+        `PILOT_HOME=${JSON.stringify(isolatedHome)}`,
+        `PILOT_INSTANCE_ID=${JSON.stringify(instanceId)}`,
+        `PILOT_CONFIG=${JSON.stringify(configPath)}`,
+        `PILOT_CONTEXT=${JSON.stringify(path.join(isolatedHome, "context.json"))}`,
+        'PILOT_IN_WORKTREE="true"',
+        'PILOT_WORKTREE_NAME="PIL-989-multi-user-implementation-using-plan-from-pil-958"',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    process.chdir(worktreeRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-989-multi-user-implementation-using-plan-from-pil-958";
+    process.env.PILOT_HOME = transientHome;
+    process.env.PILOT_INSTANCE_ID = instanceId;
+    process.env.PILOT_CONFIG = configPath;
+
+    const result = maybeRepairLegacyWorktreeConfigAndEnvFiles();
+    const repairedConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+    const repairedEnv = await fs.readFile(envPath, "utf8");
+
+    expect(result).toEqual({
+      repairedConfig: true,
+      repairedEnv: true,
+    });
+    expect(repairedConfig.database.embeddedPostgresDataDir).toBe(path.join(stableInstanceRoot, "db"));
+    expect(repairedConfig.database.backup.dir).toBe(path.join(stableInstanceRoot, "data", "backups"));
+    expect(repairedConfig.logging.logDir).toBe(path.join(stableInstanceRoot, "logs"));
+    expect(repairedConfig.storage.localDisk.baseDir).toBe(path.join(stableInstanceRoot, "data", "storage"));
+    expect(repairedConfig.secrets.localEncrypted.keyFilePath).toBe(
+      path.join(stableInstanceRoot, "secrets", "master.key"),
+    );
+    expect(repairedEnv).toContain(`PILOT_HOME=${JSON.stringify(isolatedHome)}`);
+    expect(repairedEnv).toContain('PILOT_DB_BACKUP_ENABLED="false"');
+    expect(repairedEnv).not.toContain(`PILOT_HOME=${JSON.stringify(transientHome)}`);
+    expect(process.env.PILOT_HOME).toBe(isolatedHome);
+  });
+
+  it("rebalances duplicate ports for already isolated worktree configs", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-rebalance-"));
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+    const repoWorktreesRoot = path.join(tempRoot, "repo", ".pilot", "worktrees");
+    const siblingWorktreeRoot = path.join(repoWorktreesRoot, "PIL-878-create-a-mine-tab-in-inbox");
+    const siblingInstanceRoot = path.join(isolatedHome, "instances", "pil-878-create-a-mine-tab-in-inbox");
+    const currentWorktreeRoot = path.join(repoWorktreesRoot, "PIL-884-ai-commits-component");
+    const pilotDir = path.join(currentWorktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const envPath = path.join(pilotDir, ".env");
+    const currentInstanceRoot = path.join(isolatedHome, "instances", "pil-884-ai-commits-component");
+    const siblingConfigPath = path.join(siblingWorktreeRoot, ".pilot", "config.json");
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    await fs.mkdir(path.dirname(siblingConfigPath), { recursive: true });
+    await fs.writeFile(
+      configPath,
+      JSON.stringify(
+        {
+          ...buildLegacyConfig(currentInstanceRoot),
+          database: {
+            mode: "embedded-postgres",
+            embeddedPostgresDataDir: path.join(currentInstanceRoot, "db"),
+            embeddedPostgresPort: 54330,
+            backup: {
+              enabled: true,
+              intervalMinutes: 60,
+              retentionDays: 30,
+              dir: path.join(currentInstanceRoot, "data", "backups"),
+            },
+          },
+          logging: {
+            mode: "file",
+            logDir: path.join(currentInstanceRoot, "logs"),
+          },
+          server: {
+            deploymentMode: "local_trusted",
+            exposure: "private",
+            host: "127.0.0.1",
+            port: 3101,
+            allowedHostnames: [],
+            serveUi: true,
+          },
+          storage: {
+            provider: "local_disk",
+            localDisk: {
+              baseDir: path.join(currentInstanceRoot, "data", "storage"),
+            },
+            s3: {
+              bucket: "pilot",
+              region: "us-east-1",
+              prefix: "",
+              forcePathStyle: false,
+            },
+          },
+          secrets: {
+            provider: "local_encrypted",
+            strictMode: false,
+            localEncrypted: {
+              keyFilePath: path.join(currentInstanceRoot, "secrets", "master.key"),
+            },
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+      "utf8",
+    );
+    await fs.writeFile(
+      envPath,
+      [
+        "# Pilot environment variables",
+        "PILOT_IN_WORKTREE=true",
+        "PILOT_WORKTREE_NAME=PIL-884-ai-commits-component",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await fs.writeFile(
+      siblingConfigPath,
+      JSON.stringify(
+        {
+          ...buildLegacyConfig(siblingInstanceRoot),
+          database: {
+            mode: "embedded-postgres",
+            embeddedPostgresDataDir: path.join(siblingInstanceRoot, "db"),
+            embeddedPostgresPort: 54330,
+            backup: {
+              enabled: true,
+              intervalMinutes: 60,
+              retentionDays: 30,
+              dir: path.join(siblingInstanceRoot, "data", "backups"),
+            },
+          },
+          server: {
+            deploymentMode: "local_trusted",
+            exposure: "private",
+            host: "127.0.0.1",
+            port: 3101,
+            allowedHostnames: [],
+            serveUi: true,
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+      "utf8",
+    );
+
+    process.chdir(currentWorktreeRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-884-ai-commits-component";
+    process.env.PILOT_WORKTREES_DIR = isolatedHome;
+    delete process.env.PILOT_HOME;
+    delete process.env.PILOT_INSTANCE_ID;
+    delete process.env.PILOT_CONFIG;
+    delete process.env.PILOT_CONTEXT;
+
+    const result = maybeRepairLegacyWorktreeConfigAndEnvFiles();
+    const repairedConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+
+    expect(result.repairedConfig).toBe(true);
+    expect(repairedConfig.server.port).toBe(3102);
+    expect(repairedConfig.database.embeddedPostgresPort).toBe(54331);
+  });
+
+  it("persists runtime-selected worktree ports back into explicit-port auth URLs", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-ports-"));
+    const worktreeRoot = path.join(tempRoot, "PIL-878-create-a-mine-tab-in-inbox");
+    const pilotDir = path.join(worktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+    const instanceRoot = path.join(isolatedHome, "instances", "pil-878-create-a-mine-tab-in-inbox");
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    await fs.writeFile(
+      configPath,
+      JSON.stringify(
+        {
+          ...buildLegacyConfig(instanceRoot, "http://my-host.ts.net:3100"),
+          database: {
+            mode: "embedded-postgres",
+            embeddedPostgresDataDir: path.join(instanceRoot, "db"),
+            embeddedPostgresPort: 54331,
+            backup: {
+              enabled: true,
+              intervalMinutes: 60,
+              retentionDays: 30,
+              dir: path.join(instanceRoot, "data", "backups"),
+            },
+          },
+          logging: {
+            mode: "file",
+            logDir: path.join(instanceRoot, "logs"),
+          },
+          server: {
+            deploymentMode: "local_trusted",
+            exposure: "private",
+            host: "127.0.0.1",
+            port: 3101,
+            allowedHostnames: [],
+            serveUi: true,
+          },
+          storage: {
+            provider: "local_disk",
+            localDisk: {
+              baseDir: path.join(instanceRoot, "data", "storage"),
+            },
+            s3: {
+              bucket: "pilot",
+              region: "us-east-1",
+              prefix: "",
+              forcePathStyle: false,
+            },
+          },
+          secrets: {
+            provider: "local_encrypted",
+            strictMode: false,
+            localEncrypted: {
+              keyFilePath: path.join(instanceRoot, "secrets", "master.key"),
+            },
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+      "utf8",
+    );
+
+    await fs.writeFile(
+      path.join(pilotDir, ".env"),
+      ["# Pilot environment variables", "PILOT_IN_WORKTREE=true", ""].join("\n"),
+      "utf8",
+    );
+
+    process.chdir(worktreeRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-878-create-a-mine-tab-in-inbox";
+    process.env.PILOT_HOME = isolatedHome;
+    process.env.PILOT_INSTANCE_ID = "pil-878-create-a-mine-tab-in-inbox";
+    process.env.PILOT_CONFIG = configPath;
+    delete process.env.PORT;
+    delete process.env.DATABASE_URL;
+
+    maybePersistWorktreeRuntimePorts({
+      serverPort: 3103,
+      databasePort: 54335,
+    });
+
+    const writtenConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+
+    expect(writtenConfig.server.port).toBe(3103);
+    expect(writtenConfig.database.embeddedPostgresPort).toBe(54335);
+    expect(writtenConfig.auth.publicBaseUrl).toBe("http://my-host.ts.net:3103/");
+  });
+
+  it("does not rewrite no-port public auth URLs when persisting runtime-selected ports", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-public-ports-"));
+    const worktreeRoot = path.join(tempRoot, "PIL-125-public-base-url");
+    const pilotDir = path.join(worktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+    const instanceRoot = path.join(isolatedHome, "instances", "pil-125-public-base-url");
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    await fs.writeFile(
+      configPath,
+      JSON.stringify(
+        {
+          ...buildLegacyConfig(instanceRoot, "https://pilot.example"),
+          database: {
+            mode: "embedded-postgres",
+            embeddedPostgresDataDir: path.join(instanceRoot, "db"),
+            embeddedPostgresPort: 54331,
+            backup: {
+              enabled: true,
+              intervalMinutes: 60,
+              retentionDays: 30,
+              dir: path.join(instanceRoot, "data", "backups"),
+            },
+          },
+          logging: {
+            mode: "file",
+            logDir: path.join(instanceRoot, "logs"),
+          },
+          server: {
+            deploymentMode: "local_trusted",
+            exposure: "private",
+            host: "127.0.0.1",
+            port: 3101,
+            allowedHostnames: [],
+            serveUi: true,
+          },
+          storage: {
+            provider: "local_disk",
+            localDisk: {
+              baseDir: path.join(instanceRoot, "data", "storage"),
+            },
+            s3: {
+              bucket: "pilot",
+              region: "us-east-1",
+              prefix: "",
+              forcePathStyle: false,
+            },
+          },
+          secrets: {
+            provider: "local_encrypted",
+            strictMode: false,
+            localEncrypted: {
+              keyFilePath: path.join(instanceRoot, "secrets", "master.key"),
+            },
+          },
+        },
+        null,
+        2,
+      ) + "\n",
+      "utf8",
+    );
+
+    await fs.writeFile(
+      path.join(pilotDir, ".env"),
+      ["# Pilot environment variables", "PILOT_IN_WORKTREE=true", ""].join("\n"),
+      "utf8",
+    );
+
+    process.chdir(worktreeRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "PIL-125-public-base-url";
+    process.env.PILOT_HOME = isolatedHome;
+    process.env.PILOT_INSTANCE_ID = "pil-125-public-base-url";
+    process.env.PILOT_CONFIG = configPath;
+    delete process.env.PORT;
+    delete process.env.DATABASE_URL;
+
+    maybePersistWorktreeRuntimePorts({
+      serverPort: 3103,
+      databasePort: 54335,
+    });
+
+    const writtenConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+
+    expect(writtenConfig.server.port).toBe(3103);
+    expect(writtenConfig.database.embeddedPostgresPort).toBe(54335);
+    expect(writtenConfig.auth.publicBaseUrl).toBe("https://pilot.example");
+  });
+
+  it("preserves top-level and nested config extensions while persisting runtime ports", async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), "pilot-worktree-config-extensions-"));
+    const worktreeRoot = path.join(tempRoot, "config-extensions");
+    const pilotDir = path.join(worktreeRoot, ".pilot");
+    const configPath = path.join(pilotDir, "config.json");
+    const isolatedHome = path.join(tempRoot, ".pilot-worktrees");
+    const instanceRoot = path.join(isolatedHome, "instances", "config-extensions");
+    const base = buildIsolatedConfig(instanceRoot, 3101, 54331);
+    const config = {
+      ...base,
+      topLevelExtension: { enabled: true },
+      database: {
+        ...base.database,
+        backup: {
+          ...base.database.backup,
+          backupExtension: "keep",
+        },
+      },
+      server: {
+        ...base.server,
+        serverExtension: "keep",
+      },
+      storage: {
+        ...base.storage,
+        localDisk: {
+          ...base.storage.localDisk,
+          driverExtension: "keep",
+        },
+      },
+    };
+
+    await fs.mkdir(pilotDir, { recursive: true });
+    await fs.writeFile(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+    await fs.writeFile(
+      path.join(pilotDir, ".env"),
+      ["# Pilot environment variables", "PILOT_IN_WORKTREE=true", ""].join("\n"),
+      "utf8",
+    );
+
+    process.chdir(worktreeRoot);
+    process.env.PILOT_IN_WORKTREE = "true";
+    process.env.PILOT_WORKTREE_NAME = "config-extensions";
+    process.env.PILOT_HOME = isolatedHome;
+    process.env.PILOT_INSTANCE_ID = "config-extensions";
+    process.env.PILOT_CONFIG = configPath;
+    delete process.env.PORT;
+    delete process.env.DATABASE_URL;
+
+    const open = vi.spyOn(fsSync, "openSync");
+    const sync = vi.spyOn(fsSync, "fsyncSync");
+    maybePersistWorktreeRuntimePorts({ serverPort: 3103, databasePort: 54335 });
+
+    expect(open).toHaveBeenCalledWith(pilotDir, "r");
+    expect(sync).toHaveBeenCalled();
+
+    const writtenConfig = JSON.parse(await fs.readFile(configPath, "utf8"));
+    expect(writtenConfig).toMatchObject({
+      topLevelExtension: { enabled: true },
+      database: {
+        embeddedPostgresPort: 54335,
+        backup: { backupExtension: "keep" },
+      },
+      server: {
+        port: 3103,
+        serverExtension: "keep",
+      },
+      storage: {
+        localDisk: { driverExtension: "keep" },
+      },
+    });
+
+    const stableTime = new Date("2020-01-01T00:00:00.000Z");
+    await fs.utimes(configPath, stableTime, stableTime);
+    maybePersistWorktreeRuntimePorts({ serverPort: 3103, databasePort: 54335 });
+    expect((await fs.stat(configPath)).mtimeMs).toBe(stableTime.getTime());
+  });
+
+  it("can update the in-memory config when auth URL already includes a port", () => {
+    const { config, changed } = applyRuntimePortSelectionToConfig(
+      buildLegacyConfig("/tmp/shared", "http://my-host.ts.net:3100"),
+      {
+        serverPort: 3104,
+        databasePort: 54340,
+        allowServerPortWrite: false,
+        allowDatabasePortWrite: true,
+      },
+    );
+
+    expect(changed).toBe(true);
+    expect(config.server.port).toBe(3100);
+    expect(config.database.embeddedPostgresPort).toBe(54340);
+    expect(config.auth.publicBaseUrl).toBe("http://my-host.ts.net:3104/");
+  });
+
+  it("does not rewrite the in-memory config when auth URL has no explicit port", () => {
+    const { config, changed } = applyRuntimePortSelectionToConfig(
+      buildLegacyConfig("/tmp/shared", "https://pilot.example"),
+      {
+        serverPort: 3104,
+        databasePort: 54340,
+        allowServerPortWrite: false,
+        allowDatabasePortWrite: true,
+      },
+    );
+
+    expect(changed).toBe(true);
+    expect(config.server.port).toBe(3100);
+    expect(config.database.embeddedPostgresPort).toBe(54340);
+    expect(config.auth.publicBaseUrl).toBe("https://pilot.example");
+  });
+});

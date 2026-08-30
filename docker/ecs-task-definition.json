@@ -1,0 +1,90 @@
+{
+  "family": "pilot-server",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "4096",
+  "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/pilot-ecs-execution",
+  "taskRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/pilot-ecs-task",
+  "containerDefinitions": [
+    {
+      "name": "pilot-server",
+      "image": "<ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/pilot-server:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 3100,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "HOST", "value": "0.0.0.0" },
+        { "name": "PORT", "value": "3100" },
+        { "name": "SERVE_UI", "value": "true" },
+        { "name": "PILOT_HOME", "value": "/pilot" },
+        { "name": "PILOT_INSTANCE_ID", "value": "default" },
+        { "name": "PILOT_CONFIG", "value": "/pilot/instances/default/config.json" },
+        { "name": "PILOT_DEPLOYMENT_MODE", "value": "authenticated" },
+        { "name": "PILOT_DEPLOYMENT_EXPOSURE", "value": "public" },
+        { "name": "PILOT_PUBLIC_URL", "value": "https://<DOMAIN>" },
+        { "name": "PILOT_MIGRATION_AUTO_APPLY", "value": "true" },
+        { "name": "HEARTBEAT_SCHEDULER_ENABLED", "value": "true" }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:pilot/database-url"
+        },
+        {
+          "name": "BETTER_AUTH_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:pilot/better-auth-secret"
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:pilot/anthropic-api-key"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:pilot/openai-api-key"
+        },
+        {
+          "name": "GITHUB_TOKEN",
+          "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:pilot/github-token"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "pilot-data",
+          "containerPath": "/pilot",
+          "readOnly": false
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:3100/api/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/pilot",
+          "awslogs-region": "<REGION>",
+          "awslogs-stream-prefix": "server"
+        }
+      }
+    }
+  ],
+  "volumes": [
+    {
+      "name": "pilot-data",
+      "efsVolumeConfiguration": {
+        "fileSystemId": "<EFS_ID>",
+        "rootDirectory": "/",
+        "transitEncryption": "ENABLED"
+      }
+    }
+  ]
+}

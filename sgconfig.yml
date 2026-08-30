@@ -1,0 +1,6 @@
+# ast-grep project config. Rules are GENERATED per target brand name:
+#   node scripts/rename/generate-rules.mjs <NewName>
+# The dir is empty/absent until generated, keeping `ast-grep scan` a no-op by
+# default. Never commit concrete rules — the brand name is not final.
+ruleDirs:
+  - .ast-grep-rules

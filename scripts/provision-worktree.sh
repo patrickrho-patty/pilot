@@ -1,0 +1,837 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+base_cwd="${PILOT_WORKSPACE_BASE_CWD:-${PILOT_WORKSPACE_BASE_CWD:?PILOT_WORKSPACE_BASE_CWD is required}}"
+worktree_cwd="${PILOT_WORKSPACE_CWD:-${PILOT_WORKSPACE_CWD:?PILOT_WORKSPACE_CWD is required}}"
+pilot_home="${PILOT_HOME:-${PILOT_HOME:-$HOME/.pilot}}"
+pilot_instance_id="${PILOT_INSTANCE_ID:-${PILOT_INSTANCE_ID:-default}}"
+pilot_dir="$worktree_cwd/.pilot"
+worktree_config_path="$pilot_dir/config.json"
+worktree_env_path="$pilot_dir/.env"
+seed_manifest_path="$pilot_dir/seed-manifest.json"
+seed_pending_marker_path="$pilot_dir/seed-pending"
+seed_complete_marker_path="$pilot_dir/seed-complete"
+worktree_name="${PILOT_WORKSPACE_BRANCH:-${PILOT_WORKSPACE_BRANCH:-$(basename "$worktree_cwd")}}"
+created_worktree_config=0
+worktree_instance_id="$(WORKTREE_CWD="$worktree_cwd" node <<'EOF'
+const crypto = require("node:crypto");
+const path = require("node:path");
+
+const resolvedWorkspacePath = path.resolve(process.env.WORKTREE_CWD);
+const normalized = path.basename(resolvedWorkspacePath)
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9_-]+/g, "-")
+  .replace(/-+/g, "-")
+  .replace(/^[-_]+|[-_]+$/g, "");
+const prefix = (normalized || "worktree").slice(0, 48);
+const pathHash = crypto.createHash("sha256").update(resolvedWorkspacePath).digest("hex").slice(0, 12);
+process.stdout.write(`${prefix}-${pathHash}`);
+EOF
+)"
+
+if [[ ! -d "$base_cwd" ]]; then
+  echo "Base workspace does not exist: $base_cwd" >&2
+  exit 1
+fi
+
+if [[ ! -d "$worktree_cwd" ]]; then
+  echo "Derived worktree does not exist: $worktree_cwd" >&2
+  exit 1
+fi
+
+canonical_base_cwd="$(cd "$base_cwd" && pwd -P)"
+if [[ -L "$canonical_base_cwd/.pilot" && ! -d "$canonical_base_cwd/.pilot" ]]; then
+  # A broken link hides whatever it points at, so the config below would read as absent
+  # on a workspace that is malformed rather than plain. Refuse instead of falling back.
+  echo "Registered base project workspace .pilot is a broken symlink: $canonical_base_cwd/.pilot" >&2
+  exit 1
+fi
+source_config_path="$canonical_base_cwd/.pilot/config.json"
+if [[ ! -e "$source_config_path" && ! -L "$source_config_path" ]]; then
+  # A base workspace that is a plain checkout carries no instance config of its own.
+  # Fall back to the control plane's own registered instance config, which is process
+  # state this workspace cannot rewrite.
+  source_config_path="${PILOT_CONFIG:-${PILOT_CONFIG:-$pilot_home/instances/$pilot_instance_id/config.json}}"
+fi
+if [[ ! -f "$source_config_path" || -L "$source_config_path" ]]; then
+  echo "Registered Pilot seed source config is missing or is not a canonical file: $source_config_path" >&2
+  exit 1
+fi
+canonical_source_dir="$(cd "$(dirname "$source_config_path")" && pwd -P)"
+if [[ "$canonical_source_dir/config.json" != "$source_config_path" ]]; then
+  echo "Registered Pilot seed source config uses a symlink alias: $source_config_path" >&2
+  exit 1
+fi
+source_env_path="$(dirname "$source_config_path")/.env"
+
+mkdir -p "$pilot_dir"
+
+base_cli_runner_path="$base_cwd/cli/node_modules/tsx/dist/cli.mjs"
+base_cli_entry_path="$base_cwd/cli/src/index.ts"
+
+base_cli_files_present() {
+  [[ -f "$base_cli_runner_path" && -f "$base_cli_entry_path" ]]
+}
+
+# File existence is not enough: pnpm links package node_modules into the
+# versioned virtual store, so a lockfile change plus a partial/filtered install
+# in the base workspace leaves dangling symlinks that fail ESM resolution at
+# runtime. Actually boot the CLI to prove its import graph resolves.
+base_cli_healthy() {
+  base_cli_files_present || return 1
+  (cd "$base_cwd" && node "$base_cli_runner_path" "$base_cli_entry_path" --help >/dev/null 2>&1)
+}
+
+repair_base_workspace_install() {
+  command -v pnpm >/dev/null 2>&1 || return 1
+  [[ -f "$base_cwd/package.json" && -f "$base_cwd/pnpm-lock.yaml" ]] || return 1
+  echo "Base workspace CLI at $base_cli_entry_path failed its health check (typically dangling pnpm symlinks after a partial install); repairing with pnpm install in $base_cwd." >&2
+  # --force guarantees relinking even when pnpm's up-to-date heuristics would
+  # otherwise skip the dangling symlinks; --frozen-lockfile keeps the repair
+  # from mutating the shared base workspace's lockfile.
+  local repair_cmd=(pnpm install --prod=false --force --frozen-lockfile --config.confirmModulesPurge=false)
+  # Resolve the real git dir so locking also covers base workspaces that are
+  # linked worktrees, where "$base_cwd/.git" is a file rather than a directory.
+  local repair_lock_dir=""
+  if command -v git >/dev/null 2>&1; then
+    repair_lock_dir="$(git -C "$base_cwd" rev-parse --absolute-git-dir 2>/dev/null || true)"
+  fi
+  if [[ ! -d "$repair_lock_dir" && -d "$base_cwd/.git" ]]; then
+    repair_lock_dir="$base_cwd/.git"
+  fi
+  if command -v flock >/dev/null 2>&1 && [[ -d "$repair_lock_dir" ]]; then
+    # The post-repair verification must run under the same lock: a concurrent
+    # provision's forced install could be mid-relink during an unlocked check
+    # and fail a repair that actually succeeded. Holding the lock also means a
+    # process that queued behind a peer's repair can skip its own reinstall.
+    (
+      cd "$base_cwd" || exit 1
+      exec 9>"$repair_lock_dir/pilot-provision-repair.lock"
+      flock 9
+      if base_cli_healthy; then
+        echo "Base workspace CLI became healthy while waiting for the repair lock; skipping reinstall." >&2
+        exit 0
+      fi
+      env -u NODE_ENV CI=true "${repair_cmd[@]}" >&2 || exit 1
+      base_cli_healthy
+    )
+  else
+    (cd "$base_cwd" && env -u NODE_ENV CI=true "${repair_cmd[@]}" >&2 && base_cli_healthy)
+  fi
+}
+
+ensure_base_cli_healthy() {
+  base_cli_files_present || return 1
+  base_cli_healthy && return 0
+  repair_base_workspace_install
+}
+
+run_isolated_worktree_init() {
+  if ensure_base_cli_healthy; then
+    (
+      cd "$worktree_cwd" &&
+        node "$base_cli_runner_path" "$base_cli_entry_path" worktree init --force --no-seed --seed-mode minimal --name "$worktree_name" --instance "$worktree_instance_id" --from-config "$source_config_path"
+    )
+    return
+  fi
+
+  if command -v pnpm >/dev/null 2>&1 && pnpm pilotai --help >/dev/null 2>&1; then
+    (
+      cd "$worktree_cwd" &&
+        pnpm pilotai worktree init --force --no-seed --seed-mode minimal --name "$worktree_name" --instance "$worktree_instance_id" --from-config "$source_config_path"
+    )
+    return
+  fi
+
+  if command -v pilotai >/dev/null 2>&1; then
+    (
+      cd "$worktree_cwd" &&
+        pilotai worktree init --force --no-seed --seed-mode minimal --name "$worktree_name" --instance "$worktree_instance_id" --from-config "$source_config_path"
+    )
+    return
+  fi
+
+  return 127
+}
+
+pilotai_command_available() {
+  if command -v pnpm >/dev/null 2>&1 && pnpm pilotai --help >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if command -v node >/dev/null 2>&1 && base_cli_files_present; then
+    return 0
+  fi
+
+  if command -v pilotai >/dev/null 2>&1; then
+    return 0
+  fi
+
+  return 1
+}
+
+existing_worktree_config_is_usable() {
+  WORKTREE_CONFIG_PATH="$worktree_config_path" \
+  WORKTREE_ENV_PATH="$worktree_env_path" \
+  WORKTREE_INSTANCE_ID="$worktree_instance_id" \
+  node <<'EOF'
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+
+function expandHomePrefix(value) {
+  if (!value) return value;
+  if (value === "~") return os.homedir();
+  if (value.startsWith("~/")) return path.resolve(os.homedir(), value.slice(2));
+  return value;
+}
+
+function parseEnvFile(contents) {
+  const entries = {};
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = rawLine.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!match) continue;
+    const [, key, rawValue] = match;
+    const value = rawValue.trim();
+    if (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      entries[key] = value.slice(1, -1);
+      continue;
+    }
+    entries[key] = value.replace(/\s+#.*$/, "").trim();
+  }
+  return entries;
+}
+
+function fail(reason) {
+  console.error(reason);
+  process.exit(1);
+}
+
+const configPath = path.resolve(process.env.WORKTREE_CONFIG_PATH);
+const envPath = path.resolve(process.env.WORKTREE_ENV_PATH);
+const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+const env = parseEnvFile(fs.readFileSync(envPath, "utf8"));
+const envConfigPath = expandHomePrefix(env.PILOT_CONFIG ?? env.PILOT_CONFIG);
+if (envConfigPath && path.resolve(envConfigPath) !== configPath) {
+  fail(`existing worktree env points at ${envConfigPath}, not ${configPath}`);
+}
+
+const homeDir = expandHomePrefix(env.PILOT_HOME ?? env.PILOT_HOME);
+const instanceId = env.PILOT_INSTANCE_ID ?? env.PILOT_INSTANCE_ID;
+const expectedInstanceId = process.env.WORKTREE_INSTANCE_ID;
+if (!homeDir || !instanceId) {
+  fail("existing worktree env is missing PILOT_HOME or PILOT_INSTANCE_ID");
+}
+if (instanceId !== expectedInstanceId) {
+  fail(`existing worktree env names legacy or mismatched instance ${instanceId}, expected ${expectedInstanceId}`);
+}
+if (!fs.existsSync(homeDir)) {
+  fail(`existing worktree home does not exist on this host: ${homeDir}`);
+}
+
+const instanceRoot = path.resolve(homeDir, "instances", instanceId);
+const runtimePaths = [
+  config.database?.embeddedPostgresDataDir,
+  config.database?.backup?.dir,
+  config.logging?.logDir,
+  config.storage?.localDisk?.baseDir,
+  config.secrets?.localEncrypted?.keyFilePath,
+].filter((value) => typeof value === "string" && value.length > 0);
+
+for (const rawValue of runtimePaths) {
+  const resolved = path.resolve(expandHomePrefix(rawValue));
+  const relative = path.relative(instanceRoot, resolved);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    fail(`existing worktree config path is outside ${instanceRoot}: ${resolved}`);
+  }
+}
+EOF
+}
+
+reconcile_worktree_deployment_mode() {
+  SOURCE_CONFIG_PATH="$source_config_path" \
+  WORKTREE_CONFIG_PATH="$worktree_config_path" \
+  node <<'EOF'
+const fs = require("node:fs");
+const path = require("node:path");
+
+const sourceConfigPath = path.resolve(process.env.SOURCE_CONFIG_PATH);
+const worktreeConfigPath = path.resolve(process.env.WORKTREE_CONFIG_PATH);
+const sourceConfig = JSON.parse(fs.readFileSync(sourceConfigPath, "utf8"));
+const worktreeConfig = JSON.parse(fs.readFileSync(worktreeConfigPath, "utf8"));
+const deploymentMode = sourceConfig?.server?.deploymentMode ?? "local_trusted";
+if (deploymentMode !== "local_trusted" && deploymentMode !== "authenticated") {
+  throw new Error(`Registered source has unsupported server.deploymentMode: ${deploymentMode}`);
+}
+const exposure = deploymentMode === "local_trusted"
+  ? "private"
+  : (sourceConfig?.server?.exposure ?? "private");
+const currentServer = worktreeConfig?.server && typeof worktreeConfig.server === "object"
+  ? worktreeConfig.server
+  : {};
+if (currentServer.deploymentMode === deploymentMode && currentServer.exposure === exposure) {
+  process.exit(0);
+}
+
+worktreeConfig.server = {
+  ...currentServer,
+  deploymentMode,
+  exposure,
+};
+if (worktreeConfig.$meta && typeof worktreeConfig.$meta === "object") {
+  worktreeConfig.$meta.updatedAt = new Date().toISOString();
+}
+
+const temporaryPath = `${worktreeConfigPath}.deployment-mode-${process.pid}`;
+try {
+  fs.writeFileSync(temporaryPath, `${JSON.stringify(worktreeConfig, null, 2)}\n`, { mode: 0o600 });
+  fs.renameSync(temporaryPath, worktreeConfigPath);
+} finally {
+  fs.rmSync(temporaryPath, { force: true });
+}
+console.error(`Reconciled isolated Pilot worktree deployment mode from ${sourceConfigPath}: ${deploymentMode}/${exposure}`);
+EOF
+}
+
+write_seed_pending_manifest() {
+  SEED_MANIFEST_PATH="$seed_manifest_path" \
+  SEED_PENDING_MARKER_PATH="$seed_pending_marker_path" \
+  SEED_COMPLETE_MARKER_PATH="$seed_complete_marker_path" \
+  SOURCE_CONFIG_PATH="$source_config_path" \
+  TARGET_INSTANCE_ID="$worktree_instance_id" \
+  node <<'EOF'
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const manifestPath = process.env.SEED_MANIFEST_PATH;
+const pendingPath = process.env.SEED_PENDING_MARKER_PATH;
+const completePath = process.env.SEED_COMPLETE_MARKER_PATH;
+const sourceConfigPath = path.resolve(process.env.SOURCE_CONFIG_PATH);
+const sourceEnvPath = path.join(path.dirname(sourceConfigPath), ".env");
+let sourceInstanceId = path.basename(path.dirname(sourceConfigPath));
+if (fs.existsSync(sourceEnvPath)) {
+  const match = fs.readFileSync(sourceEnvPath, "utf8").match(/^\s*(?:export\s+)?PILOT_INSTANCE_ID\s*=\s*["']?([^\s"'#]+)["']?/m);
+  if (match?.[1]) sourceInstanceId = match[1];
+}
+fs.rmSync(completePath, { force: true });
+fs.rmSync(pendingPath, { force: true });
+const at = new Date().toISOString();
+fs.writeFileSync(
+  manifestPath,
+  `${JSON.stringify({
+    version: 2,
+    source: {
+      instanceId: sourceInstanceId,
+      configPath: sourceConfigPath,
+    },
+    snapshotAt: null,
+    seedMode: "minimal",
+    migrationRevision: null,
+    targetInstanceId: process.env.TARGET_INSTANCE_ID,
+    phase: "pending",
+    state: "pending",
+    attemptId: crypto.randomUUID(),
+    startedAt: null,
+    finishedAt: null,
+    diagnostics: [{ phase: "pending", status: "succeeded", at }],
+  }, null, 2)}\n`,
+  { mode: 0o600 },
+);
+EOF
+}
+
+write_fallback_worktree_config() {
+  WORKTREE_NAME="$worktree_name" \
+  BASE_CWD="$base_cwd" \
+  WORKTREE_CWD="$worktree_cwd" \
+  PILOT_DIR="$pilot_dir" \
+  SOURCE_CONFIG_PATH="$source_config_path" \
+  SOURCE_ENV_PATH="$source_env_path" \
+  WORKTREE_INSTANCE_ID="$worktree_instance_id" \
+  PILOT_WORKTREES_DIR="${PILOT_WORKTREES_DIR:-}" \
+  node <<'EOF'
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
+const net = require("node:net");
+
+function expandHomePrefix(value) {
+  if (!value) return value;
+  if (value === "~") return os.homedir();
+  if (value.startsWith("~/")) return path.resolve(os.homedir(), value.slice(2));
+  return value;
+}
+
+function nonEmpty(value) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function parseEnvFile(contents) {
+  const entries = {};
+  for (const rawLine of contents.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = rawLine.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!match) continue;
+    const [, key, rawValue] = match;
+    const value = rawValue.trim();
+    if (!value) {
+      entries[key] = "";
+      continue;
+    }
+    if (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      entries[key] = value.slice(1, -1);
+      continue;
+    }
+    entries[key] = value.replace(/\s+#.*$/, "").trim();
+  }
+  return entries;
+}
+
+async function findAvailablePort(preferredPort, reserved = new Set()) {
+  const startPort = Number.isFinite(preferredPort) && preferredPort > 0 ? Math.trunc(preferredPort) : 0;
+  if (startPort > 0) {
+    for (let port = startPort; port < startPort + 100; port += 1) {
+      if (reserved.has(port)) continue;
+      const available = await new Promise((resolve) => {
+        const server = net.createServer();
+        server.unref();
+        server.once("error", () => resolve(false));
+        server.listen(port, "127.0.0.1", () => {
+          server.close(() => resolve(true));
+        });
+      });
+      if (available) return port;
+    }
+  }
+
+  return await new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        server.close(() => reject(new Error("Failed to allocate a port.")));
+        return;
+      }
+      const port = address.port;
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+function isLoopbackHost(hostname) {
+  const value = hostname.trim().toLowerCase();
+  return value === "127.0.0.1" || value === "localhost" || value === "::1";
+}
+
+function rewriteLocalUrlPort(rawUrl, port) {
+  if (!rawUrl) return undefined;
+  try {
+    const parsed = new URL(rawUrl);
+    if (!isLoopbackHost(parsed.hostname)) return rawUrl;
+    parsed.port = String(port);
+    return parsed.toString();
+  } catch {
+    return rawUrl;
+  }
+}
+
+function resolveRuntimeLikePath(value, configPath) {
+  const expanded = expandHomePrefix(value);
+  if (path.isAbsolute(expanded)) return expanded;
+  return path.resolve(path.dirname(configPath), expanded);
+}
+
+async function main() {
+  const worktreeName = process.env.WORKTREE_NAME;
+  const pilotDir = process.env.PILOT_DIR;
+  const sourceConfigPath = process.env.SOURCE_CONFIG_PATH;
+  const sourceEnvPath = process.env.SOURCE_ENV_PATH;
+  const worktreeHome = path.resolve(expandHomePrefix(nonEmpty(process.env.PILOT_WORKTREES_DIR) ?? "~/.pilot-worktrees"));
+  const instanceId = process.env.WORKTREE_INSTANCE_ID;
+  if (!/^[A-Za-z0-9_-]+$/.test(instanceId ?? "")) {
+    throw new Error("WORKTREE_INSTANCE_ID is missing or unsafe");
+  }
+  const instanceRoot = path.resolve(worktreeHome, "instances", instanceId);
+  const configPath = path.resolve(pilotDir, "config.json");
+  const envPath = path.resolve(pilotDir, ".env");
+
+  let sourceConfig = null;
+  if (sourceConfigPath && fs.existsSync(sourceConfigPath)) {
+    sourceConfig = JSON.parse(fs.readFileSync(sourceConfigPath, "utf8"));
+  }
+
+  const sourceEnvEntries =
+    sourceEnvPath && fs.existsSync(sourceEnvPath)
+      ? parseEnvFile(fs.readFileSync(sourceEnvPath, "utf8"))
+      : {};
+
+  const preferredServerPort = Number(sourceConfig?.server?.port ?? 3101) + 1;
+  const serverPort = await findAvailablePort(preferredServerPort);
+  const preferredDbPort = Number(sourceConfig?.database?.embeddedPostgresPort ?? 54329) + 1;
+  const databasePort = await findAvailablePort(preferredDbPort, new Set([serverPort]));
+
+  fs.rmSync(configPath, { force: true });
+  fs.mkdirSync(path.dirname(configPath), { recursive: true });
+  fs.mkdirSync(instanceRoot, { recursive: true });
+
+  const authPublicBaseUrl = rewriteLocalUrlPort(sourceConfig?.auth?.publicBaseUrl, serverPort);
+  const targetConfig = {
+    $meta: {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      source: "configure",
+    },
+    ...(sourceConfig?.llm ? { llm: sourceConfig.llm } : {}),
+    database: {
+      mode: "embedded-postgres",
+      embeddedPostgresDataDir: path.resolve(instanceRoot, "db"),
+      embeddedPostgresPort: databasePort,
+      backup: {
+        enabled: sourceConfig?.database?.backup?.enabled ?? true,
+        intervalMinutes: sourceConfig?.database?.backup?.intervalMinutes ?? 60,
+        retentionDays: sourceConfig?.database?.backup?.retentionDays ?? 30,
+        dir: path.resolve(instanceRoot, "data", "backups"),
+      },
+    },
+    logging: {
+      mode: sourceConfig?.logging?.mode ?? "file",
+      logDir: path.resolve(instanceRoot, "logs"),
+    },
+    server: {
+      deploymentMode: sourceConfig?.server?.deploymentMode ?? "local_trusted",
+      exposure: sourceConfig?.server?.exposure ?? "private",
+      ...(sourceConfig?.server?.bind ? { bind: sourceConfig.server.bind } : {}),
+      ...(sourceConfig?.server?.customBindHost ? { customBindHost: sourceConfig.server.customBindHost } : {}),
+      host: sourceConfig?.server?.host ?? "127.0.0.1",
+      port: serverPort,
+      allowedHostnames: sourceConfig?.server?.allowedHostnames ?? [],
+      serveUi: sourceConfig?.server?.serveUi ?? true,
+    },
+    auth: {
+      baseUrlMode: sourceConfig?.auth?.baseUrlMode ?? "auto",
+      ...(authPublicBaseUrl ? { publicBaseUrl: authPublicBaseUrl } : {}),
+      disableSignUp: sourceConfig?.auth?.disableSignUp ?? false,
+    },
+    storage: {
+      provider: sourceConfig?.storage?.provider ?? "local_disk",
+      localDisk: {
+        baseDir: path.resolve(instanceRoot, "data", "storage"),
+      },
+      s3: {
+        bucket: sourceConfig?.storage?.s3?.bucket ?? "pilot",
+        region: sourceConfig?.storage?.s3?.region ?? "us-east-1",
+        endpoint: sourceConfig?.storage?.s3?.endpoint,
+        prefix: sourceConfig?.storage?.s3?.prefix ?? "",
+        forcePathStyle: sourceConfig?.storage?.s3?.forcePathStyle ?? false,
+      },
+    },
+    secrets: {
+      provider: sourceConfig?.secrets?.provider ?? "local_encrypted",
+      strictMode: sourceConfig?.secrets?.strictMode ?? false,
+      localEncrypted: {
+        keyFilePath: path.resolve(instanceRoot, "secrets", "master.key"),
+      },
+    },
+  };
+
+  fs.writeFileSync(configPath, `${JSON.stringify(targetConfig, null, 2)}\n`, { mode: 0o600 });
+
+  const inlineMasterKey = nonEmpty(sourceEnvEntries.PILOT_SECRETS_MASTER_KEY ?? sourceEnvEntries.PILOT_SECRETS_MASTER_KEY);
+  if (inlineMasterKey) {
+    fs.mkdirSync(path.resolve(instanceRoot, "secrets"), { recursive: true });
+    fs.writeFileSync(targetConfig.secrets.localEncrypted.keyFilePath, inlineMasterKey, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+  } else {
+    const sourceKeyFilePath = nonEmpty(sourceEnvEntries.PILOT_SECRETS_MASTER_KEY_FILE ?? sourceEnvEntries.PILOT_SECRETS_MASTER_KEY_FILE)
+      ? resolveRuntimeLikePath(sourceEnvEntries.PILOT_SECRETS_MASTER_KEY_FILE, sourceConfigPath)
+      : nonEmpty(sourceConfig?.secrets?.localEncrypted?.keyFilePath)
+        ? resolveRuntimeLikePath(sourceConfig.secrets.localEncrypted.keyFilePath, sourceConfigPath)
+        : null;
+
+    if (sourceKeyFilePath && fs.existsSync(sourceKeyFilePath)) {
+      fs.mkdirSync(path.resolve(instanceRoot, "secrets"), { recursive: true });
+      fs.copyFileSync(sourceKeyFilePath, targetConfig.secrets.localEncrypted.keyFilePath);
+      fs.chmodSync(targetConfig.secrets.localEncrypted.keyFilePath, 0o600);
+    }
+  }
+
+  // Managed entries carry a legacy PILOT_ twin alongside every PILOT_ key:
+  // CLIs running inside the worktree can predate the brand rename.
+  const managedEnv = [
+    ["HOME", worktreeHome],
+    ["INSTANCE_ID", instanceId],
+    ["CONFIG", configPath],
+    ["CONTEXT", path.resolve(worktreeHome, "context.json")],
+    ["IN_WORKTREE", "true"],
+    ["WORKTREE_NAME", worktreeName],
+  ];
+  const envLines: string[] = [];
+  for (const [suffix, value] of managedEnv) {
+    envLines.push(`PILOT_${suffix}=` + JSON.stringify(value));
+    envLines.push(`PILOT_${suffix}=` + JSON.stringify(value));
+  }
+
+  // Secrets that must be carried over from the source instance so the worktree's
+  // dev server behaves like the real one. PILOT_TOOL_ACTION_SIGNING_SECRET is
+  // required for signed tool-gateway approvals (ask-first MCP policies); without
+  // it the first gated POST /tool-gateway/tools/call returns Internal server error.
+  // BETTER_AUTH_SECRET keeps auth tokens compatible across the source/worktree pair.
+  const propagatedSecretKeys = [
+    ["PILOT_AGENT_JWT_SECRET", "PILOT_AGENT_JWT_SECRET"],
+    ["PILOT_TOOL_ACTION_SIGNING_SECRET", "PILOT_TOOL_ACTION_SIGNING_SECRET"],
+    ["BETTER_AUTH_SECRET", "BETTER_AUTH_SECRET"],
+  ];
+  for (const [key, legacyKey] of propagatedSecretKeys) {
+    const value = nonEmpty(sourceEnvEntries[key] ?? sourceEnvEntries[legacyKey]);
+    if (value) {
+      envLines.push(key + "=" + JSON.stringify(value));
+      envLines.push(legacyKey + "=" + JSON.stringify(value));
+    }
+  }
+
+  fs.writeFileSync(envPath, `${envLines.join("\n")}\n`, { mode: 0o600 });
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});
+EOF
+}
+
+if [[ -e "$worktree_config_path" && -e "$worktree_env_path" ]] && existing_worktree_config_is_usable; then
+  echo "Reusing existing isolated Pilot worktree config at $worktree_config_path" >&2
+else
+  if [[ -e "$worktree_config_path" || -e "$worktree_env_path" ]]; then
+    echo "Existing isolated Pilot worktree config is stale for this host; regenerating." >&2
+  fi
+  if pilotai_command_available; then
+    if run_isolated_worktree_init; then
+      :
+    else
+      init_exit_code=$?
+      if [[ "$init_exit_code" -eq 127 ]]; then
+        # Every CLI candidate was unusable (e.g. an unhealthy base install that
+        # the repair could not fix); degrade instead of stranding the run.
+        echo "No usable pilotai CLI found; writing isolated fallback config without DB seeding." >&2
+        write_fallback_worktree_config
+      else
+        # A CLI that ran and failed signals a real problem; do not paper over
+        # it with an unseeded fallback config.
+        echo "pilotai worktree init failed (exit $init_exit_code); failing provisioning instead of writing an unseeded fallback config." >&2
+        exit "$init_exit_code"
+      fi
+    fi
+  else
+    echo "pilotai worktree init unavailable; writing isolated fallback config without DB seeding." >&2
+    write_fallback_worktree_config
+  fi
+  created_worktree_config=1
+fi
+
+# The target config can predate a deployment-mode change on the registered
+# source, and older/fallback CLI writers may default this field independently.
+# Reconcile it after either create or reuse so the final guest config always
+# carries the source's deployment/auth contract without replacing its database.
+reconcile_worktree_deployment_mode
+
+if [[ "$created_worktree_config" -eq 1 && ! -e "$seed_manifest_path" && ! -e "$seed_pending_marker_path" && ! -e "$seed_complete_marker_path" ]]; then
+  write_seed_pending_manifest
+fi
+
+list_base_node_modules_paths() {
+  cd "$base_cwd" &&
+    find . \
+      -mindepth 1 \
+      -maxdepth 4 \
+      -type d \
+      -name node_modules \
+      ! -path './.git/*' \
+      ! -path './.pilot/*' \
+      | sed 's#^\./##'
+}
+
+compute_pnpm_install_fingerprint() {
+  WORKTREE_CWD="$worktree_cwd" node <<'EOF'
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = process.env.WORKTREE_CWD;
+const ignoredDirs = new Set([".git", ".pilot", "node_modules", "dist", "storybook-static"]);
+const files = [];
+
+function walk(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (ignoredDirs.has(entry.name)) continue;
+
+    const absolutePath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walk(absolutePath);
+      continue;
+    }
+
+    if (
+      entry.isFile()
+      && (entry.name === "package.json" || entry.name === "pnpm-lock.yaml" || entry.name === "pnpm-workspace.yaml")
+    ) {
+      files.push(absolutePath);
+    }
+  }
+}
+
+walk(root);
+files.sort((left, right) => path.relative(root, left).localeCompare(path.relative(root, right)));
+
+const hash = crypto.createHash("sha256");
+for (const file of files) {
+  const relativePath = path.relative(root, file).replaceAll(path.sep, "/");
+  hash.update(relativePath);
+  hash.update("\0");
+  hash.update(fs.readFileSync(file));
+  hash.update("\0");
+}
+
+process.stdout.write(hash.digest("hex"));
+EOF
+}
+
+if [[ -f "$worktree_cwd/package.json" && -f "$worktree_cwd/pnpm-lock.yaml" ]]; then
+  needs_install=0
+  install_fingerprint_path="$pilot_dir/pnpm-install-fingerprint"
+  current_install_fingerprint="$(compute_pnpm_install_fingerprint)"
+  previous_install_fingerprint=""
+  if [[ -f "$install_fingerprint_path" ]]; then
+    previous_install_fingerprint="$(cat "$install_fingerprint_path")"
+  fi
+
+  while IFS= read -r relative_path; do
+    [[ -n "$relative_path" ]] || continue
+    target_path="$worktree_cwd/$relative_path"
+
+    if [[ -L "$target_path" || ! -e "$target_path" ]]; then
+      needs_install=1
+      break
+    fi
+  done < <(list_base_node_modules_paths)
+
+  if [[ "$needs_install" -eq 0 && "$current_install_fingerprint" != "$previous_install_fingerprint" ]]; then
+    needs_install=1
+  fi
+
+  if [[ "$needs_install" -eq 1 ]]; then
+    backup_suffix=".pilot-backup-${BASHPID:-$$}"
+    moved_symlink_paths=()
+
+    while IFS= read -r relative_path; do
+      [[ -n "$relative_path" ]] || continue
+      target_path="$worktree_cwd/$relative_path"
+      if [[ -L "$target_path" ]]; then
+        backup_path="${target_path}${backup_suffix}"
+        rm -rf "$backup_path"
+        mv "$target_path" "$backup_path"
+        moved_symlink_paths+=("$relative_path")
+      fi
+    done < <(list_base_node_modules_paths)
+
+    restore_moved_symlinks() {
+      local relative_path target_path backup_path
+      [[ ${#moved_symlink_paths[@]} -gt 0 ]] || return 0
+      for relative_path in "${moved_symlink_paths[@]}"; do
+        target_path="$worktree_cwd/$relative_path"
+        backup_path="${target_path}${backup_suffix}"
+        [[ -L "$backup_path" ]] || continue
+        rm -rf "$target_path"
+        mv "$backup_path" "$target_path"
+      done
+    }
+
+    cleanup_moved_symlinks() {
+      local relative_path target_path backup_path
+      [[ ${#moved_symlink_paths[@]} -gt 0 ]] || return 0
+      for relative_path in "${moved_symlink_paths[@]}"; do
+        target_path="$worktree_cwd/$relative_path"
+        backup_path="${target_path}${backup_suffix}"
+        [[ -L "$backup_path" ]] && rm "$backup_path"
+      done
+    }
+
+    run_pnpm_install() {
+      local stdout_path stderr_path
+      stdout_path="$(mktemp)"
+      stderr_path="$(mktemp)"
+
+      if (
+        cd "$worktree_cwd"
+        pnpm install --prod=false "$@"
+      ) >"$stdout_path" 2>"$stderr_path"; then
+        cat "$stdout_path"
+        cat "$stderr_path" >&2
+        rm -f "$stdout_path" "$stderr_path"
+        return 0
+      fi
+
+      local exit_code=$?
+      cat "$stdout_path"
+      cat "$stderr_path" >&2
+      if grep -q "ERR_PNPM_OUTDATED_LOCKFILE" "$stdout_path" "$stderr_path"; then
+        rm -f "$stdout_path" "$stderr_path"
+        return 90
+      fi
+
+      rm -f "$stdout_path" "$stderr_path"
+      return "$exit_code"
+    }
+
+    if run_pnpm_install --frozen-lockfile; then
+      :
+    else
+      install_exit_code=$?
+      if [[ "$install_exit_code" -eq 90 ]]; then
+        echo "pnpm-lock.yaml is out of date in this execution workspace; retrying install without --frozen-lockfile." >&2
+        run_pnpm_install --no-frozen-lockfile || {
+          restore_moved_symlinks
+          exit 1
+        }
+      else
+        restore_moved_symlinks
+        exit "$install_exit_code"
+      fi
+    fi
+
+    cleanup_moved_symlinks
+    current_install_fingerprint="$(compute_pnpm_install_fingerprint)"
+    printf '%s\n' "$current_install_fingerprint" >"$install_fingerprint_path"
+  fi
+
+  exit 0
+fi
+
+while IFS= read -r relative_path; do
+  [[ -n "$relative_path" ]] || continue
+  source_path="$base_cwd/$relative_path"
+  target_path="$worktree_cwd/$relative_path"
+
+  [[ -d "$source_path" ]] || continue
+  [[ -e "$target_path" || -L "$target_path" ]] && continue
+
+  mkdir -p "$(dirname "$target_path")"
+  ln -s "$source_path" "$target_path"
+done < <(
+  list_base_node_modules_paths
+)

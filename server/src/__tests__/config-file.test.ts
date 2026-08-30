@@ -1,0 +1,114 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { readConfigFile } from "../config-file.js";
+
+const ORIGINAL_PILOT_CONFIG = process.env.PILOT_CONFIG;
+
+function writeConfig(configPath: string, value: unknown): void {
+  fs.writeFileSync(configPath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function minimalConfig(): unknown {
+  return {
+    $meta: {
+      version: 1,
+      updatedAt: "2026-07-05T00:00:00.000Z",
+      source: "configure",
+    },
+    database: {
+      mode: "embedded-postgres",
+    },
+    logging: {
+      mode: "file",
+    },
+    server: {},
+  };
+}
+
+describe("readConfigFile", () => {
+  let tempDir: string;
+  let configPath: string;
+
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "pilot-config-file-test-"));
+    configPath = path.join(tempDir, "config.json");
+    process.env.PILOT_CONFIG = configPath;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    if (ORIGINAL_PILOT_CONFIG === undefined) {
+      delete process.env.PILOT_CONFIG;
+    } else {
+      process.env.PILOT_CONFIG = ORIGINAL_PILOT_CONFIG;
+    }
+
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it("returns null when the config file does not exist", () => {
+    expect(readConfigFile()).toBeNull();
+  });
+
+  it("throws a path-specific error when the config file is invalid JSON", () => {
+    fs.writeFileSync(configPath, "{");
+
+    expect(() => readConfigFile()).toThrow(
+      new RegExp(`Invalid Pilot config at ${escapeRegExp(configPath)}: failed to read or parse JSON`),
+    );
+  });
+
+  it("throws a field-specific error when the config file fails schema validation", () => {
+    const config = minimalConfig();
+    if (typeof config === "object" && config !== null) {
+      (config as { $meta: { source: string } }).$meta.source = "edited-by-hand";
+    }
+
+    writeConfig(configPath, config);
+
+    expect(() => readConfigFile()).toThrow(/Invalid Pilot config .* \$meta\.source:/);
+  });
+
+  it("parses a valid config file", () => {
+    writeConfig(configPath, minimalConfig());
+
+    expect(readConfigFile()).toMatchObject({
+      $meta: {
+        source: "configure",
+      },
+      database: {
+        mode: "embedded-postgres",
+      },
+      logging: {
+        mode: "file",
+      },
+    });
+  });
+
+  it("warns about likely misspellings without stripping them", () => {
+    const config = {
+      ...(minimalConfig() as Record<string, unknown>),
+      server: {
+        ports: 3200,
+      },
+    };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    writeConfig(configPath, config);
+
+    expect(readConfigFile()).toMatchObject({
+      server: {
+        port: 3100,
+        ports: 3200,
+      },
+    });
+    expect(warn).toHaveBeenCalledWith(
+      "Unknown config key server.ports; did you mean server.port? It will be preserved.",
+    );
+  });
+});

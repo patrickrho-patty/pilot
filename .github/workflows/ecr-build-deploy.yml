@@ -1,0 +1,180 @@
+# Builds the Pilot Docker image, pushes it to the account's ECR, then deploys
+# it to rho-cluster (EKS ap-northeast-2) via Helm into the `pilot` namespace.
+#
+# Fork-specific workflow: upstream docker.yml publishes multi-arch to GHCR;
+# this one builds linux/amd64 only (matching the rho-cluster nodes), pushes
+# to 361645878435.dkr.ecr.ap-northeast-2.amazonaws.com/pilot, and rolls out
+# the new image with helm --atomic so a failed upgrade auto-rolls back.
+#
+# Trigger via `gh workflow run ecr-build-deploy.yml -f tag=vX.Y.Z`.
+# Set `deploy_enabled=false` to build/push only without deploying.
+name: ecr-build-deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag (e.g. v0.1.0-pilot)"
+        required: true
+        default: "v0.1.0-pilot"
+      deploy_enabled:
+        description: "Deploy to rho-cluster after push"
+        type: boolean
+        required: false
+        default: true
+
+env:
+  ECR_REGISTRY: 361645878435.dkr.ecr.ap-northeast-2.amazonaws.com
+  ECR_REPOSITORY: pilot
+  AWS_REGION: ap-northeast-2
+  EKS_CLUSTER: rho-cluster
+  HELM_NAMESPACE: pilot
+  HELM_RELEASE: pilot
+
+# Serialise runs per ref without killing an in-flight one: a newer dispatch
+# supersedes only the pending slot; a running build/deploy always finishes.
+concurrency:
+  group: ecr-build-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # Full history so git describe can compute a version if needed; .git
+        # is dockerignored but PILOT_BUILD_COMMIT is passed explicitly.
+        with:
+          fetch-depth: 0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 9.15.4
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Keep the lockfile in the Docker build context consistent with package
+      # metadata (same rationale as upstream docker.yml).
+      - name: Refresh lockfile for Docker build context
+        run: |
+          set -euo pipefail
+          pnpm install --lockfile-only --ignore-scripts --no-frozen-lockfile
+
+          changed="$(git status --porcelain)"
+          if [ -z "$changed" ]; then
+            echo "Lockfile already matches package metadata."
+            exit 0
+          fi
+
+          if printf '%s\n' "$changed" | grep -Fvq ' pnpm-lock.yaml'; then
+            echo "Unexpected files changed during lockfile refresh:"
+            echo "$changed"
+            exit 1
+          fi
+
+          echo "Using refreshed pnpm-lock.yaml in the Docker build context."
+
+      - name: Compute tool cache epoch
+        id: tools-epoch
+        run: echo "epoch=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Free runner disk
+        run: |
+          set -euo pipefail
+          sudo rm -rf \
+            /usr/share/dotnet \
+            /usr/share/swift \
+            /usr/local/lib/android \
+            /usr/local/share/boost \
+            /usr/local/share/powershell \
+            /opt/ghc \
+            /opt/hostedtoolcache/CodeQL || true
+          docker system prune -af || true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          # Pin the production stage explicitly: the Dockerfile declares a
+          # later `cloud` stage and the default target would drift.
+          target: production
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            PILOT_BUILD_VERSION=${{ inputs.tag }}
+            PILOT_BUILD_COMMIT=${{ github.sha }}
+            CLI_TOOLS_CACHE_EPOCH=${{ steps.tools-epoch.outputs.epoch }}
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ inputs.tag }}
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    if: ${{ inputs.deploy_enabled }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name "${EKS_CLUSTER}" --region "${AWS_REGION}"
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+
+      - name: Lint chart
+        run: helm lint deploy/charts/pilot -f deploy/rho-eks.yaml
+
+      - name: Deploy
+        run: |
+          set -euo pipefail
+          helm upgrade --install "${HELM_RELEASE}" deploy/charts/pilot \
+            --namespace "${HELM_NAMESPACE}" \
+            --create-namespace \
+            -f deploy/rho-eks.yaml \
+            --set image.tag="${{ inputs.tag }}" \
+            --atomic \
+            --wait \
+            --timeout 15m
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/"${HELM_RELEASE}" \
+            --namespace "${HELM_NAMESPACE}" \
+            --timeout=5m
+          kubectl get pods -n "${HELM_NAMESPACE}" -o wide

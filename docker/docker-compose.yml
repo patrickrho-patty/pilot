@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: pilot
+      POSTGRES_PASSWORD: pilot
+      POSTGRES_DB: pilot
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pilot -d pilot"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  server:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "3100:3100"
+    environment:
+      DATABASE_URL: postgres://pilot:pilot@db:5432/pilot
+      PORT: "3100"
+      SERVE_UI: "true"
+      PILOT_DEPLOYMENT_MODE: "authenticated"
+      PILOT_DEPLOYMENT_EXPOSURE: "private"
+      PILOT_PUBLIC_URL: "${PILOT_PUBLIC_URL:-http://localhost:3100}"
+      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:?BETTER_AUTH_SECRET must be set}"
+    volumes:
+      - pilot-data:/pilot
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  pilot-data:

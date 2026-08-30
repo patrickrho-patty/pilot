@@ -1,0 +1,69 @@
+{
+  "name": "pilotai",
+  "version": "0.3.1",
+  "description": "Pilot CLI — orchestrate AI agent teams to run a business",
+  "type": "module",
+  "bin": {
+    "pilotai": "./dist/index.js"
+  },
+  "keywords": [
+    "pilot",
+    "ai",
+    "agents",
+    "orchestration",
+    "cli"
+  ],
+  "license": "LicenseRef-Proprietary",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/patty-io/pilot",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/patty-io/pilot",
+  "bugs": {
+    "url": "https://github.com/patty-io/pilot/issues"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "node --input-type=module -e \"import esbuild from 'esbuild'; import config from './esbuild.config.mjs'; await esbuild.build(config);\" && chmod +x dist/index.js",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0",
+    "@pilotai/adapter-claude-local": "workspace:*",
+    "@pilotai/adapter-codex-local": "workspace:*",
+    "@pilotai/adapter-cursor-cloud": "workspace:*",
+    "@pilotai/adapter-cursor-local": "workspace:*",
+    "@pilotai/adapter-gemini-local": "workspace:*",
+    "@pilotai/adapter-grok-local": "workspace:*",
+    "@pilotai/adapter-kimi-local": "workspace:*",
+    "@pilotai/adapter-opencode-local": "workspace:*",
+    "@pilotai/adapter-pi-local": "workspace:*",
+    "@pilotai/adapter-openclaw-gateway": "workspace:*",
+    "@pilotai/adapter-utils": "workspace:*",
+    "@pilotai/db": "workspace:*",
+    "@pilotai/server": "workspace:*",
+    "@pilotai/shared": "workspace:*",
+    "@pilotai/hermes-pilot-adapter": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "dotenv": "^17.4.2",
+    "commander": "^13.1.0",
+    "embedded-postgres": "^18.1.0-beta.16",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=24.11.0"
+  }
+}

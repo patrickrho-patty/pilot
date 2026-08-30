@@ -1,0 +1,41 @@
+{
+  "name": "@pilotai/plugin-kitchen-sink-example",
+  "version": "0.1.0",
+  "description": "Reference plugin that demonstrates the full Pilot plugin surface area in one package",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "pilotPlugin": {
+    "manifest": "./dist/manifest.js",
+    "worker": "./dist/worker.js",
+    "ui": "./dist/ui/"
+  },
+  "scripts": {
+    "prebuild": "pnpm --filter @pilotai/plugin-sdk ensure-build-deps",
+    "build": "tsc && node ./scripts/build-ui.mjs",
+    "clean": "rm -rf dist",
+    "typecheck": "pnpm --filter @pilotai/plugin-sdk ensure-build-deps && tsc --noEmit"
+  },
+  "dependencies": {
+    "@pilotai/plugin-sdk": "workspace:*",
+    "@pilotai/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "license": "LicenseRef-Proprietary"
+}
