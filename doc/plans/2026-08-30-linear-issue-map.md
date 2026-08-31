@@ -101,3 +101,17 @@
 - Workplace scenarios (§35–42) — future use-case demos, not features
 - Demo script, RACI, runbooks (§80–88) — client-engagement materials
 - §65/§66 "required configuration/deployment" checklists — absorbed into Wave 1 tickets and PAT-1969
+
+---
+
+## Created in Linear (2026-08-31)
+
+**Epics:** PAT-1975 (Crew side) ↔ PAT-1976 (Pilot side)
+
+| Wave | Crew | Pilot |
+|---|---|---|
+| 1 | PAT-1995 (pilot mode), PAT-1996 (acceptance E2E) | PAT-1977 (core loop), PAT-1978 (API client), PAT-1979 (hire), PAT-1980 (offboard), PAT-1981 (runtime pkg), PAT-1982 (flag+deploy) |
+| 2 | PAT-1997 (edit UX), PAT-1998 (settings page) | PAT-1983 (reliability), PAT-1984 (observability), PAT-1985 (edit policy), PAT-1986 (mapping config) |
+| 3 | PAT-1999 (approval cards), PAT-2000 (previews) | PAT-1987 (protocol), PAT-1988 (integration object) |
+| 4 | PAT-2001 (proposal lane), PAT-2002 (delegation visibility) | PAT-1989 (awareness), PAT-1990 (multi-agent) |
+| Backlog | PAT-2003 (workflow action), PAT-2004 (message action), PAT-2005 (mapping UI) | PAT-1991 (Mode B), PAT-1992 (service account), PAT-1993 (job protocol watch), PAT-1994 (federation) |
