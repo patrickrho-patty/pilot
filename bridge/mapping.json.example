@@ -1,0 +1,16 @@
+{
+  "$comment": "crew-bridge mapping (PAT-1977). Channel keys are Crew channel UUIDs (the h tag). Agent keys are display names; pubkey is the agent's Crew npub (hex); allowedSenders are the only pubkeys whose mentions may assign that agent. Point BRIDGE_MAPPING_PATH at this file.",
+  "channels": {
+    "11111111-1111-1111-1111-111111111111": {
+      "companyId": "your-pilot-company-id",
+      "name": "market-intel"
+    }
+  },
+  "agents": {
+    "christina": {
+      "pilotAgentId": "your-pilot-agent-id",
+      "pubkey": "64-char-hex-agent-pubkey",
+      "allowedSenders": ["64-char-hex-allowed-human-pubkey"]
+    }
+  }
+}

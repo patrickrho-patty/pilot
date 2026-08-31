@@ -57,17 +57,10 @@ export class CrewRelay {
       try {
         this.relay = await Relay.connect(this.relayUrl);
         this.backoffMs = 1000;
-        this.relay.on("auth", async (challenge: string) =>
-          finalizeEvent(
-            {
-              kind: 22242,
-              created_at: Math.floor(Date.now() / 1000),
-              tags: [["challenge", challenge], ["relay", this.relayUrl]],
-              content: "",
-            },
-            hexToBytes(this.privateKey),
-          ),
-        );
+        // NIP-42: nostr-tools ≥2.2 hands us the pre-built auth event template
+        // (kind 22242 with challenge+relay tags) — we only sign it.
+        this.relay.onauth = (authEvent) =>
+          Promise.resolve(finalizeEvent(authEvent, hexToBytes(this.privateKey)));
         this.relay.subscribe([{ ...filter, since: Math.floor(Date.now() / 1000) }], {
           onevent: (event: NostrEvent) => {
             if (verifyCrewEvent(event)) onEvent(event);
