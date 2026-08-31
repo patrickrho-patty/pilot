@@ -115,3 +115,15 @@
 | 3 | PAT-1999 (approval cards), PAT-2000 (previews) | PAT-1987 (protocol), PAT-1988 (integration object) |
 | 4 | PAT-2001 (proposal lane), PAT-2002 (delegation visibility) | PAT-1989 (awareness), PAT-1990 (multi-agent) |
 | Backlog | PAT-2003 (workflow action), PAT-2004 (message action), PAT-2005 (mapping UI) | PAT-1991 (Mode B), PAT-1992 (service account), PAT-1993 (job protocol watch), PAT-1994 (federation) |
+
+## Audit additions (2026-08-31) — gaps found in full re-read
+
+| Pilot | Title | Wave |
+|---|---|---|
+| PAT-2006 | SIEM/audit export (§58, §67 P1) | 2 |
+| PAT-2007 | Data-retention controls by channel/classification (§50, §67 P1) | 2 |
+| PAT-2008 | Git/PR event routing for security/release employees (§36, §67 P1) | 2/3 |
+| PAT-2009 | Day-2 operational runbooks (§88, Appendix D) | 2 |
+| PAT-2010 | Governance pilot E2E: financial approval gate (§37, §76) | 2/3 |
+
+Absorbed elsewhere (not separate issues): gateway secret management rules → PAT-1977/1984; §65 retention/audit config + ops channel → PAT-1969/PAT-1963 ops scope; §66 "native connector posting as agent" → covered by PAT-1981 + PAT-1988 combination; §67 P1 "Pilot state → Crew status projection" → covered by PAT-2000 previews.
