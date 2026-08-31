@@ -15,6 +15,18 @@ spec:
     - host: {{ .Values.ingress.host | quote }}
       http:
         paths:
+          {{- if .Values.ingress.updatesProxy.enabled }}
+          # Crew desktop auto-updates: 302-presign proxy in front of the
+          # private crew-updates Wasabi bucket (rho-cluster, infra owned by
+          # the crew repo: infra/updates-proxy). Must precede the / catch-all.
+          - path: /updates
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.ingress.updatesProxy.serviceName }}
+                port:
+                  number: {{ .Values.ingress.updatesProxy.servicePort }}
+          {{- end }}
           - path: /
             pathType: Prefix
             backend:
