@@ -64,4 +64,62 @@ export class PilotClient {
       body: JSON.stringify({ body: bodyText }),
     });
   }
+
+  /** Company secret store (PAT-1979). Returns the created secret id. */
+  async createSecret(input: {
+    companyId: string;
+    name: string;
+    key: string;
+    value: string;
+    description?: string;
+  }): Promise<{ id: string }> {
+    const path = `/api/companies/${input.companyId}/secrets`;
+    const resp = await this.call(path, {
+      method: "POST",
+      body: JSON.stringify({
+        name: input.name,
+        key: input.key,
+        value: input.value,
+        ...(input.description ? { description: input.description } : {}),
+      }),
+    });
+    const body = (await resp.json()) as { id: string };
+    return { id: body.id };
+  }
+
+  async getAgent(agentId: string): Promise<{
+    id: string;
+    adapterConfig?: Record<string, unknown>;
+  }> {
+    const resp = await this.call(`/api/agents/${agentId}`, { method: "GET" });
+    return (await resp.json()) as {
+      id: string;
+      adapterConfig?: Record<string, unknown>;
+    };
+  }
+
+  /**
+   * Merge entries into an agent's adapterConfig.env and PATCH the agent.
+   * The server shallow-merges top-level adapterConfig keys, so a partial env
+   * object would clobber the existing one — we read, merge, and write back
+   * the complete env ourselves.
+   * Values may be plain strings or secret_ref bindings:
+   *   { type: "secret_ref", secretId: string }
+   */
+  async updateAgentEnv(
+    agentId: string,
+    entries: Record<string, string | { type: "secret_ref"; secretId: string }>,
+  ): Promise<void> {
+    const agent = await this.getAgent(agentId);
+    const adapterConfig = { ...(agent.adapterConfig ?? {}) };
+    const env = {
+      ...((adapterConfig["env"] as Record<string, unknown> | undefined) ?? {}),
+      ...entries,
+    };
+    adapterConfig["env"] = env;
+    await this.call(`/api/agents/${agentId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ adapterConfig }),
+    });
+  }
 }

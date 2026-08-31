@@ -25,21 +25,27 @@ export async function sendGatewayAck(
   replyToEventId: string,
   text: string,
 ): Promise<void> {
-  const res = await runCrewCli(
-    cliPath,
-    [
-      "messages",
-      "send",
-      "--channel",
-      channelUuid,
-      "--reply-to",
-      replyToEventId,
-      "--content",
-      text,
-    ],
-    env,
-  );
-  if (!res.ok) throw new Error("gateway ack failed: crew-cli exited non-zero");
+  await sendGatewayMessage(cliPath, env, channelUuid, text, replyToEventId);
+}
+
+export async function sendGatewayMessage(
+  cliPath: string,
+  env: Record<string, string>,
+  channelUuid: string,
+  text: string,
+  replyToEventId?: string,
+): Promise<void> {
+  const args = [
+    "messages",
+    "send",
+    "--channel",
+    channelUuid,
+    ...(replyToEventId ? ["--reply-to", replyToEventId] : []),
+    "--content",
+    text,
+  ];
+  const res = await runCrewCli(cliPath, args, env);
+  if (!res.ok) throw new Error("gateway message failed: crew-cli exited non-zero");
 }
 
 export function parseChannelList(stdout: string, channelName: string): string | null {

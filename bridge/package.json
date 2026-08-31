@@ -2,9 +2,14 @@
   "name": "@pilotai/crew-bridge",
   "private": true,
   "type": "module",
+  "bin": {
+    "crew-bridge": "./dist/cli.js"
+  },
   "scripts": {
     "test": "vitest run",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "serve": "node dist/cli.js serve",
+    "hire": "node dist/cli.js hire"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",

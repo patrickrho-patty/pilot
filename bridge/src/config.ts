@@ -5,7 +5,7 @@ export type BridgeConfig = {
   gatewayPrivateKey: string;
   dbPath: string;
   port: number;
-  admin: { crewCliPath: string; relayAdminKeyPath: string };
+  admin: { crewCliPath: string; relayAdminKeyPath: string; crewAdminPath?: string };
 };
 
 const HEX64 = /^[0-9a-f]{64}$/i;
@@ -33,6 +33,7 @@ export function loadConfig(
     admin: {
       crewCliPath: env["CREW_CLI_PATH"] ?? "crew",
       relayAdminKeyPath: req("CREW_RELAY_ADMIN_KEY_PATH"),
+      crewAdminPath: env["CREW_ADMIN_PATH"],
     },
   };
 }

@@ -1,0 +1,88 @@
+import { loadConfig } from "./config.js";
+import { loadMapping } from "./crew.js";
+import { hireEmployee } from "./hire.js";
+import { PilotClient } from "./pilot.js";
+import { CrewRelay } from "./relay.js";
+import { BridgeStore } from "./store.js";
+
+function usage(): never {
+  console.error(`usage: crew-bridge <command>
+
+commands:
+  serve                                  run the relay→Pilot service loop
+  hire <name> --role <role> --agent-id <id> --company <id>
+        [--reports-to <name>] [--channels <uuid,uuid>] [--welcome-channel <uuid>]
+        [--mapping <path>] [--db <path>]
+
+hire mints the employee's Crew identity, publishes their profile, enrolls them
+on the relay, joins the mapped channels, and places the signing key into Pilot
+secret custody. The private key is never printed.`);
+  process.exit(1);
+}
+
+function arg(name: string, argv: string[]): string | undefined {
+  const i = argv.indexOf(name);
+  return i >= 0 ? argv[i + 1] : undefined;
+}
+
+async function main(): Promise<void> {
+  const [command, ...rest] = process.argv.slice(2);
+  const mappingPath = arg("--mapping", rest) ?? process.env.BRIDGE_MAPPING_PATH ?? "./mapping.json";
+  const dbPath = arg("--db", rest) ?? process.env.BRIDGE_DB_PATH ?? "./bridge.db";
+
+  if (command === "hire") {
+    const name = rest[0];
+    const role = arg("--role", rest);
+    const agentId = arg("--agent-id", rest);
+    const companyId = arg("--company", rest);
+    if (!name || !role || !agentId || !companyId) usage();
+
+    const config = loadConfig(process.env, dbPath);
+    const mapping = loadMapping(mappingPath);
+    const relay = new CrewRelay(config.relayUrl, config.gatewayPrivateKey);
+    const pilot = new PilotClient(config.pilotBaseUrl, config.pilotApiKey);
+
+    const channelIdsArg = arg("--channels", rest);
+    const channelIds = channelIdsArg
+      ? channelIdsArg.split(",").map((c) => c.trim()).filter(Boolean)
+      : Object.keys(mapping.channels);
+    const result = await hireEmployee(config, relay, pilot, {
+      name,
+      role,
+      agentId,
+      companyId,
+      channelIds,
+      ...(arg("--welcome-channel", rest)
+        ? { welcomeChannelId: arg("--welcome-channel", rest) }
+        : {}),
+      ...(arg("--reports-to", rest) ? { reportsTo: arg("--reports-to", rest) } : {}),
+    });
+    relay.close();
+
+    // Secret-free summary (§10.4).
+    console.log(
+      JSON.stringify({
+        hired: name,
+        pubkey: result.pubkey,
+        profileEventId: result.profileEventId,
+        enrolledInRelay: result.enrolledInRelay,
+        joinedChannelIds: result.joinedChannelIds,
+        secretId: result.secretId,
+        ...(result.welcomeEventId ? { welcomeEventId: result.welcomeEventId } : {}),
+      }),
+    );
+    return;
+  }
+
+  if (command === "serve") {
+    await import("./index.js");
+    return;
+  }
+
+  usage();
+}
+
+void main().catch((err) => {
+  console.error("fatal:", err instanceof Error ? err.message : err);
+  process.exit(1);
+});
