@@ -122,4 +122,19 @@ export class PilotClient {
       body: JSON.stringify({ adapterConfig }),
     });
   }
+
+  /** Drop entries from an agent's adapterConfig.env (offboard hardening). */
+  async removeAgentEnvKeys(agentId: string, keys: string[]): Promise<void> {
+    const agent = await this.getAgent(agentId);
+    const adapterConfig = { ...(agent.adapterConfig ?? {}) };
+    const env = {
+      ...((adapterConfig["env"] as Record<string, unknown> | undefined) ?? {}),
+    };
+    for (const key of keys) delete env[key];
+    adapterConfig["env"] = env;
+    await this.call(`/api/agents/${agentId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ adapterConfig }),
+    });
+  }
 }

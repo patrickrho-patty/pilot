@@ -1,6 +1,7 @@
 import { loadConfig } from "./config.js";
 import { loadMapping } from "./crew.js";
 import { hireEmployee } from "./hire.js";
+import { offboardEmployee } from "./offboard.js";
 import { PilotClient } from "./pilot.js";
 import { CrewRelay } from "./relay.js";
 import { BridgeStore } from "./store.js";
@@ -13,6 +14,8 @@ commands:
   hire <name> --role <role> --agent-id <id> --company <id>
         [--reports-to <name>] [--channels <uuid,uuid>] [--welcome-channel <uuid>]
         [--mapping <path>] [--db <path>]
+  offboard <name> [--pubkey <hex>] [--reason <text>] [--agent-key-file <path>]
+        [--channels <uuid,uuid>] [--mapping <path>] [--db <path>]
 
 hire mints the employee's Crew identity, publishes their profile, enrolls them
 on the relay, joins the mapped channels, and places the signing key into Pilot
@@ -69,6 +72,43 @@ async function main(): Promise<void> {
         joinedChannelIds: result.joinedChannelIds,
         secretId: result.secretId,
         ...(result.welcomeEventId ? { welcomeEventId: result.welcomeEventId } : {}),
+      }),
+    );
+    return;
+  }
+
+  if (command === "offboard") {
+    const name = rest[0];
+    if (!name) usage();
+
+    const config = loadConfig(process.env, dbPath);
+    const mapping = loadMapping(mappingPath);
+    const relay = new CrewRelay(config.relayUrl, config.gatewayPrivateKey);
+    const pilot = new PilotClient(config.pilotBaseUrl, config.pilotApiKey);
+
+    const channelsArg = arg("--channels", rest);
+    const result = await offboardEmployee(config, relay, pilot, mapping, {
+      name,
+      ...(arg("--pubkey", rest) ? { pubkey: arg("--pubkey", rest) } : {}),
+      ...(arg("--reason", rest) ? { reason: arg("--reason", rest) } : {}),
+      ...(arg("--agent-key-file", rest)
+        ? { agentKeyFile: arg("--agent-key-file", rest) }
+        : {}),
+      ...(channelsArg
+        ? { channelIds: channelsArg.split(",").map((c) => c.trim()).filter(Boolean) }
+        : {}),
+    });
+    relay.close();
+
+    console.log(
+      JSON.stringify({
+        offboarded: result.name,
+        pubkey: result.pubkey,
+        leftChannelIds: result.leftChannelIds,
+        tombstoned: result.tombstoned,
+        enrollmentRevoked: result.enrollmentRevoked,
+        envUnbound: result.envUnbound,
+        auditedAt: result.auditedAt,
       }),
     );
     return;
