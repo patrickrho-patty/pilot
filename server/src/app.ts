@@ -132,6 +132,9 @@ const VITE_DEV_STATIC_PATHS = new Set([
   "/favicon.svg",
   "/site.webmanifest",
   "/sw.js",
+  // Manifest-referenced icons.
+  "/android-chrome-192x192.png",
+  "/android-chrome-512x512.png",
 ]);
 
 export function isDatabaseConnectionUnavailableError(err: unknown): boolean {
@@ -298,6 +301,8 @@ export async function createApp(
     bindHost: string;
     authPublicBaseUrl?: string;
     authReady: boolean;
+    /** SSO providers offered by this instance (e.g. ["keycloak"]); surfaced via /api/health. */
+    authSsoProviders?: string[];
     companyDeletionEnabled: boolean;
     instanceId?: string;
     hostVersion?: string;
@@ -406,6 +411,7 @@ export async function createApp(
       deploymentMode: opts.deploymentMode,
       deploymentExposure: opts.deploymentExposure,
       authReady: opts.authReady,
+      authSsoProviders: opts.authSsoProviders,
       companyDeletionEnabled: opts.companyDeletionEnabled,
       databaseBackupHealth: opts.databaseBackupHealth,
     }),

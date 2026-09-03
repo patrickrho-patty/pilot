@@ -4,32 +4,24 @@ const CHARS = [" ", ".", "·", "▪", "▫", "○"] as const;
 const TARGET_FPS = 24;
 const FRAME_INTERVAL_MS = 1000 / TARGET_FPS;
 
+// The Pilot mark in ASCII: one stem, one hub, three destinations
+// (vector original: ui/public/favicon.svg / resources/logos/pilot_symbol.png).
 const PILOT_SPRITES = [
   [
-    "  ╭────╮ ",
-    " ╭╯╭──╮│ ",
-    " │ │  ││ ",
-    " │ │  ││ ",
-    " │ │  ││ ",
-    " │ │  ││ ",
-    " │ ╰──╯│ ",
-    " ╰─────╯ ",
+    "  ╭────● ",
+    "──●─────●",
+    "  ╰────● ",
   ],
   [
-    " ╭─────╮ ",
-    " │╭──╮╰╮ ",
-    " ││  │ │ ",
-    " ││  │ │ ",
-    " ││  │ │ ",
-    " ││  │ │ ",
-    " │╰──╯ │ ",
-    " ╰────╯  ",
+    " ●────╮  ",
+    "●─────●──",
+    " ●────╯  ",
   ],
 ] as const;
 
 type PilotSprite = (typeof PILOT_SPRITES)[number];
 
-interface Clip {
+interface Glyph {
   x: number;
   y: number;
   vx: number;
@@ -78,8 +70,8 @@ export function AsciiArtAnimation() {
     let trail = new Float32Array(0);
     let colWave = new Float32Array(0);
     let rowWave = new Float32Array(0);
-    let clipMask = new Uint16Array(0);
-    let clips: Clip[] = [];
+    let glyphMask = new Uint16Array(0);
+    let glyphs: Glyph[] = [];
     let lastOutput = "";
 
     function toGlyph(value: number): string {
@@ -99,13 +91,13 @@ export function AsciiArtAnimation() {
       trail = new Float32Array(cellCount);
       colWave = new Float32Array(cols);
       rowWave = new Float32Array(rows);
-      clipMask = new Uint16Array(cellCount);
-      clips = clips.filter((clip) => {
+      glyphMask = new Uint16Array(cellCount);
+      glyphs = glyphs.filter((glyph) => {
         return (
-          clip.x > -clip.width - 2 &&
-          clip.x < cols + 2 &&
-          clip.y > -clip.height - 2 &&
-          clip.y < rows + 2
+          glyph.x > -glyph.width - 2 &&
+          glyph.x < cols + 2 &&
+          glyph.y > -glyph.height - 2 &&
+          glyph.y < rows + 2
         );
       });
       lastOutput = "";
@@ -150,7 +142,7 @@ export function AsciiArtAnimation() {
       lastOutput = output;
     }
 
-    function spawnClip() {
+    function spawnGlyph() {
       const sprite = PILOT_SPRITES[Math.floor(Math.random() * PILOT_SPRITES.length)]!;
       const size = spriteSize(sprite);
       const edge = Math.random();
@@ -171,7 +163,7 @@ export function AsciiArtAnimation() {
         vy = y < 0 ? 0.028 + Math.random() * 0.034 : -(0.028 + Math.random() * 0.034);
       }
 
-      clips.push({
+      glyphs.push({
         x,
         y,
         vx,
@@ -185,11 +177,11 @@ export function AsciiArtAnimation() {
       });
     }
 
-    function stampClip(clip: Clip, alpha: number) {
-      const baseCol = Math.round(clip.x);
-      const baseRow = Math.round(clip.y);
-      for (let sr = 0; sr < clip.sprite.length; sr++) {
-        const line = clip.sprite[sr]!;
+    function stampGlyph(glyph: Glyph, alpha: number) {
+      const baseCol = Math.round(glyph.x);
+      const baseRow = Math.round(glyph.y);
+      for (let sr = 0; sr < glyph.sprite.length; sr++) {
+        const line = glyph.sprite[sr]!;
         const row = baseRow + sr;
         if (row < 0 || row >= rows) continue;
         for (let sc = 0; sc < line.length; sc++) {
@@ -200,7 +192,7 @@ export function AsciiArtAnimation() {
           const idx = row * cols + col;
           const stroke = ch === "│" || ch === "─" ? 0.8 : 0.92;
           trail[idx] = Math.max(trail[idx] ?? 0, alpha * stroke);
-          clipMask[idx] = ch.charCodeAt(0);
+          glyphMask[idx] = ch.charCodeAt(0);
         }
       }
     }
@@ -216,37 +208,37 @@ export function AsciiArtAnimation() {
 
       const cellCount = cols * rows;
       const targetCount = Math.max(3, Math.floor(cellCount / 2200));
-      while (clips.length < targetCount) spawnClip();
+      while (glyphs.length < targetCount) spawnGlyph();
 
       for (let i = 0; i < trail.length; i++) trail[i] *= 0.92;
-      clipMask.fill(0);
+      glyphMask.fill(0);
 
-      for (let i = clips.length - 1; i >= 0; i--) {
-        const clip = clips[i]!;
-        clip.life += delta;
+      for (let i = glyphs.length - 1; i >= 0; i--) {
+        const glyph = glyphs[i]!;
+        glyph.life += delta;
 
-        const wobbleX = Math.sin((clip.y + clip.drift + tick * 0.12) * 0.09) * 0.0018;
-        const wobbleY = Math.cos((clip.x - clip.drift - tick * 0.09) * 0.08) * 0.0014;
-        clip.vx = (clip.vx + wobbleX) * 0.998;
-        clip.vy = (clip.vy + wobbleY) * 0.998;
+        const wobbleX = Math.sin((glyph.y + glyph.drift + tick * 0.12) * 0.09) * 0.0018;
+        const wobbleY = Math.cos((glyph.x - glyph.drift - tick * 0.09) * 0.08) * 0.0014;
+        glyph.vx = (glyph.vx + wobbleX) * 0.998;
+        glyph.vy = (glyph.vy + wobbleY) * 0.998;
 
-        clip.x += clip.vx * delta;
-        clip.y += clip.vy * delta;
+        glyph.x += glyph.vx * delta;
+        glyph.y += glyph.vy * delta;
 
         if (
-          clip.life >= clip.maxLife ||
-          clip.x < -clip.width - 2 ||
-          clip.x > cols + 2 ||
-          clip.y < -clip.height - 2 ||
-          clip.y > rows + 2
+          glyph.life >= glyph.maxLife ||
+          glyph.x < -glyph.width - 2 ||
+          glyph.x > cols + 2 ||
+          glyph.y < -glyph.height - 2 ||
+          glyph.y > rows + 2
         ) {
-          clips.splice(i, 1);
+          glyphs.splice(i, 1);
           continue;
         }
 
-        const life = clip.life / clip.maxLife;
+        const life = glyph.life / glyph.maxLife;
         const alpha = life < 0.12 ? life / 0.12 : life > 0.88 ? (1 - life) / 0.12 : 1;
-        stampClip(clip, alpha);
+        stampGlyph(glyph, alpha);
       }
 
       for (let c = 0; c < cols; c++) colWave[c] = Math.sin(c * 0.08 + tick * 0.06);
@@ -256,9 +248,9 @@ export function AsciiArtAnimation() {
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const idx = r * cols + c;
-          const clipChar = clipMask[idx];
-          if (clipChar > 0) {
-            output += String.fromCharCode(clipChar);
+          const glyphChar = glyphMask[idx];
+          if (glyphChar > 0) {
+            output += String.fromCharCode(glyphChar);
             continue;
           }
           const ambient = (colWave[c] + rowWave[r]) * 0.08 + 0.1;

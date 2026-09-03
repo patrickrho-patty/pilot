@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="doc/assets/pilot-hero.svg" alt="Pilot — control tower for AI-agent companies" width="760"/>
+  <img src="../resources/logos/pilot_logo.png" alt="Pilot — control tower for AI-agent companies" width="560"/>
 </p>
 
 <p align="center">

@@ -4,10 +4,10 @@ const RUNTIME_BRANDING_BLOCK_START = "<!-- PILOT_RUNTIME_BRANDING_START -->";
 const RUNTIME_BRANDING_BLOCK_END = "<!-- PILOT_RUNTIME_BRANDING_END -->";
 
 const DEFAULT_FAVICON_LINKS = [
-  '<link rel="icon" href="/favicon.ico" sizes="48x48" />',
-  '<link rel="icon" href="/favicon.svg" type="image/svg+xml" />',
-  '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />',
-  '<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />',
+  '<link rel="icon" href="/favicon.ico?v=2" sizes="48x48" />',
+  '<link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />',
+  '<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2" />',
+  '<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2" />',
 ].join("\n");
 
 export type WorktreeUiBranding = {

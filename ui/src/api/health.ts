@@ -28,6 +28,8 @@ export type HealthStatus = {
   deploymentMode?: "local_trusted" | "authenticated";
   deploymentExposure?: "private" | "public";
   authReady?: boolean;
+  /** SSO providers this instance offers (e.g. ["keycloak"]); drives the sign-in page buttons. */
+  authSsoProviders?: string[];
   bootstrapStatus?: "ready" | "bootstrap_pending";
   bootstrapInviteActive?: boolean;
   features?: {

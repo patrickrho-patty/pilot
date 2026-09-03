@@ -790,6 +790,13 @@ export function agentService(db: Db) {
       const adapterConfig = isPlainRecord(data.adapterConfig)
         ? await secretsSvc.normalizeAdapterConfigForPersistence(companyId, data.adapterConfig, { adapterType })
         : {};
+      // Hired agents drive Pilot through its API: default-sync the `pilot`
+      // skill (API + governance reference) unless the hire explicitly
+      // configured a skill sync list. Without it, agents guess at routes and
+      // stream their failed experiments into the issue chat.
+      if (!isPlainRecord(adapterConfig.pilotSkillSync)) {
+        adapterConfig.pilotSkillSync = { desiredSkills: ["pilot"] };
+      }
       // Run the server-enforced binding invariant after generic normalization
       // and before any database write. A create has no prior config.
       const bindingDecision = assertClaudeOAuthBindingInvariant({

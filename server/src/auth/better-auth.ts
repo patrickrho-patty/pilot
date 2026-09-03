@@ -2,6 +2,7 @@ import type { Request, RequestHandler } from "express";
 import type { IncomingHttpHeaders } from "node:http";
 import { betterAuth, type Auth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { genericOAuth, keycloak } from "better-auth/plugins/generic-oauth";
 import { toNodeHandler } from "better-auth/node";
 import type { Db } from "@pilotai/db";
 import {
@@ -9,8 +10,13 @@ import {
   authSessions,
   authUsers,
   authVerifications,
+  companies,
+  companyMemberships,
 } from "@pilotai/db";
+import { eq } from "drizzle-orm";
 import type { Config } from "../config.js";
+import type { AuthKeycloakSettings } from "../config.js";
+import { accessService } from "../services/access.js";
 import { resolvePilotInstanceId } from "../home-paths.js";
 import {
   workspaceLoginHandoffPlugin,
@@ -62,6 +68,15 @@ export function buildBetterAuthAdvancedOptions(input: { disableSecureCookies: bo
     cookiePrefix: deriveAuthCookiePrefix(),
     ...(input.disableSecureCookies ? { useSecureCookies: false } : {}),
   };
+}
+
+/**
+ * Email+password sign-in is disabled entirely on SSO-only instances: when a
+ * Keycloak realm is configured, board identity comes from the realm and there
+ * are no local passwords to sign into.
+ */
+export function boardEmailPasswordEnabled(config: { authKeycloak: unknown }): boolean {
+  return !config.authKeycloak;
 }
 
 export function shouldEnableAuthRateLimit(input: {
@@ -182,6 +197,42 @@ export function resolveWorkspaceHandoffIdentity(
   };
 }
 
+/**
+ * Keycloak OIDC sign-in (genericOAuth plugin). The issuer is the realm URL
+ * (e.g. https://sso.example.com/realms/pilot); discovery pulls the authorize
+ * + token endpoints, so only the realm client id/secret are needed here. The
+ * redirect URI to register on the realm client is
+ * `<public-base-url>/api/auth/oauth2/callback/keycloak`.
+ */
+export function buildKeycloakOAuthPlugin(settings: AuthKeycloakSettings) {
+  return genericOAuth({
+    config: [
+      {
+        ...keycloak({
+          clientId: settings.clientId,
+          clientSecret: settings.clientSecret,
+          issuer: settings.issuer,
+        }),
+        // Skip the Keycloak username/password form entirely and go straight
+        // to the Google broker — same behavior as crew's SSO flow
+        // (crates/crew-relay/src/api/oidc.rs uses kc_idp_hint=google).
+        authorizationUrlParams: { kc_idp_hint: "google" },
+      },
+    ],
+  });
+}
+
+/**
+ * Does this email belong to one of the allowed work domains?
+ * Case-insensitive; a NULL/unparseable email never matches.
+ */
+export function emailDomainMatches(email: string | null | undefined, domains: readonly string[]): boolean {
+  if (!email || domains.length === 0) return false;
+  const domain = email.trim().toLowerCase().split("@")[1];
+  if (!domain) return false;
+  return domains.includes(domain);
+}
+
 export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins: string[]): BetterAuthInstance {
   const baseUrl = config.authBaseUrlMode === "explicit" ? config.authPublicBaseUrl : undefined;
   const publicUrl = process.env.PILOT_PUBLIC_URL?.trim() || baseUrl;
@@ -214,7 +265,7 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins:
       },
     }),
     emailAndPassword: {
-      enabled: true,
+      enabled: boardEmailPasswordEnabled(config),
       requireEmailVerification: false,
       disableSignUp: config.authDisableSignUp,
     },
@@ -224,12 +275,12 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins:
       override: process.env.PILOT_AUTH_RATE_LIMIT_ENABLED,
     }),
     advanced: buildBetterAuthAdvancedOptions({ disableSecureCookies }),
-    // Registered only for a managed workspace instance: the plugin is what makes
-    // `Open workspace` password-independent, and a control-plane instance that
-    // was never handed a workspace key must not expose the exchange at all.
-    ...(resolveWorkspaceHandoffIdentity(config)
-      ? {
-          plugins: [
+    plugins: [
+      // Registered only for a managed workspace instance: the plugin is what makes
+      // `Open workspace` password-independent, and a control-plane instance that
+      // was never handed a workspace key must not expose the exchange at all.
+      ...(resolveWorkspaceHandoffIdentity(config)
+        ? [
             workspaceLoginHandoffPlugin({
               db,
               // Re-resolved per exchange so a hot restart cannot keep validating
@@ -243,7 +294,64 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins:
                   origin: null,
                 },
             }),
-          ],
+          ]
+        : []),
+      // Keycloak SSO (internal realm). Absent entirely when PILOT_KEYCLOAK_*
+      // env vars are not fully set, so the OAuth endpoints stay unregistered.
+      ...(config.authKeycloak ? [buildKeycloakOAuthPlugin(config.authKeycloak)] : []),
+    ],
+    // Domain-based access provisioning on every sign-in:
+    //   - an email on PILOT_SSO_ADMIN_EMAILS is promoted to instance_admin;
+    //   - an email whose domain is on PILOT_SSO_DOMAINS is joined (as a plain
+    //     member, never admin) when the instance has exactly one company.
+    // Both are idempotent; errors are logged and never block the sign-in.
+    ...(config.ssoAdminEmails.length > 0 || config.ssoMemberDomains.length > 0
+      ? {
+          databaseHooks: {
+            session: {
+              create: {
+                after: async (session: { userId: string }) => {
+                  try {
+                    const user = await db
+                      .select({ email: authUsers.email })
+                      .from(authUsers)
+                      .where(eq(authUsers.id, session.userId))
+                      .then((rows) => rows[0] ?? null);
+                    const email = user?.email ?? null;
+                    const isAdminEmail = email !== null && config.ssoAdminEmails.includes(email.toLowerCase());
+                    const isMemberDomain = emailDomainMatches(email, config.ssoMemberDomains);
+                    if (!isAdminEmail && !isMemberDomain) return;
+                    const access = accessService(db);
+                    if (isAdminEmail) await access.promoteInstanceAdmin(session.userId);
+                    const existingCompanies = await db.select({ id: companies.id }).from(companies);
+                    if (existingCompanies.length === 1) {
+                      const membership = await access.getMembership(existingCompanies[0].id, "user", session.userId);
+                      if (!membership || membership.status !== "active") {
+                        await db
+                          .insert(companyMemberships)
+                          .values({
+                            companyId: existingCompanies[0].id,
+                            principalType: "user",
+                            principalId: session.userId,
+                            status: "active",
+                            membershipRole: "member",
+                          })
+                          .onConflictDoUpdate({
+                            target: [companyMemberships.companyId, companyMemberships.principalType, companyMemberships.principalId],
+                            set: { status: "active", updatedAt: new Date() },
+                          });
+                      }
+                    }
+                  } catch (error) {
+                    console.warn(
+                      `[sso] domain-based access provisioning failed for user ${session.userId}:`,
+                      error instanceof Error ? error.message : error,
+                    );
+                  }
+                },
+              },
+            },
+          },
         }
       : {}),
   };

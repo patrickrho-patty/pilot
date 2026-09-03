@@ -2,6 +2,89 @@
 
 This project can run fully in local dev without setting up PostgreSQL manually.
 
+## Board Sign-In (Keycloak SSO)
+
+The board supports two sign-in paths: email + password (better-auth, default)
+and OIDC sign-in through the org's Keycloak (optional, env-gated). When Keycloak
+is configured the instance becomes **SSO-only**: the sign-in page (`/auth`)
+shows a single "Sign in with Patty" button, the email/password form and the
+account-creation toggle are hidden, and the email+password endpoints are
+disabled server-side (`emailAndPassword.enabled=false`) — board identity comes
+from the realm. Google federation already exists on the `internal` realm
+(`https://login.patty.io`), so Pilot only ever talks to Keycloak.
+
+Server configuration — set all three, SSO stays off otherwise (a partial set
+logs a startup warning):
+
+```sh
+PILOT_KEYCLOAK_ISSUER=https://login.patty.io/realms/internal
+PILOT_KEYCLOAK_CLIENT_ID=pilot-board
+PILOT_KEYCLOAK_CLIENT_SECRET=<from the realm client>
+```
+
+`PILOT_KEYCLOAK_ISSUER` is the realm URL (trailing slash stripped); discovery
+uses `<issuer>/.well-known/openid-configuration`. The SSO flag reaches the UI
+through `GET /api/health` as `authSsoProviders: ["keycloak"]`.
+
+Keycloak realm-side (admin console, one-time):
+
+1. Create a client for Pilot in the realm (e.g. `pilot-board`, confidential
+   access type) and copy its secret into `PILOT_KEYCLOAK_CLIENT_SECRET`.
+2. Add the valid redirect URI:
+   `<pilot-public-url>/api/auth/oauth2/callback/keycloak`.
+3. Make sure Google is enabled as an identity provider for the realm (already
+   true for `internal`; crew uses the same federation).
+
+Users who sign in via SSO get a better-auth user backed by an OIDC account row;
+existing email/password users with the same email stay separate accounts.
+Sign-in works even when `PILOT_AUTH_DISABLE_SIGN_UP=true` (SSO never creates
+local passwords).
+
+### SSO access provisioning
+
+Two env knobs control who gets access when signing in through SSO:
+
+```sh
+# Exact emails promoted to instance_admin on sign-in (the CEO / operators)
+PILOT_SSO_ADMIN_EMAILS=patrick@patty.io
+
+# Work-email domains whose users are auto-joined as plain members (never admin)
+PILOT_SSO_DOMAINS=patty.io
+```
+
+On each SSO sign-in:
+
+- an email on `PILOT_SSO_ADMIN_EMAILS` becomes an `instance_admin`;
+- any signed-in user whose email domain is on `PILOT_SSO_DOMAINS` is joined —
+  as an active **member**, never an admin — when the instance has exactly one
+  company (idempotent; with zero or multiple companies, use invites instead).
+
+Both lists are optional and independent; errors in provisioning are logged and
+never block the sign-in itself. The first person in (typically the CEO) creates
+the company via the onboarding wizard; everyone after that auto-joins it.
+
+### Customer deployment runbook (SSO shape)
+
+For deploying a managed instance for a customer organization:
+
+1. **Identity** (one-time per customer): in their realm, create a confidential
+   OIDC client (e.g. `pilot-<customer>`, standard flow only) with redirect URI
+   `https://<customer-pilot-url>/api/auth/oauth2/callback/keycloak`, and copy
+   its client secret.
+2. **Deploy Pilot** in `authenticated` mode with `BETTER_AUTH_SECRET`,
+   `PILOT_KEYCLOAK_*`, `PILOT_SSO_ADMIN_EMAILS=<their admin>`, and
+   `PILOT_SSO_DOMAINS=<their work domain>`.
+3. **Their admin signs in first**: provisioned as `instance_admin`, completes
+   the onboarding wizard, and becomes the company `owner`.
+4. **Their workforce signs in whenever**: straight to Google via
+   `kc_idp_hint=google`, then auto-joined to the company as members. No
+   invites needed while the instance has exactly one company.
+
+For customers without SSO: the first sign-up on a fresh `authenticated`+
+`private` instance claims first admin (`bootstrap_pending` →
+`/bootstrap/claim`); on public exposures use a bootstrap CEO invite instead.
+Employees then join through company invites created in the invites UI.
+
 ## Deployment Modes
 
 For mode definitions and intended CLI behavior, see `doc/DEPLOYMENT-MODES.md`.

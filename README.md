@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="doc/assets/pilot-hero.svg" alt="Pilot — 에이전트 회사의 관제탑" width="760"/>
+  <img src="resources/logos/pilot_logo.png" alt="Pilot — 에이전트 회사의 관제탑" width="560"/>
 </p>
 
 <p align="center">

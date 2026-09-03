@@ -4,11 +4,13 @@ import { useNavigate, useSearchParams } from "@/lib/router";
 import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
 import { getRememberedInvitePath } from "../lib/invite-memory";
-import { Button } from "@/components/ui/button";
+import { healthApi } from "../api/health";
+import wordmarkLight from "@/assets/pilot-logo-light.png";
+import wordmarkDark from "@/assets/pilot-logo-dark.png";
 import { AsciiArtAnimation } from "@/components/AsciiArtAnimation";
 import { PilotLoading } from "@/components/AnimatedPilotIcon";
+import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Sparkles } from "lucide-react";
 
 type AuthMode = "sign_in" | "sign_up";
 
@@ -32,6 +34,34 @@ export function AuthPage() {
     queryFn: () => authApi.getSession(),
     retry: false,
   });
+  const { data: health } = useQuery({
+    queryKey: queryKeys.health,
+    queryFn: () => healthApi.get(),
+    retry: false,
+  });
+  const keycloakSsoEnabled = health?.authSsoProviders?.includes("keycloak") ?? false;
+  const [ssoPending, setSsoPending] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("sso_error") !== null) {
+      setError("Sign-in with SSO did not complete. Please try again or use email and password.");
+    }
+  }, [searchParams]);
+
+  const startKeycloakSignIn = async () => {
+    setError(null);
+    setSsoPending(true);
+    try {
+      const url = await authApi.signInWithKeycloak({
+        callbackUrl: new URL(nextPath, window.location.origin).href,
+        errorCallbackUrl: new URL("/auth?sso_error=1", window.location.origin).href,
+      });
+      window.location.assign(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "SSO sign-in failed");
+      setSsoPending(false);
+    }
+  };
 
   useEffect(() => {
     if (session) {
@@ -88,21 +118,46 @@ export function AuthPage() {
       {/* Left half — form */}
       <div className="w-full md:w-1/2 flex flex-col overflow-y-auto">
         <div className="w-full max-w-md mx-auto my-auto px-8 py-12">
-          <div className="flex items-center gap-2 mb-8">
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Pilot</span>
+          <div className="mb-8">
+            {/* Official Pilot wordmark — generated from resources/logos/pilot_logo.png.
+                Imported (not /public) so Vite content-hashes the URL: brand asset
+                swaps can never be masked by HTTP/service-worker caches. */}
+            <img src={wordmarkLight} alt="Pilot" className="h-7 w-auto dark:hidden" />
+            <img src={wordmarkDark} alt="Pilot" className="hidden h-7 w-auto dark:block" />
           </div>
 
-          <h1 className="text-xl font-semibold">
-            {mode === "sign_in" ? "Sign in to Pilot" : "Create your Pilot account"}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "sign_in"
-              ? "Use your email and password to access this instance."
-              : "Create an account for this instance. Email confirmation is not required in v1."}
-          </p>
+          {keycloakSsoEnabled ? (
+            <>
+              <h1 className="text-xl font-semibold">Sign in to Pilot</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Use your Patty account to access this instance.
+              </p>
+              {error && (
+                <p id={errorId} role="alert" className="mt-4 text-xs text-destructive">
+                  {error}
+                </p>
+              )}
+              <Button
+                type="button"
+                className="mt-6 w-full"
+                onClick={startKeycloakSignIn}
+                disabled={ssoPending}
+              >
+                {ssoPending ? "Redirecting…" : "Sign in with Patty"}
+              </Button>
+            </>
+          ) : (
+            <>
+              <h1 className="text-xl font-semibold">
+                {mode === "sign_in" ? "Sign in to Pilot" : "Create your Pilot account"}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {mode === "sign_in"
+                  ? "Use your email and password to access this instance."
+                  : "Create an account for this instance. Email confirmation is not required in v1."}
+              </p>
 
-          <form
+              <form
             className="mt-6 space-y-4"
             method="post"
             action={mode === "sign_up" ? "/api/auth/sign-up/email" : "/api/auth/sign-in/email"}
@@ -199,6 +254,8 @@ export function AuthPage() {
               {mode === "sign_in" ? "Create one" : "Sign in"}
             </button>
           </div>
+            </>
+          )}
         </div>
       </div>
 
