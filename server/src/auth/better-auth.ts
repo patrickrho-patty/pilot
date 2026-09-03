@@ -10,9 +10,13 @@ import {
   authSessions,
   authUsers,
   authVerifications,
+  companies,
+  companyMemberships,
 } from "@pilotai/db";
+import { eq } from "drizzle-orm";
 import type { Config } from "../config.js";
 import type { AuthKeycloakSettings } from "../config.js";
+import { accessService } from "../services/access.js";
 import { resolvePilotInstanceId } from "../home-paths.js";
 import {
   workspaceLoginHandoffPlugin,
@@ -218,7 +222,16 @@ export function buildKeycloakOAuthPlugin(settings: AuthKeycloakSettings) {
   });
 }
 
-export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins: string[]): BetterAuthInstance {
+/**
+ * Does this email belong to one of the allowed work domains?
+ * Case-insensitive; a NULL/unparseable email never matches.
+ */
+export function emailDomainMatches(email: string | null | undefined, domains: readonly string[]): boolean {
+  if (!email || domains.length === 0) return false;
+  const domain = email.trim().toLowerCase().split("@")[1];
+  if (!domain) return false;
+  return domains.includes(domain);
+}
   const baseUrl = config.authBaseUrlMode === "explicit" ? config.authPublicBaseUrl : undefined;
   const publicUrl = process.env.PILOT_PUBLIC_URL?.trim() || baseUrl;
   const secret = process.env.BETTER_AUTH_SECRET ?? process.env.PILOT_AGENT_JWT_SECRET;
@@ -285,6 +298,56 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins:
       // env vars are not fully set, so the OAuth endpoints stay unregistered.
       ...(config.authKeycloak ? [buildKeycloakOAuthPlugin(config.authKeycloak)] : []),
     ],
+    // Domain-based access provisioning: on every sign-in, a user whose email
+    // is on an allowed work domain is promoted to instance_admin and, when the
+    // instance has exactly one company, joined to it as a member. Idempotent;
+    // errors are logged and never block the sign-in itself.
+    ...(config.ssoAutoAdminDomains.length > 0
+      ? {
+          databaseHooks: {
+            session: {
+              create: {
+                after: async (session: { userId: string }) => {
+                  try {
+                    const user = await db
+                      .select({ email: authUsers.email })
+                      .from(authUsers)
+                      .where(eq(authUsers.id, session.userId))
+                      .then((rows) => rows[0] ?? null);
+                    if (!emailDomainMatches(user?.email, config.ssoAutoAdminDomains)) return;
+                    const access = accessService(db);
+                    await access.promoteInstanceAdmin(session.userId);
+                    const existingCompanies = await db.select({ id: companies.id }).from(companies);
+                    if (existingCompanies.length === 1) {
+                      const membership = await access.getMembership(existingCompanies[0].id, "user", session.userId);
+                      if (!membership || membership.status !== "active") {
+                        await db
+                          .insert(companyMemberships)
+                          .values({
+                            companyId: existingCompanies[0].id,
+                            principalType: "user",
+                            principalId: session.userId,
+                            status: "active",
+                            membershipRole: "member",
+                          })
+                          .onConflictDoUpdate({
+                            target: [companyMemberships.companyId, companyMemberships.principalType, companyMemberships.principalId],
+                            set: { status: "active", updatedAt: new Date() },
+                          });
+                      }
+                    }
+                  } catch (error) {
+                    console.warn(
+                      `[sso] domain-based access provisioning failed for user ${session.userId}:`,
+                      error instanceof Error ? error.message : error,
+                    );
+                  }
+                },
+              },
+            },
+          },
+        }
+      : {}),
   };
 
   if (!baseUrl) {

@@ -80,6 +80,18 @@ export function resolveAuthKeycloakSettings(env: {
   };
 }
 
+/** Parse a comma-separated domain list ("patty.io, @Example.Co") into normalized domains. */
+export function parseSsoDomainList(raw: string | undefined): string[] {
+  return Array.from(
+    new Set(
+      (raw ?? "")
+        .split(",")
+        .map((domain) => domain.trim().toLowerCase().replace(/^@/, ""))
+        .filter((domain) => domain.includes(".") && !domain.includes(" ")),
+    ),
+  );
+}
+
 export interface Config {
   deploymentMode: DeploymentMode;
   deploymentExposure: DeploymentExposure;
@@ -92,6 +104,8 @@ export interface Config {
   authPublicBaseUrl: string | undefined;
   authDisableSignUp: boolean;
   authKeycloak: AuthKeycloakSettings | null;
+  /** Work-email domains that get instance access automatically on SSO sign-in. */
+  ssoAutoAdminDomains: string[];
   databaseMode: DatabaseMode;
   databaseUrl: string | undefined;
   databaseMigrationUrl: string | undefined;
@@ -247,6 +261,7 @@ export function loadConfig(): Config {
       ? disableSignUpFromEnv === "true"
       : (fileConfig?.auth?.disableSignUp ?? false);
   const { settings: authKeycloak, missing: keycloakMissing } = resolveAuthKeycloakSettings(process.env);
+  const ssoAutoAdminDomains = parseSsoDomainList(process.env.PILOT_SSO_DOMAINS);
   if (keycloakMissing.length > 0 && keycloakMissing.length < 3) {
     console.warn(
       `Keycloak SSO is disabled: ${keycloakMissing.join(", ")} ${keycloakMissing.length === 1 ? "is" : "are"} not set. ` +
@@ -352,6 +367,7 @@ export function loadConfig(): Config {
     authPublicBaseUrl,
     authDisableSignUp,
     authKeycloak,
+    ssoAutoAdminDomains,
     databaseMode: fileDatabaseMode,
     databaseUrl: process.env.DATABASE_URL ?? fileDbUrl,
     databaseMigrationUrl: process.env.DATABASE_MIGRATION_URL,

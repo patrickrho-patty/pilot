@@ -40,6 +40,21 @@ existing email/password users with the same email stay separate accounts.
 Sign-in works even when `PILOT_AUTH_DISABLE_SIGN_UP=true` (SSO never creates
 local passwords).
 
+### SSO domain auto-provisioning
+
+Set `PILOT_SSO_DOMAINS` (comma-separated) to grant access automatically to
+everyone signing in with a work email on those domains:
+
+```sh
+PILOT_SSO_DOMAINS=patty.io
+```
+
+On each SSO sign-in, a user whose email domain matches is promoted to
+`instance_admin` and — when the instance has exactly one company — joined to it
+as an active member. Idempotent; unmatched domains still need a company
+invite. The first person in (typically the CEO) creates the company via the
+onboarding wizard; everyone after that auto-joins it.
+
 ## Deployment Modes
 
 For mode definitions and intended CLI behavior, see `doc/DEPLOYMENT-MODES.md`.
