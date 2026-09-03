@@ -135,7 +135,7 @@ const VITE_DEV_STATIC_PATHS = new Set([
   // Official brand assets referenced by the sign-in page and site.webmanifest.
   "/android-chrome-192x192.png",
   "/android-chrome-512x512.png",
-  "/pilot_logo-600-transparent.png",
+  "/pilot_logo-600-transparent-light.png",
   "/pilot_logo-600-transparent-dark.png",
 ]);
 

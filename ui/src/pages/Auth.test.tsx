@@ -278,7 +278,27 @@ describe("AuthPage", () => {
     healthGetMock.mockResolvedValue({ status: "ok", authSsoProviders: [] });
     const { root } = await mount();
 
-    expect(container.textContent).not.toContain("Sign in with SSO");
+    expect(container.textContent).not.toContain("Sign in with Patty");
+    // Email sign-in remains the path on non-SSO instances.
+    expect(container.querySelector('input[name="email"]')).not.toBeNull();
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("renders SSO-only sign-in when the instance advertises keycloak", async () => {
+    healthGetMock.mockResolvedValue({ status: "ok", authSsoProviders: ["keycloak"] });
+    const { root } = await mount();
+    await flushReact();
+
+    // No email form, no account-creation toggle — SSO is the only path.
+    expect(container.querySelector('input[name="email"]')).toBeNull();
+    expect(container.querySelector('input[name="password"]')).toBeNull();
+    expect(container.textContent).not.toContain("Create one");
+    expect(container.textContent).not.toContain("email and password");
+    expect(container.textContent).toContain("Use your Patty account");
+    expect(container.textContent).toContain("Sign in with Patty");
 
     await act(async () => {
       root.unmount();
@@ -291,7 +311,7 @@ describe("AuthPage", () => {
     await flushReact();
 
     const ssoButton = Array.from(container.querySelectorAll("button")).find(
-      (button) => button.textContent === "Sign in with SSO (Keycloak)",
+      (button) => button.textContent === "Sign in with Patty",
     );
     expect(ssoButton).not.toBeNull();
 

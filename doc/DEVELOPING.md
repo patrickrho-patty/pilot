@@ -4,12 +4,14 @@ This project can run fully in local dev without setting up PostgreSQL manually.
 
 ## Board Sign-In (Keycloak SSO)
 
-The board supports two sign-in paths: email + password (better-auth, always on)
+The board supports two sign-in paths: email + password (better-auth, default)
 and OIDC sign-in through the org's Keycloak (optional, env-gated). When Keycloak
-is configured, the sign-in page (`/auth`) shows a "Sign in with SSO (Keycloak)"
-button; the Google OAuth step happens inside Keycloak (the `internal` realm at
-`https://login.patty.io` already federates Google), so Pilot only ever talks to
-Keycloak.
+is configured the instance becomes **SSO-only**: the sign-in page (`/auth`)
+shows a single "Sign in with Patty" button, the email/password form and the
+account-creation toggle are hidden, and the email+password endpoints are
+disabled server-side (`emailAndPassword.enabled=false`) — board identity comes
+from the realm. Google federation already exists on the `internal` realm
+(`https://login.patty.io`), so Pilot only ever talks to Keycloak.
 
 Server configuration — set all three, SSO stays off otherwise (a partial set
 logs a startup warning):

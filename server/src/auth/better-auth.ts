@@ -66,6 +66,15 @@ export function buildBetterAuthAdvancedOptions(input: { disableSecureCookies: bo
   };
 }
 
+/**
+ * Email+password sign-in is disabled entirely on SSO-only instances: when a
+ * Keycloak realm is configured, board identity comes from the realm and there
+ * are no local passwords to sign into.
+ */
+export function boardEmailPasswordEnabled(config: { authKeycloak: unknown }): boolean {
+  return !config.authKeycloak;
+}
+
 export function shouldEnableAuthRateLimit(input: {
   deploymentMode: Config["deploymentMode"];
   deploymentExposure?: Config["deploymentExposure"];
@@ -235,7 +244,7 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins:
       },
     }),
     emailAndPassword: {
-      enabled: true,
+      enabled: boardEmailPasswordEnabled(config),
       requireEmailVerification: false,
       disableSignUp: config.authDisableSignUp,
     },
