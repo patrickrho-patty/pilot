@@ -5,6 +5,8 @@ import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
 import { getRememberedInvitePath } from "../lib/invite-memory";
 import { healthApi } from "../api/health";
+import wordmarkLight from "@/assets/pilot-logo-light.png";
+import wordmarkDark from "@/assets/pilot-logo-dark.png";
 import { AsciiArtAnimation } from "@/components/AsciiArtAnimation";
 import { PilotLoading } from "@/components/AnimatedPilotIcon";
 import { Button } from "@/components/ui/button";
@@ -117,9 +119,11 @@ export function AuthPage() {
       <div className="w-full md:w-1/2 flex flex-col overflow-y-auto">
         <div className="w-full max-w-md mx-auto my-auto px-8 py-12">
           <div className="mb-8">
-            {/* Official Pilot wordmark — light/dark variants generated from resources/logos/pilot_logo.png */}
-            <img src="/pilot_logo-600-transparent-light.png" alt="Pilot" className="h-7 w-auto dark:hidden" />
-            <img src="/pilot_logo-600-transparent-dark.png" alt="Pilot" className="hidden h-7 w-auto dark:block" />
+            {/* Official Pilot wordmark — generated from resources/logos/pilot_logo.png.
+                Imported (not /public) so Vite content-hashes the URL: brand asset
+                swaps can never be masked by HTTP/service-worker caches. */}
+            <img src={wordmarkLight} alt="Pilot" className="h-7 w-auto dark:hidden" />
+            <img src={wordmarkDark} alt="Pilot" className="hidden h-7 w-auto dark:block" />
           </div>
 
           {keycloakSsoEnabled ? (

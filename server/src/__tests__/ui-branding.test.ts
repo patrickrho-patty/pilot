@@ -12,10 +12,10 @@ const TEMPLATE = `<!doctype html>
     <!-- PILOT_RUNTIME_BRANDING_START -->
     <!-- PILOT_RUNTIME_BRANDING_END -->
     <!-- PILOT_FAVICON_START -->
-    <link rel="icon" href="/favicon.ico" sizes="48x48" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" href="/favicon.ico?v=1" sizes="48x48" />
+    <link rel="icon" href="/favicon.svg?v=1" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=1" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=1" />
     <!-- PILOT_FAVICON_END -->
 </head>`;
 

@@ -203,11 +203,17 @@ export function resolveWorkspaceHandoffIdentity(
 export function buildKeycloakOAuthPlugin(settings: AuthKeycloakSettings) {
   return genericOAuth({
     config: [
-      keycloak({
-        clientId: settings.clientId,
-        clientSecret: settings.clientSecret,
-        issuer: settings.issuer,
-      }),
+      {
+        ...keycloak({
+          clientId: settings.clientId,
+          clientSecret: settings.clientSecret,
+          issuer: settings.issuer,
+        }),
+        // Skip the Keycloak username/password form entirely and go straight
+        // to the Google broker — same behavior as crew's SSO flow
+        // (crates/crew-relay/src/api/oidc.rs uses kc_idp_hint=google).
+        authorizationUrlParams: { kc_idp_hint: "google" },
+      },
     ],
   });
 }
