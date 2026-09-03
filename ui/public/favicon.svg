@@ -1,12 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round">
-  <style>
-    .ring { stroke: #18181b; }
-    @media (prefers-color-scheme: dark) {
-      .ring { stroke: #e4e4e7; }
-    }
-  </style>
-  <circle cx="12" cy="12" r="8.75" class="ring" stroke-width="2"/>
-  <circle cx="12" cy="12" r="4.5" class="ring" stroke-width="1.5" opacity="0.55"/>
-  <path d="M12 12 L16.9 7.1" stroke="#22d3ee" stroke-width="2"/>
-  <circle cx="15.9" cy="14.8" r="1.8" fill="#22d3ee"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254">
+  <!-- Pilot brand mark: one stem, one hub, three destinations. -->
+  <!-- Vector recreation of resources/logos/pilot_symbol.png (keep in sync). -->
+  <rect width="1254" height="1254" rx="140" fill="#FBFBFB" stroke="#ECECEE" stroke-width="4"/>
+  <g stroke="#0A0A0A" stroke-width="66" stroke-linecap="round" fill="none">
+    <path d="M 523 627 Q 645 543 802 398"/>
+    <path d="M 523 627 H 868"/>
+    <path d="M 523 627 Q 645 711 802 856"/>
+  </g>
+  <rect x="205" y="594" width="330" height="66" fill="#0A0A0A"/>
+  <g fill="#0A0A0A">
+    <circle cx="890" cy="345" r="73"/>
+    <circle cx="935" cy="627" r="73"/>
+    <circle cx="890" cy="910" r="73"/>
+  </g>
+  <circle cx="523" cy="627" r="102" fill="#FBFBFB"/>
+  <circle cx="523" cy="627" r="90" fill="#1265F7"/>
 </svg>
