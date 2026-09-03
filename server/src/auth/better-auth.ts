@@ -232,6 +232,8 @@ export function emailDomainMatches(email: string | null | undefined, domains: re
   if (!domain) return false;
   return domains.includes(domain);
 }
+
+export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins: string[]): BetterAuthInstance {
   const baseUrl = config.authBaseUrlMode === "explicit" ? config.authPublicBaseUrl : undefined;
   const publicUrl = process.env.PILOT_PUBLIC_URL?.trim() || baseUrl;
   const secret = process.env.BETTER_AUTH_SECRET ?? process.env.PILOT_AGENT_JWT_SECRET;
