@@ -802,6 +802,7 @@ export async function startServer(): Promise<StartedServer> {
     bindHost: config.host,
     authPublicBaseUrl: config.authPublicBaseUrl,
     authReady,
+    authSsoProviders: config.authKeycloak ? ["keycloak"] : [],
     companyDeletionEnabled: config.companyDeletionEnabled,
     pluginMigrationDb: pluginMigrationDb as any,
     betterAuthHandler,

@@ -298,6 +298,8 @@ export async function createApp(
     bindHost: string;
     authPublicBaseUrl?: string;
     authReady: boolean;
+    /** SSO providers offered by this instance (e.g. ["keycloak"]); surfaced via /api/health. */
+    authSsoProviders?: string[];
     companyDeletionEnabled: boolean;
     instanceId?: string;
     hostVersion?: string;
@@ -406,6 +408,7 @@ export async function createApp(
       deploymentMode: opts.deploymentMode,
       deploymentExposure: opts.deploymentExposure,
       authReady: opts.authReady,
+      authSsoProviders: opts.authSsoProviders,
       companyDeletionEnabled: opts.companyDeletionEnabled,
       databaseBackupHealth: opts.databaseBackupHealth,
     }),

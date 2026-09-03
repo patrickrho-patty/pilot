@@ -11,12 +11,21 @@ import { AuthPage } from "./Auth";
 const getSessionMock = vi.hoisted(() => vi.fn());
 const signInEmailMock = vi.hoisted(() => vi.fn());
 const signUpEmailMock = vi.hoisted(() => vi.fn());
+const healthGetMock = vi.hoisted(() => vi.fn());
+const signInWithKeycloakMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../api/auth", () => ({
   authApi: {
     getSession: () => getSessionMock(),
     signInEmail: (input: unknown) => signInEmailMock(input),
     signUpEmail: (input: unknown) => signUpEmailMock(input),
+    signInWithKeycloak: (input: unknown) => signInWithKeycloakMock(input),
+  },
+}));
+
+vi.mock("../api/health", () => ({
+  healthApi: {
+    get: () => healthGetMock(),
   },
 }));
 
@@ -88,6 +97,8 @@ describe("AuthPage", () => {
     getSessionMock.mockResolvedValue(null);
     signInEmailMock.mockResolvedValue(undefined);
     signUpEmailMock.mockResolvedValue(undefined);
+    healthGetMock.mockResolvedValue({ status: "ok" });
+    signInWithKeycloakMock.mockResolvedValue("https://sso.example.test/realms/pilot/protocol/openid-connect/auth?client_id=pilot-board");
   });
 
   afterEach(() => {
@@ -96,11 +107,11 @@ describe("AuthPage", () => {
     vi.clearAllMocks();
   });
 
-  async function mount() {
+  async function mountWithRoute(initialEntry = "/auth") {
     const { root, queryClient } = renderAuthPage(container);
     await act(async () => {
       root.render(
-        <MemoryRouter initialEntries={["/auth"]}>
+        <MemoryRouter initialEntries={[initialEntry]}>
           <QueryClientProvider client={queryClient}>
             <Routes>
               <Route path="/auth" element={<AuthPage />} />
@@ -112,6 +123,10 @@ describe("AuthPage", () => {
     await flushReact();
     await flushReact();
     return { root, queryClient };
+  }
+
+  async function mount() {
+    return mountWithRoute("/auth");
   }
 
   it("exposes password-manager metadata and a11y attributes on the sign-in form", async () => {
@@ -217,6 +232,10 @@ describe("AuthPage", () => {
 
   it("invalidates anonymous health metadata after sign-in", async () => {
     const { root, queryClient } = await mount();
+    // The auth page itself subscribes to /api/health (SSO button visibility),
+    // so a successful sign-in must refetch it: the mounted query is how the
+    // invalidation becomes observable without reaching into internals.
+    const healthCallsBefore = healthGetMock.mock.calls.length;
     queryClient.setQueryData(queryKeys.health, {
       status: "ok",
       deploymentMode: "authenticated",
@@ -247,7 +266,73 @@ describe("AuthPage", () => {
       email: "jane@example.com",
       password: "supersecret",
     });
-    expect(queryClient.getQueryState(queryKeys.health)?.isInvalidated).toBe(true);
+    await flushReact();
+    expect(healthGetMock.mock.calls.length).toBeGreaterThan(healthCallsBefore);
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("hides the SSO button when the instance does not advertise keycloak", async () => {
+    healthGetMock.mockResolvedValue({ status: "ok", authSsoProviders: [] });
+    const { root } = await mount();
+
+    expect(container.textContent).not.toContain("Sign in with SSO");
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("starts the keycloak flow when the SSO button is clicked", async () => {
+    healthGetMock.mockResolvedValue({ status: "ok", authSsoProviders: ["keycloak"] });
+    const { root } = await mount();
+    await flushReact();
+
+    const ssoButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent === "Sign in with SSO (Keycloak)",
+    );
+    expect(ssoButton).not.toBeNull();
+
+    const originalLocation = window.location;
+    const assignMock = vi.fn();
+    Object.defineProperty(window, "location", {
+      value: { ...originalLocation, assign: assignMock },
+      configurable: true,
+      writable: true,
+    });
+
+    try {
+      await act(async () => {
+        ssoButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+      await flushReact();
+
+      expect(signInWithKeycloakMock).toHaveBeenCalledWith({
+        callbackUrl: new URL("/", window.location.origin).href,
+        errorCallbackUrl: new URL("/auth?sso_error=1", originalLocation.origin).href,
+      });
+      expect(assignMock).toHaveBeenCalledWith(
+        "https://sso.example.test/realms/pilot/protocol/openid-connect/auth?client_id=pilot-board",
+      );
+    } finally {
+      Object.defineProperty(window, "location", {
+        value: originalLocation,
+        configurable: true,
+        writable: true,
+      });
+    }
+
+    await act(async () => {
+      root.unmount();
+    });
+  });
+
+  it("surfaces the SSO failure message when redirected back with sso_error", async () => {
+    const { root } = await mountWithRoute("/auth?sso_error=1");
+
+    expect(container.textContent).toContain("Sign-in with SSO did not complete");
 
     await act(async () => {
       root.unmount();

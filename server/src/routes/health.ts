@@ -103,6 +103,8 @@ export function healthRoutes(
     deploymentMode: DeploymentMode;
     deploymentExposure: DeploymentExposure;
     authReady: boolean;
+    /** SSO providers available on this instance (e.g. ["keycloak"]). Surfaced on the public health payload so the sign-in page can offer the right buttons. */
+    authSsoProviders?: string[];
     companyDeletionEnabled: boolean;
     serverInfo?: ServerInfoSnapshot;
     databaseBackupHealth?: InspectDatabaseBackupHealthOptions;
@@ -115,6 +117,7 @@ export function healthRoutes(
   },
 ) {
   const router = Router();
+  const authSsoProviders = opts.authSsoProviders ?? [];
 
   router.post("/dev-server/restart", async (req, res) => {
     const actorType = "actor" in req ? req.actor?.type : null;
@@ -307,6 +310,7 @@ export function healthRoutes(
         commit,
         bootstrapStatus,
         bootstrapInviteActive,
+        authSsoProviders,
         ...(redactedDatabaseBackup ? { databaseBackup: redactedDatabaseBackup } : {}),
         ...(redactedWarnings ? { warnings: redactedWarnings } : {}),
         ...(devServer ? { devServer } : {}),
@@ -330,6 +334,7 @@ export function healthRoutes(
       authReady: opts.authReady,
       bootstrapStatus,
       bootstrapInviteActive,
+      authSsoProviders,
       features: {
         companyDeletionEnabled: opts.companyDeletionEnabled,
       },

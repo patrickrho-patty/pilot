@@ -2,6 +2,42 @@
 
 This project can run fully in local dev without setting up PostgreSQL manually.
 
+## Board Sign-In (Keycloak SSO)
+
+The board supports two sign-in paths: email + password (better-auth, always on)
+and OIDC sign-in through the org's Keycloak (optional, env-gated). When Keycloak
+is configured, the sign-in page (`/auth`) shows a "Sign in with SSO (Keycloak)"
+button; the Google OAuth step happens inside Keycloak (the `internal` realm at
+`https://login.patty.io` already federates Google), so Pilot only ever talks to
+Keycloak.
+
+Server configuration — set all three, SSO stays off otherwise (a partial set
+logs a startup warning):
+
+```sh
+PILOT_KEYCLOAK_ISSUER=https://login.patty.io/realms/internal
+PILOT_KEYCLOAK_CLIENT_ID=pilot-board
+PILOT_KEYCLOAK_CLIENT_SECRET=<from the realm client>
+```
+
+`PILOT_KEYCLOAK_ISSUER` is the realm URL (trailing slash stripped); discovery
+uses `<issuer>/.well-known/openid-configuration`. The SSO flag reaches the UI
+through `GET /api/health` as `authSsoProviders: ["keycloak"]`.
+
+Keycloak realm-side (admin console, one-time):
+
+1. Create a client for Pilot in the realm (e.g. `pilot-board`, confidential
+   access type) and copy its secret into `PILOT_KEYCLOAK_CLIENT_SECRET`.
+2. Add the valid redirect URI:
+   `<pilot-public-url>/api/auth/oauth2/callback/keycloak`.
+3. Make sure Google is enabled as an identity provider for the realm (already
+   true for `internal`; crew uses the same federation).
+
+Users who sign in via SSO get a better-auth user backed by an OIDC account row;
+existing email/password users with the same email stay separate accounts.
+Sign-in works even when `PILOT_AUTH_DISABLE_SIGN_UP=true` (SSO never creates
+local passwords).
+
 ## Deployment Modes
 
 For mode definitions and intended CLI behavior, see `doc/DEPLOYMENT-MODES.md`.

@@ -45,6 +45,7 @@ function createApp(
   serverInfo = testServerInfo,
   databaseBackupHealth?: Parameters<typeof healthRoutes>[1]["databaseBackupHealth"],
   runtimeEnv?: Parameters<typeof healthRoutes>[1]["runtimeEnv"],
+  authSsoProviders?: string[],
 ) {
   const app = express();
   app.use(
@@ -53,6 +54,7 @@ function createApp(
       deploymentMode: "local_trusted",
       deploymentExposure: "private",
       authReady: true,
+      authSsoProviders,
       companyDeletionEnabled: true,
       serverInfo,
       databaseBackupHealth,
@@ -77,6 +79,20 @@ describe("GET /health", () => {
     const res = await request(app).get("/health");
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: "ok", version: serverVersion, serverVersion: serverVersion, commit: testServerInfo.git.fullSha, serverInfo: testServerInfo });
+  }, 15_000);
+
+  it("advertises keycloak SSO when configured", async () => {
+    const app = createApp(createHealthyDb(), testServerInfo, undefined, undefined, ["keycloak"]);
+    const res = await request(app).get("/health");
+    expect(res.status).toBe(200);
+    expect(res.body.authSsoProviders).toEqual(["keycloak"]);
+  }, 15_000);
+
+  it("defaults authSsoProviders to empty when SSO is not configured", async () => {
+    const app = createApp(createHealthyDb());
+    const res = await request(app).get("/health");
+    expect(res.status).toBe(200);
+    expect(res.body.authSsoProviders).toEqual([]);
   }, 15_000);
 
   it("keeps the self-hosted health response byte-identical and omits cloud", async () => {
@@ -346,6 +362,7 @@ describe("GET /health", () => {
       commit: testServerInfo.git.fullSha,
       bootstrapStatus: "ready",
       bootstrapInviteActive: false,
+      authSsoProviders: [],
       databaseBackup: {
         enabled: true,
         status: "warning",
@@ -403,6 +420,7 @@ describe("GET /health", () => {
       commit: testServerInfo.git.fullSha,
       bootstrapStatus: "ready",
       bootstrapInviteActive: false,
+      authSsoProviders: [],
     });
     expect(res.body.serverInfo).toBeUndefined();
   });
@@ -441,6 +459,7 @@ describe("GET /health", () => {
       commit: testServerInfo.git.fullSha,
       bootstrapStatus: "ready",
       bootstrapInviteActive: false,
+      authSsoProviders: [],
     });
     expect(res.body.serverInfo).toBeUndefined();
   });

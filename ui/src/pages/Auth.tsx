@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "@/lib/router";
 import { authApi } from "../api/auth";
 import { queryKeys } from "../lib/queryKeys";
 import { getRememberedInvitePath } from "../lib/invite-memory";
+import { healthApi } from "../api/health";
 import { Button } from "@/components/ui/button";
 import { AsciiArtAnimation } from "@/components/AsciiArtAnimation";
 import { PilotLoading } from "@/components/AnimatedPilotIcon";
@@ -31,6 +32,34 @@ export function AuthPage() {
     queryFn: () => authApi.getSession(),
     retry: false,
   });
+  const { data: health } = useQuery({
+    queryKey: queryKeys.health,
+    queryFn: () => healthApi.get(),
+    retry: false,
+  });
+  const keycloakSsoEnabled = health?.authSsoProviders?.includes("keycloak") ?? false;
+  const [ssoPending, setSsoPending] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("sso_error") !== null) {
+      setError("Sign-in with SSO did not complete. Please try again or use email and password.");
+    }
+  }, [searchParams]);
+
+  const startKeycloakSignIn = async () => {
+    setError(null);
+    setSsoPending(true);
+    try {
+      const url = await authApi.signInWithKeycloak({
+        callbackUrl: new URL(nextPath, window.location.origin).href,
+        errorCallbackUrl: new URL("/auth?sso_error=1", window.location.origin).href,
+      });
+      window.location.assign(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "SSO sign-in failed");
+      setSsoPending(false);
+    }
+  };
 
   useEffect(() => {
     if (session) {
@@ -185,6 +214,25 @@ export function AuthPage() {
                   : "Create Account"}
             </Button>
           </form>
+
+          {keycloakSsoEnabled && (
+            <>
+              <div className="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4 w-full"
+                onClick={startKeycloakSignIn}
+                disabled={ssoPending}
+              >
+                {ssoPending ? "Redirecting…" : "Sign in with SSO (Keycloak)"}
+              </Button>
+            </>
+          )}
 
           <div className="mt-5 text-sm text-muted-foreground">
             {mode === "sign_in" ? "Need an account?" : "Already have an account?"}{" "}

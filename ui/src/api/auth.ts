@@ -166,6 +166,22 @@ export const authApi = {
     await authPost("/sign-in/email", input);
   },
 
+  /**
+   * Start Keycloak SSO (better-auth genericOAuth plugin). Resolves with the
+   * provider redirect URL; the caller navigates the browser to it.
+   */
+  signInWithKeycloak: async (input: { callbackUrl: string; errorCallbackUrl: string }) => {
+    const payload = await authPost("/sign-in/oauth2", {
+      providerId: "keycloak",
+      callbackURL: input.callbackUrl,
+      errorCallbackURL: input.errorCallbackUrl,
+    }) as { url?: string; redirect?: boolean } | null;
+    if (!payload?.url) {
+      throw new Error("SSO is not available on this instance.");
+    }
+    return payload.url;
+  },
+
   signUpEmail: async (input: { name: string; email: string; password: string }) => {
     await authPost("/sign-up/email", input);
   },

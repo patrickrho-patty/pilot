@@ -49,6 +49,37 @@ const TAILSCALE_DETECT_TIMEOUT_MS = 3000;
 
 type DatabaseMode = "embedded-postgres" | "postgres";
 
+/** Keycloak (OIDC) sign-in settings. Set via PILOT_KEYCLOAK_* env vars; null = SSO disabled. */
+export interface AuthKeycloakSettings {
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
+}
+
+/**
+ * Resolve Keycloak SSO settings from env. All three variables are required —
+ * a partial set returns null plus the missing names so startup can warn
+ * instead of silently half-configuring sign-in.
+ */
+export function resolveAuthKeycloakSettings(env: {
+  PILOT_KEYCLOAK_ISSUER?: string;
+  PILOT_KEYCLOAK_CLIENT_ID?: string;
+  PILOT_KEYCLOAK_CLIENT_SECRET?: string;
+}): { settings: AuthKeycloakSettings | null; missing: string[] } {
+  const issuer = env.PILOT_KEYCLOAK_ISSUER?.trim().replace(/\/+$/, "") || undefined;
+  const clientId = env.PILOT_KEYCLOAK_CLIENT_ID?.trim() || undefined;
+  const clientSecret = env.PILOT_KEYCLOAK_CLIENT_SECRET?.trim() || undefined;
+  const missing = [
+    issuer ? null : "PILOT_KEYCLOAK_ISSUER",
+    clientId ? null : "PILOT_KEYCLOAK_CLIENT_ID",
+    clientSecret ? null : "PILOT_KEYCLOAK_CLIENT_SECRET",
+  ].filter((name): name is string => name !== null);
+  return {
+    settings: issuer && clientId && clientSecret ? { issuer, clientId, clientSecret } : null,
+    missing,
+  };
+}
+
 export interface Config {
   deploymentMode: DeploymentMode;
   deploymentExposure: DeploymentExposure;
@@ -60,6 +91,7 @@ export interface Config {
   authBaseUrlMode: AuthBaseUrlMode;
   authPublicBaseUrl: string | undefined;
   authDisableSignUp: boolean;
+  authKeycloak: AuthKeycloakSettings | null;
   databaseMode: DatabaseMode;
   databaseUrl: string | undefined;
   databaseMigrationUrl: string | undefined;
@@ -214,6 +246,13 @@ export function loadConfig(): Config {
     disableSignUpFromEnv !== undefined
       ? disableSignUpFromEnv === "true"
       : (fileConfig?.auth?.disableSignUp ?? false);
+  const { settings: authKeycloak, missing: keycloakMissing } = resolveAuthKeycloakSettings(process.env);
+  if (keycloakMissing.length > 0 && keycloakMissing.length < 3) {
+    console.warn(
+      `Keycloak SSO is disabled: ${keycloakMissing.join(", ")} ${keycloakMissing.length === 1 ? "is" : "are"} not set. ` +
+      "Set all PILOT_KEYCLOAK_* variables to enable sign-in through Keycloak.",
+    );
+  }
   const allowedHostnamesFromEnvRaw = process.env.PILOT_ALLOWED_HOSTNAMES;
   const allowedHostnamesFromEnv = allowedHostnamesFromEnvRaw
     ? allowedHostnamesFromEnvRaw
@@ -312,6 +351,7 @@ export function loadConfig(): Config {
     authBaseUrlMode,
     authPublicBaseUrl,
     authDisableSignUp,
+    authKeycloak,
     databaseMode: fileDatabaseMode,
     databaseUrl: process.env.DATABASE_URL ?? fileDbUrl,
     databaseMigrationUrl: process.env.DATABASE_MIGRATION_URL,

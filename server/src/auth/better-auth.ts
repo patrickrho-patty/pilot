@@ -2,6 +2,7 @@ import type { Request, RequestHandler } from "express";
 import type { IncomingHttpHeaders } from "node:http";
 import { betterAuth, type Auth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { genericOAuth, keycloak } from "better-auth/plugins/generic-oauth";
 import { toNodeHandler } from "better-auth/node";
 import type { Db } from "@pilotai/db";
 import {
@@ -11,6 +12,7 @@ import {
   authVerifications,
 } from "@pilotai/db";
 import type { Config } from "../config.js";
+import type { AuthKeycloakSettings } from "../config.js";
 import { resolvePilotInstanceId } from "../home-paths.js";
 import {
   workspaceLoginHandoffPlugin,
@@ -182,6 +184,25 @@ export function resolveWorkspaceHandoffIdentity(
   };
 }
 
+/**
+ * Keycloak OIDC sign-in (genericOAuth plugin). The issuer is the realm URL
+ * (e.g. https://sso.example.com/realms/pilot); discovery pulls the authorize
+ * + token endpoints, so only the realm client id/secret are needed here. The
+ * redirect URI to register on the realm client is
+ * `<public-base-url>/api/auth/oauth2/callback/keycloak`.
+ */
+export function buildKeycloakOAuthPlugin(settings: AuthKeycloakSettings) {
+  return genericOAuth({
+    config: [
+      keycloak({
+        clientId: settings.clientId,
+        clientSecret: settings.clientSecret,
+        issuer: settings.issuer,
+      }),
+    ],
+  });
+}
+
 export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins: string[]): BetterAuthInstance {
   const baseUrl = config.authBaseUrlMode === "explicit" ? config.authPublicBaseUrl : undefined;
   const publicUrl = process.env.PILOT_PUBLIC_URL?.trim() || baseUrl;
@@ -224,12 +245,12 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins:
       override: process.env.PILOT_AUTH_RATE_LIMIT_ENABLED,
     }),
     advanced: buildBetterAuthAdvancedOptions({ disableSecureCookies }),
-    // Registered only for a managed workspace instance: the plugin is what makes
-    // `Open workspace` password-independent, and a control-plane instance that
-    // was never handed a workspace key must not expose the exchange at all.
-    ...(resolveWorkspaceHandoffIdentity(config)
-      ? {
-          plugins: [
+    plugins: [
+      // Registered only for a managed workspace instance: the plugin is what makes
+      // `Open workspace` password-independent, and a control-plane instance that
+      // was never handed a workspace key must not expose the exchange at all.
+      ...(resolveWorkspaceHandoffIdentity(config)
+        ? [
             workspaceLoginHandoffPlugin({
               db,
               // Re-resolved per exchange so a hot restart cannot keep validating
@@ -243,9 +264,12 @@ export function createBetterAuthInstance(db: Db, config: Config, trustedOrigins:
                   origin: null,
                 },
             }),
-          ],
-        }
-      : {}),
+          ]
+        : []),
+      // Keycloak SSO (internal realm). Absent entirely when PILOT_KEYCLOAK_*
+      // env vars are not fully set, so the OAuth endpoints stay unregistered.
+      ...(config.authKeycloak ? [buildKeycloakOAuthPlugin(config.authKeycloak)] : []),
+    ],
   };
 
   if (!baseUrl) {
