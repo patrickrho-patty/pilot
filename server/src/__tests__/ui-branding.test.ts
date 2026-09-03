@@ -100,7 +100,7 @@ describe("ui branding", () => {
     expect(branded).not.toContain('href="/favicon.svg"');
 
     const defaultHtml = applyUiBranding(TEMPLATE, {});
-    expect(defaultHtml).toContain('href="/favicon.svg"');
+    expect(defaultHtml).toContain('href="/favicon.svg?v=2"');
     expect(defaultHtml).not.toContain('name="pilot-worktree-name"');
   });
 });
