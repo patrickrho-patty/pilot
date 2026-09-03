@@ -131,9 +131,12 @@ export async function discoverPiModels(input: {
     throw new Error(detail ? `\`pi --list-models\` failed: ${detail}` : "`pi --list-models` failed.");
   }
 
-  // Pi outputs model list to stderr, but fall back to stdout for older versions
-  const output = result.stderr || result.stdout;
-  return sortModels(dedupeModels(parseModelsOutput(output)));
+  // pi has moved the model table between streams across versions: current
+  // versions print it to stdout (stderr carries MCP advisories), older ones
+  // printed it to stderr. Parse both and use whichever yields models.
+  const fromStdout = parseModelsOutput(result.stdout);
+  const models = fromStdout.length > 0 ? fromStdout : parseModelsOutput(result.stderr);
+  return sortModels(dedupeModels(models));
 }
 
 function normalizeEnv(input: unknown): Record<string, string> {
