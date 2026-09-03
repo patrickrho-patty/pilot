@@ -16,6 +16,13 @@ ingress:
   enabled: true
   className: alb
   host: pilot.patty.io
+  # Crew desktop auto-updates proxy (crew-updates bucket presign redirect).
+  # Live objects: deployment/service/secret applied directly in the cluster;
+  # this only owns the /updates path rule on the shared ALB ingress.
+  updatesProxy:
+    enabled: true
+    serviceName: updates-proxy
+    servicePort: 80
 
 config:
   PILOT_PUBLIC_URL: https://pilot.patty.io
