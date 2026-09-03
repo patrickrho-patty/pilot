@@ -132,6 +132,11 @@ const VITE_DEV_STATIC_PATHS = new Set([
   "/favicon.svg",
   "/site.webmanifest",
   "/sw.js",
+  // Official brand assets referenced by the sign-in page and site.webmanifest.
+  "/android-chrome-192x192.png",
+  "/android-chrome-512x512.png",
+  "/pilot_logo-600-transparent.png",
+  "/pilot_logo-600-transparent-dark.png",
 ]);
 
 export function isDatabaseConnectionUnavailableError(err: unknown): boolean {

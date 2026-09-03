@@ -118,8 +118,8 @@ export function AuthPage() {
         <div className="w-full max-w-md mx-auto my-auto px-8 py-12">
           <div className="mb-8">
             {/* Official Pilot wordmark — light/dark variants generated from resources/logos/pilot_logo.png */}
-            <img src="/pilot-logo-600-transparent.png" alt="Pilot" className="h-7 w-auto dark:hidden" />
-            <img src="/pilot-logo-600-transparent-dark.png" alt="Pilot" className="hidden h-7 w-auto dark:block" />
+            <img src="/pilot_logo-600-transparent.png" alt="Pilot" className="h-7 w-auto dark:hidden" />
+            <img src="/pilot_logo-600-transparent-dark.png" alt="Pilot" className="hidden h-7 w-auto dark:block" />
           </div>
 
           <h1 className="text-xl font-semibold">
