@@ -63,6 +63,28 @@ Both lists are optional and independent; errors in provisioning are logged and
 never block the sign-in itself. The first person in (typically the CEO) creates
 the company via the onboarding wizard; everyone after that auto-joins it.
 
+### Customer deployment runbook (SSO shape)
+
+For deploying a managed instance for a customer organization:
+
+1. **Identity** (one-time per customer): in their realm, create a confidential
+   OIDC client (e.g. `pilot-<customer>`, standard flow only) with redirect URI
+   `https://<customer-pilot-url>/api/auth/oauth2/callback/keycloak`, and copy
+   its client secret.
+2. **Deploy Pilot** in `authenticated` mode with `BETTER_AUTH_SECRET`,
+   `PILOT_KEYCLOAK_*`, `PILOT_SSO_ADMIN_EMAILS=<their admin>`, and
+   `PILOT_SSO_DOMAINS=<their work domain>`.
+3. **Their admin signs in first**: provisioned as `instance_admin`, completes
+   the onboarding wizard, and becomes the company `owner`.
+4. **Their workforce signs in whenever**: straight to Google via
+   `kc_idp_hint=google`, then auto-joined to the company as members. No
+   invites needed while the instance has exactly one company.
+
+For customers without SSO: the first sign-up on a fresh `authenticated`+
+`private` instance claims first admin (`bootstrap_pending` →
+`/bootstrap/claim`); on public exposures use a bootstrap CEO invite instead.
+Employees then join through company invites created in the invites UI.
+
 ## Deployment Modes
 
 For mode definitions and intended CLI behavior, see `doc/DEPLOYMENT-MODES.md`.
