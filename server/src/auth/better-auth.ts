@@ -298,11 +298,12 @@ export function emailDomainMatches(email: string | null | undefined, domains: re
       // env vars are not fully set, so the OAuth endpoints stay unregistered.
       ...(config.authKeycloak ? [buildKeycloakOAuthPlugin(config.authKeycloak)] : []),
     ],
-    // Domain-based access provisioning: on every sign-in, a user whose email
-    // is on an allowed work domain is promoted to instance_admin and, when the
-    // instance has exactly one company, joined to it as a member. Idempotent;
-    // errors are logged and never block the sign-in itself.
-    ...(config.ssoAutoAdminDomains.length > 0
+    // Domain-based access provisioning on every sign-in:
+    //   - an email on PILOT_SSO_ADMIN_EMAILS is promoted to instance_admin;
+    //   - an email whose domain is on PILOT_SSO_DOMAINS is joined (as a plain
+    //     member, never admin) when the instance has exactly one company.
+    // Both are idempotent; errors are logged and never block the sign-in.
+    ...(config.ssoAdminEmails.length > 0 || config.ssoMemberDomains.length > 0
       ? {
           databaseHooks: {
             session: {
@@ -314,9 +315,12 @@ export function emailDomainMatches(email: string | null | undefined, domains: re
                       .from(authUsers)
                       .where(eq(authUsers.id, session.userId))
                       .then((rows) => rows[0] ?? null);
-                    if (!emailDomainMatches(user?.email, config.ssoAutoAdminDomains)) return;
+                    const email = user?.email ?? null;
+                    const isAdminEmail = email !== null && config.ssoAdminEmails.includes(email.toLowerCase());
+                    const isMemberDomain = emailDomainMatches(email, config.ssoMemberDomains);
+                    if (!isAdminEmail && !isMemberDomain) return;
                     const access = accessService(db);
-                    await access.promoteInstanceAdmin(session.userId);
+                    if (isAdminEmail) await access.promoteInstanceAdmin(session.userId);
                     const existingCompanies = await db.select({ id: companies.id }).from(companies);
                     if (existingCompanies.length === 1) {
                       const membership = await access.getMembership(existingCompanies[0].id, "user", session.userId);

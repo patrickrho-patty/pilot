@@ -92,6 +92,18 @@ export function parseSsoDomainList(raw: string | undefined): string[] {
   );
 }
 
+/** Parse a comma-separated email list into normalized (lowercased) emails. */
+export function parseSsoEmailList(raw: string | undefined): string[] {
+  return Array.from(
+    new Set(
+      (raw ?? "")
+        .split(",")
+        .map((email) => email.trim().toLowerCase())
+        .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)),
+    ),
+  );
+}
+
 export interface Config {
   deploymentMode: DeploymentMode;
   deploymentExposure: DeploymentExposure;
@@ -104,8 +116,10 @@ export interface Config {
   authPublicBaseUrl: string | undefined;
   authDisableSignUp: boolean;
   authKeycloak: AuthKeycloakSettings | null;
-  /** Work-email domains that get instance access automatically on SSO sign-in. */
-  ssoAutoAdminDomains: string[];
+  /** Exact emails that are promoted to instance_admin on SSO sign-in. */
+  ssoAdminEmails: string[];
+  /** Work-email domains whose users are auto-joined (as members, never admin) on SSO sign-in. */
+  ssoMemberDomains: string[];
   databaseMode: DatabaseMode;
   databaseUrl: string | undefined;
   databaseMigrationUrl: string | undefined;
@@ -261,7 +275,8 @@ export function loadConfig(): Config {
       ? disableSignUpFromEnv === "true"
       : (fileConfig?.auth?.disableSignUp ?? false);
   const { settings: authKeycloak, missing: keycloakMissing } = resolveAuthKeycloakSettings(process.env);
-  const ssoAutoAdminDomains = parseSsoDomainList(process.env.PILOT_SSO_DOMAINS);
+  const ssoAdminEmails = parseSsoEmailList(process.env.PILOT_SSO_ADMIN_EMAILS);
+  const ssoMemberDomains = parseSsoDomainList(process.env.PILOT_SSO_DOMAINS);
   if (keycloakMissing.length > 0 && keycloakMissing.length < 3) {
     console.warn(
       `Keycloak SSO is disabled: ${keycloakMissing.join(", ")} ${keycloakMissing.length === 1 ? "is" : "are"} not set. ` +
@@ -367,7 +382,8 @@ export function loadConfig(): Config {
     authPublicBaseUrl,
     authDisableSignUp,
     authKeycloak,
-    ssoAutoAdminDomains,
+    ssoAdminEmails,
+    ssoMemberDomains,
     databaseMode: fileDatabaseMode,
     databaseUrl: process.env.DATABASE_URL ?? fileDbUrl,
     databaseMigrationUrl: process.env.DATABASE_MIGRATION_URL,

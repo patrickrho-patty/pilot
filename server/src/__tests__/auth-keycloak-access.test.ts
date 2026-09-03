@@ -3,7 +3,7 @@ import {
   boardEmailPasswordEnabled,
   emailDomainMatches,
 } from "../auth/better-auth.js";
-import { parseSsoDomainList } from "../config.js";
+import { parseSsoDomainList, parseSsoEmailList } from "../config.js";
 
 describe("boardEmailPasswordEnabled", () => {
   it("keeps email sign-in available without Keycloak", () => {
@@ -59,5 +59,19 @@ describe("parseSsoDomainList", () => {
     expect(parseSsoDomainList("not a domain, no-spaces@weird, ok.io")).toEqual(["ok.io"]);
     expect(parseSsoDomainList(undefined)).toEqual([]);
     expect(parseSsoDomainList("")).toEqual([]);
+  });
+});
+
+describe("parseSsoEmailList", () => {
+  it("normalizes, lowercases, and dedupes emails", () => {
+    expect(parseSsoEmailList("Patrick@Patty.io, patrick@patty.io, a.b@patty.io")).toEqual([
+      "patrick@patty.io",
+      "a.b@patty.io",
+    ]);
+  });
+
+  it("drops junk that is not an email", () => {
+    expect(parseSsoEmailList("patty.io, no-at-sign, ceo@patty.io")).toEqual(["ceo@patty.io"]);
+    expect(parseSsoEmailList(undefined)).toEqual([]);
   });
 });

@@ -40,20 +40,28 @@ existing email/password users with the same email stay separate accounts.
 Sign-in works even when `PILOT_AUTH_DISABLE_SIGN_UP=true` (SSO never creates
 local passwords).
 
-### SSO domain auto-provisioning
+### SSO access provisioning
 
-Set `PILOT_SSO_DOMAINS` (comma-separated) to grant access automatically to
-everyone signing in with a work email on those domains:
+Two env knobs control who gets access when signing in through SSO:
 
 ```sh
+# Exact emails promoted to instance_admin on sign-in (the CEO / operators)
+PILOT_SSO_ADMIN_EMAILS=patrick@patty.io
+
+# Work-email domains whose users are auto-joined as plain members (never admin)
 PILOT_SSO_DOMAINS=patty.io
 ```
 
-On each SSO sign-in, a user whose email domain matches is promoted to
-`instance_admin` and — when the instance has exactly one company — joined to it
-as an active member. Idempotent; unmatched domains still need a company
-invite. The first person in (typically the CEO) creates the company via the
-onboarding wizard; everyone after that auto-joins it.
+On each SSO sign-in:
+
+- an email on `PILOT_SSO_ADMIN_EMAILS` becomes an `instance_admin`;
+- any signed-in user whose email domain is on `PILOT_SSO_DOMAINS` is joined —
+  as an active **member**, never an admin — when the instance has exactly one
+  company (idempotent; with zero or multiple companies, use invites instead).
+
+Both lists are optional and independent; errors in provisioning are logged and
+never block the sign-in itself. The first person in (typically the CEO) creates
+the company via the onboarding wizard; everyone after that auto-joins it.
 
 ## Deployment Modes
 
