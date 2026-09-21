@@ -16,6 +16,9 @@ ingress:
   enabled: true
   className: alb
   host: pilot.patty.io
+  annotations:
+    alb.ingress.kubernetes.io/subnets: >-
+      subnet-09c2e49c03d8b0660,subnet-01004009d9dbf07cf,subnet-092f8d62be99bdd3c
   # Crew desktop auto-updates proxy (crew-updates bucket presign redirect).
   # Live objects: deployment/service/secret applied directly in the cluster;
   # this only owns the /updates path rule on the shared ALB ingress.
