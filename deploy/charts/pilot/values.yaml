@@ -35,7 +35,7 @@ persistence:
   # Holds /pilot: embedded PostgreSQL data, uploaded assets, local secrets
   # key, agent workspace state (see doc/DOCKER.md persistence contract).
   size: 20Gi
-  storageClass: ""   # cluster default (gp2)
+  storageClass: ""   # cluster default; production pins gp3-encrypted
 
 ingress:
   enabled: true

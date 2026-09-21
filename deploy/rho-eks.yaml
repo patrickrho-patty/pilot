@@ -1,6 +1,6 @@
 # Pilot on rho-cluster (EKS ap-northeast-2).
 #
-# Profile: embedded PostgreSQL persisted on an EBS gp2 PVC under /pilot,
+# Profile: embedded PostgreSQL persisted on an encrypted EBS gp3 PVC under /pilot,
 # matching the Docker quickstart contract (doc/DOCKER.md). Migrating to RDS
 # later is a values-only change: set DATABASE_URL in the pilot-secrets secret
 # and adjust persistence as needed.
@@ -40,6 +40,6 @@ resources:
 persistence:
   enabled: true
   size: 20Gi
-  storageClass: ""   # gp2 (cluster default)
+  storageClass: gp3-encrypted
 
 existingSecret: pilot-secrets
