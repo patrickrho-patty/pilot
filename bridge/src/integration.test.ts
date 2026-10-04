@@ -4,9 +4,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { BridgeConfig } from "./config.js";
 import {
+  applyIntegrationConfig,
+  EMPTY_INTEGRATION_CONFIG,
   KIND_AGENT_CREATION_POLICY,
   publishPilotPolicy,
   readCreationPolicy,
+  readIntegrationConfig,
   relayHttpUrl,
 } from "./integration.js";
 import type { CrewRelay } from "./relay.js";
@@ -63,6 +66,87 @@ describe("readCreationPolicy", () => {
     await expect(readCreationPolicy("wss://crew.test", fetchImpl)).rejects.toThrow(
       "creation policy read failed: HTTP 503",
     );
+  });
+});
+
+describe("readIntegrationConfig (PAT-1998/PAT-2005)", () => {
+  it("reads the relay's effective config", async () => {
+    const fetchImpl = (async () =>
+      new Response(
+        JSON.stringify({
+          integrated: true,
+          boardUrl: "https://pilot.example",
+          channels: {
+            "11111111-1111-1111-1111-111111111111": {
+              companyId: "co-1",
+              projectId: "22222222-2222-2222-2222-222222222222",
+            },
+          },
+          author: "abc",
+          eventId: "def",
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    const config = await readIntegrationConfig("wss://crew.test", fetchImpl);
+    expect(config.integrated).toBe(true);
+    expect(config.boardUrl).toBe("https://pilot.example");
+    expect(config.channels["11111111-1111-1111-1111-111111111111"].companyId).toBe("co-1");
+  });
+
+  it("treats a never-configured relay as not integrated", async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ integrated: false }), { status: 200 })) as unknown as typeof fetch;
+    const config = await readIntegrationConfig("wss://crew.test", fetchImpl);
+    expect(config).toEqual(EMPTY_INTEGRATION_CONFIG);
+  });
+
+  it("throws on a failed read rather than pretending the community is unconfigured", async () => {
+    const fetchImpl = (async () => new Response("nope", { status: 503 })) as unknown as typeof fetch;
+    await expect(readIntegrationConfig("wss://crew.test", fetchImpl)).rejects.toThrow(
+      "integration config read failed: HTTP 503",
+    );
+  });
+});
+
+describe("applyIntegrationConfig", () => {
+  const CH = "11111111-1111-1111-1111-111111111111";
+  const fileMapping = {
+    channels: { [CH]: { companyId: "co-old", name: "market-intel", retentionDays: 30, defaultAgent: "christina" } },
+    agents: { christina: { pilotAgentId: "agent-1", pubkey: "a".repeat(64), allowedSenders: [] } },
+  };
+
+  it("lets the relay win for the destination and keeps the file's other fields", () => {
+    const merged = applyIntegrationConfig(fileMapping, {
+      integrated: true,
+      boardUrl: "https://pilot.example",
+      channels: { [CH]: { companyId: "co-new", projectId: "22222222-2222-2222-2222-222222222222" } },
+      author: null,
+      eventId: null,
+    });
+    expect(merged.channels[CH].companyId).toBe("co-new");
+    expect(merged.channels[CH].projectId).toBe("22222222-2222-2222-2222-222222222222");
+    // The relay config does not carry these, so the file must survive.
+    expect(merged.channels[CH].retentionDays).toBe(30);
+    expect(merged.channels[CH].defaultAgent).toBe("christina");
+    expect(merged.agents.christina.pilotAgentId).toBe("agent-1");
+  });
+
+  it("ignores a relay channel the file does not know", () => {
+    const merged = applyIntegrationConfig(fileMapping, {
+      integrated: true,
+      boardUrl: "https://pilot.example",
+      channels: { "99999999-9999-9999-9999-999999999999": { companyId: "co-x", projectId: null } },
+      author: null,
+      eventId: null,
+    });
+    // Activating a channel with no agent or retention settings would file work
+    // into a company the bridge cannot route.
+    expect(Object.keys(merged.channels)).toEqual([CH]);
+    expect(merged.channels[CH].companyId).toBe("co-old");
+  });
+
+  it("leaves the file mapping untouched when the community is not integrated", () => {
+    expect(applyIntegrationConfig(fileMapping, EMPTY_INTEGRATION_CONFIG)).toEqual(fileMapping);
   });
 });
 

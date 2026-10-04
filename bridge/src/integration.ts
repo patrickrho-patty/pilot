@@ -1,7 +1,33 @@
 import { readFileSync } from "node:fs";
 import { finalizeEvent } from "nostr-tools";
 import type { BridgeConfig } from "./config.js";
+import type { BridgeMapping } from "./crew.js";
 import { hexToBytes, type CrewRelay } from "./relay.js";
+
+/**
+ * The community integration config (PAT-1998/PAT-2005), read from the relay.
+ *
+ * The relay owns this because an admin must be able to change the connection
+ * setting and channel mapping without an operator editing a file and restarting
+ * a pod. The bridge overlays it on its own mapping file, which stays
+ * authoritative for everything the relay config does not carry (agents, users,
+ * repos, retention, per-channel defaults).
+ */
+export type RelayIntegrationConfig = {
+  integrated: boolean;
+  boardUrl: string | null;
+  channels: Record<string, { companyId: string; projectId: string | null }>;
+  author: string | null;
+  eventId: string | null;
+};
+
+export const EMPTY_INTEGRATION_CONFIG: RelayIntegrationConfig = {
+  integrated: false,
+  boardUrl: null,
+  channels: {},
+  author: null,
+  eventId: null,
+};
 
 /** Crew community agent-creation policy head (PAT-1982). */
 export const KIND_AGENT_CREATION_POLICY = 39090;
@@ -12,6 +38,59 @@ export const PILOT_POLICY = "pilot";
 
 export function relayHttpUrl(relayUrl: string): string {
   return relayUrl.replace(/^ws/, "http").replace(/\/$/, "");
+}
+
+/**
+ * Read the effective integration config. A relay that has never been configured
+ * answers with the not-integrated default.
+ */
+export async function readIntegrationConfig(
+  relayUrl: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<RelayIntegrationConfig> {
+  const resp = await fetchImpl(`${relayHttpUrl(relayUrl)}/api/workspace/integration-config`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!resp.ok) {
+    throw new Error(`integration config read failed: HTTP ${resp.status}`);
+  }
+  const body = (await resp.json()) as Partial<RelayIntegrationConfig>;
+  return {
+    integrated: body.integrated === true,
+    boardUrl: typeof body.boardUrl === "string" ? body.boardUrl : null,
+    channels: body.channels && typeof body.channels === "object" ? body.channels : {},
+    author: typeof body.author === "string" ? body.author : null,
+    eventId: typeof body.eventId === "string" ? body.eventId : null,
+  };
+}
+
+/**
+ * Overlay the relay config's channel destinations onto the file mapping.
+ *
+ * The relay wins for `companyId`/`projectId` because it is the surface an admin
+ * edits; the file keeps `name`, `retentionDays` and `defaultAgent`, which the
+ * relay config does not carry. A relay entry for a channel the file does not
+ * know is ignored: filing work into a company needs the agent and retention
+ * settings the file holds, so a half-known channel must not be activated.
+ */
+export function applyIntegrationConfig(
+  mapping: BridgeMapping,
+  config: RelayIntegrationConfig,
+): BridgeMapping {
+  if (!config.integrated || Object.keys(config.channels).length === 0) {
+    return mapping;
+  }
+  const channels: BridgeMapping["channels"] = { ...mapping.channels };
+  for (const [channelId, destination] of Object.entries(config.channels)) {
+    const existing = channels[channelId];
+    if (!existing) continue;
+    channels[channelId] = {
+      ...existing,
+      companyId: destination.companyId,
+      ...(destination.projectId ? { projectId: destination.projectId } : {}),
+    };
+  }
+  return { ...mapping, channels };
 }
 
 /**
