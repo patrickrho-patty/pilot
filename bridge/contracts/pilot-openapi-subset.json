@@ -1,0 +1,1556 @@
+{
+ "capturedAt": "2026-10-04T10:12:02Z",
+ "info": {
+  "description": "REST API for the Paperclip AI agent management platform",
+  "title": "Paperclip API",
+  "version": "1.0.0"
+ },
+ "openapi": "3.0.0",
+ "paths": {
+  "/api/agents/me": {
+   "get": {
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "Get the current agent",
+    "tags": [
+     "agents"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   }
+  },
+  "/api/agents/{id}": {
+   "get": {
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Not found"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "Get an agent",
+    "tags": [
+     "agents"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   },
+   "patch": {
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "properties": {
+         "adapterConfig": {
+          "additionalProperties": {},
+          "type": "object"
+         },
+         "adapterType": {
+          "minLength": 1,
+          "type": "string"
+         },
+         "applyStoredClaudeLogin": {
+          "type": "boolean"
+         },
+         "budgetMonthlyCents": {
+          "minimum": 0,
+          "type": "integer"
+         },
+         "capabilities": {
+          "nullable": true,
+          "type": "string"
+         },
+         "defaultEnvironmentId": {
+          "format": "uuid",
+          "nullable": true,
+          "type": "string"
+         },
+         "desiredSkills": {
+          "items": {
+           "oneOf": [
+            {
+             "minLength": 1,
+             "type": "string"
+            },
+            {
+             "properties": {
+              "key": {
+               "minLength": 1,
+               "type": "string"
+              },
+              "versionId": {
+               "format": "uuid",
+               "nullable": true,
+               "type": "string"
+              }
+             },
+             "required": [
+              "key",
+              "versionId"
+             ],
+             "type": "object"
+            }
+           ]
+          },
+          "type": "array"
+         },
+         "icon": {
+          "enum": [
+           "bot",
+           "cpu",
+           "brain",
+           "zap",
+           "rocket",
+           "code",
+           "terminal",
+           "shield",
+           "eye",
+           "search",
+           "wrench",
+           "hammer",
+           "lightbulb",
+           "sparkles",
+           "star",
+           "heart",
+           "flame",
+           "bug",
+           "cog",
+           "database",
+           "globe",
+           "lock",
+           "mail",
+           "message-square",
+           "file-code",
+           "git-branch",
+           "package",
+           "puzzle",
+           "target",
+           "wand",
+           "atom",
+           "circuit-board",
+           "radar",
+           "swords",
+           "telescope",
+           "microscope",
+           "crown",
+           "gem",
+           "hexagon",
+           "pentagon",
+           "fingerprint"
+          ],
+          "nullable": true,
+          "type": "string"
+         },
+         "instructionsBundle": {
+          "properties": {
+           "entryFile": {
+            "minLength": 1,
+            "type": "string"
+           },
+           "files": {
+            "additionalProperties": {
+             "type": "string"
+            },
+            "type": "object"
+           }
+          },
+          "required": [
+           "files"
+          ],
+          "type": "object"
+         },
+         "metadata": {
+          "additionalProperties": {},
+          "nullable": true,
+          "type": "object"
+         },
+         "name": {
+          "minLength": 1,
+          "type": "string"
+         },
+         "replaceAdapterConfig": {
+          "type": "boolean"
+         },
+         "reportsTo": {
+          "format": "uuid",
+          "nullable": true,
+          "type": "string"
+         },
+         "role": {
+          "enum": [
+           "ceo",
+           "cto",
+           "cmo",
+           "cfo",
+           "security",
+           "engineer",
+           "designer",
+           "pm",
+           "qa",
+           "devops",
+           "researcher",
+           "general"
+          ],
+          "type": "string"
+         },
+         "runtimeConfig": {
+          "properties": {
+           "modelProfiles": {
+            "additionalProperties": false,
+            "properties": {
+             "cheap": {
+              "additionalProperties": false,
+              "properties": {
+               "adapterConfig": {
+                "additionalProperties": {},
+                "type": "object"
+               },
+               "enabled": {
+                "type": "boolean"
+               },
+               "label": {
+                "minLength": 1,
+                "type": "string"
+               }
+              },
+              "required": [
+               "adapterConfig"
+              ],
+              "type": "object"
+             }
+            },
+            "type": "object"
+           }
+          },
+          "type": "object"
+         },
+         "spentMonthlyCents": {
+          "minimum": 0,
+          "type": "integer"
+         },
+         "status": {
+          "enum": [
+           "active",
+           "paused",
+           "idle",
+           "running",
+           "error",
+           "pending_approval",
+           "terminated"
+          ],
+          "type": "string"
+         },
+         "storedSessionId": {
+          "maxLength": 256,
+          "minLength": 1,
+          "type": "string"
+         },
+         "title": {
+          "nullable": true,
+          "type": "string"
+         }
+        },
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "400": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Bad request"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Not found"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "Update an agent",
+    "tags": [
+     "agents"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   }
+  },
+  "/api/agents/{id}/skills/sync": {
+   "post": {
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "properties": {
+         "desiredSkills": {
+          "items": {
+           "oneOf": [
+            {
+             "minLength": 1,
+             "type": "string"
+            },
+            {
+             "properties": {
+              "key": {
+               "minLength": 1,
+               "type": "string"
+              },
+              "versionId": {
+               "format": "uuid",
+               "nullable": true,
+               "type": "string"
+              }
+             },
+             "required": [
+              "key",
+              "versionId"
+             ],
+             "type": "object"
+            }
+           ]
+          },
+          "type": "array"
+         },
+         "mode": {
+          "enum": [
+           "add",
+           "remove",
+           "replace"
+          ],
+          "type": "string"
+         }
+        },
+        "required": [
+         "mode",
+         "desiredSkills"
+        ],
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "400": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Bad request"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "404": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Not found"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unprocessable entity"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "Sync desired skills onto an agent configuration",
+    "tags": [
+     "agents"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   }
+  },
+  "/api/companies/{companyId}/issues": {
+   "post": {
+    "parameters": [
+     {
+      "in": "path",
+      "name": "companyId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {}
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "400": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Bad request"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unprocessable entity"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "Create an issue",
+    "tags": [
+     "issues"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   }
+  },
+  "/api/companies/{companyId}/secrets": {
+   "post": {
+    "parameters": [
+     {
+      "in": "path",
+      "name": "companyId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "properties": {
+         "description": {
+          "nullable": true,
+          "type": "string"
+         },
+         "externalRef": {
+          "nullable": true,
+          "type": "string"
+         },
+         "key": {
+          "maxLength": 120,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "type": "string"
+         },
+         "managedMode": {
+          "enum": [
+           "paperclip_managed",
+           "external_reference"
+          ],
+          "type": "string"
+         },
+         "name": {
+          "minLength": 1,
+          "type": "string"
+         },
+         "provider": {
+          "enum": [
+           "local_encrypted",
+           "aws_secrets_manager",
+           "gcp_secret_manager",
+           "vault"
+          ],
+          "type": "string"
+         },
+         "providerConfigId": {
+          "format": "uuid",
+          "nullable": true,
+          "type": "string"
+         },
+         "providerMetadata": {
+          "additionalProperties": {},
+          "nullable": true,
+          "type": "object"
+         },
+         "providerVersionRef": {
+          "nullable": true,
+          "type": "string"
+         },
+         "value": {
+          "minLength": 1,
+          "nullable": true,
+          "type": "string"
+         }
+        },
+        "required": [
+         "name"
+        ],
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "400": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Bad request"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "Create a secret",
+    "tags": [
+     "secrets"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   }
+  },
+  "/api/companies/{companyId}/skills": {
+   "post": {
+    "parameters": [
+     {
+      "in": "path",
+      "name": "companyId",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "properties": {
+         "authorName": {
+          "nullable": true,
+          "type": "string"
+         },
+         "categories": {
+          "items": {
+           "minLength": 1,
+           "type": "string"
+          },
+          "type": "array"
+         },
+         "color": {
+          "nullable": true,
+          "type": "string"
+         },
+         "description": {
+          "nullable": true,
+          "type": "string"
+         },
+         "folderId": {
+          "format": "uuid",
+          "nullable": true,
+          "type": "string"
+         },
+         "forkedFromSkillId": {
+          "format": "uuid",
+          "nullable": true,
+          "type": "string"
+         },
+         "homepageUrl": {
+          "nullable": true,
+          "type": "string"
+         },
+         "iconUrl": {
+          "nullable": true,
+          "type": "string"
+         },
+         "markdown": {
+          "nullable": true,
+          "type": "string"
+         },
+         "name": {
+          "minLength": 1,
+          "type": "string"
+         },
+         "sharingScope": {
+          "enum": [
+           "private",
+           "company",
+           "public_link"
+          ],
+          "type": "string"
+         },
+         "slug": {
+          "minLength": 1,
+          "nullable": true,
+          "type": "string"
+         },
+         "tagline": {
+          "maxLength": 120,
+          "nullable": true,
+          "type": "string"
+         }
+        },
+        "required": [
+         "name"
+        ],
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "400": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Bad request"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "Create a company skill",
+    "tags": [
+     "skills"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   }
+  },
+  "/api/issues/{id}/checkout": {
+   "post": {
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "properties": {
+         "agentId": {
+          "format": "uuid",
+          "type": "string"
+         },
+         "expectedStatuses": {
+          "items": {
+           "enum": [
+            "backlog",
+            "todo",
+            "in_progress",
+            "in_review",
+            "done",
+            "blocked",
+            "cancelled"
+           ],
+           "type": "string"
+          },
+          "type": "array"
+         }
+        },
+        "required": [
+         "agentId",
+         "expectedStatuses"
+        ],
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "400": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Bad request"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "Check out an issue",
+    "tags": [
+     "issues"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   }
+  },
+  "/api/issues/{id}/comments": {
+   "get": {
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "List issue comments",
+    "tags": [
+     "issues"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   },
+   "post": {
+    "parameters": [
+     {
+      "in": "path",
+      "name": "id",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "properties": {
+         "authorType": {
+          "enum": [
+           "user",
+           "agent",
+           "system"
+          ],
+          "type": "string"
+         },
+         "body": {
+          "type": "string"
+         },
+         "interrupt": {
+          "type": "boolean"
+         },
+         "metadata": {
+          "additionalProperties": false,
+          "nullable": true,
+          "properties": {
+           "authorizationReason": {
+            "maxLength": 160,
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+           },
+           "sections": {
+            "items": {
+             "additionalProperties": false,
+             "properties": {
+              "rows": {
+               "items": {
+                "oneOf": [
+                 {
+                  "additionalProperties": false,
+                  "properties": {
+                   "label": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "text": {
+                    "maxLength": 2000,
+                    "minLength": 1,
+                    "type": "string"
+                   },
+                   "type": {
+                    "enum": [
+                     "text"
+                    ],
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "type",
+                   "text"
+                  ],
+                  "type": "object"
+                 },
+                 {
+                  "additionalProperties": false,
+                  "properties": {
+                   "code": {
+                    "maxLength": 4000,
+                    "minLength": 1,
+                    "type": "string"
+                   },
+                   "label": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "language": {
+                    "maxLength": 40,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "type": {
+                    "enum": [
+                     "code"
+                    ],
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "type",
+                   "code"
+                  ],
+                  "type": "object"
+                 },
+                 {
+                  "additionalProperties": false,
+                  "properties": {
+                   "label": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "type": "string"
+                   },
+                   "type": {
+                    "enum": [
+                     "key_value"
+                    ],
+                    "type": "string"
+                   },
+                   "value": {
+                    "maxLength": 2000,
+                    "minLength": 1,
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "type",
+                   "label",
+                   "value"
+                  ],
+                  "type": "object"
+                 },
+                 {
+                  "additionalProperties": false,
+                  "properties": {
+                   "identifier": {
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "issueId": {
+                    "format": "uuid",
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "label": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "title": {
+                    "maxLength": 240,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "type": {
+                    "enum": [
+                     "issue_link"
+                    ],
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "type"
+                  ],
+                  "type": "object"
+                 },
+                 {
+                  "additionalProperties": false,
+                  "properties": {
+                   "agentId": {
+                    "format": "uuid",
+                    "type": "string"
+                   },
+                   "label": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "name": {
+                    "maxLength": 160,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "type": {
+                    "enum": [
+                     "agent_link"
+                    ],
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "type",
+                   "agentId"
+                  ],
+                  "type": "object"
+                 },
+                 {
+                  "additionalProperties": false,
+                  "properties": {
+                   "agentId": {
+                    "format": "uuid",
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "label": {
+                    "maxLength": 120,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "runId": {
+                    "format": "uuid",
+                    "type": "string"
+                   },
+                   "title": {
+                    "maxLength": 160,
+                    "minLength": 1,
+                    "nullable": true,
+                    "type": "string"
+                   },
+                   "type": {
+                    "enum": [
+                     "run_link"
+                    ],
+                    "type": "string"
+                   }
+                  },
+                  "required": [
+                   "type",
+                   "runId"
+                  ],
+                  "type": "object"
+                 }
+                ]
+               },
+               "type": "array"
+              },
+              "title": {
+               "maxLength": 160,
+               "minLength": 1,
+               "nullable": true,
+               "type": "string"
+              }
+             },
+             "required": [
+              "rows"
+             ],
+             "type": "object"
+            },
+            "type": "array"
+           },
+           "sourceRunId": {
+            "format": "uuid",
+            "nullable": true,
+            "type": "string"
+           },
+           "version": {
+            "enum": [
+             1
+            ],
+            "type": "number"
+           }
+          },
+          "required": [
+           "version",
+           "sections"
+          ],
+          "type": "object"
+         },
+         "onBehalfOfUserId": {
+          "minLength": 1,
+          "nullable": true,
+          "type": "string"
+         },
+         "presentation": {
+          "additionalProperties": false,
+          "nullable": true,
+          "properties": {
+           "density": {
+            "enum": [
+             "compact"
+            ],
+            "type": "string"
+           },
+           "detailsDefaultOpen": {
+            "type": "boolean"
+           },
+           "kind": {
+            "enum": [
+             "message",
+             "system_notice"
+            ],
+            "type": "string"
+           },
+           "title": {
+            "maxLength": 160,
+            "minLength": 1,
+            "nullable": true,
+            "type": "string"
+           },
+           "tone": {
+            "enum": [
+             "neutral",
+             "info",
+             "success",
+             "warning",
+             "danger"
+            ],
+            "type": "string"
+           }
+          },
+          "type": "object"
+         },
+         "reopen": {
+          "type": "boolean"
+         },
+         "resume": {
+          "type": "boolean"
+         }
+        },
+        "required": [
+         "body"
+        ],
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "201": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": {},
+         "type": "object"
+        }
+       }
+      },
+      "description": "Success"
+     },
+     "400": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Bad request"
+     },
+     "401": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Unauthorized"
+     },
+     "403": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/Error"
+        }
+       }
+      },
+      "description": "Forbidden"
+     }
+    },
+    "security": [
+     {
+      "BoardSessionAuth": []
+     },
+     {
+      "BoardApiKeyAuth": []
+     },
+     {
+      "AgentBearerAuth": []
+     }
+    ],
+    "summary": "Add a comment to an issue",
+    "tags": [
+     "issues"
+    ],
+    "x-paperclip-authorization": {
+     "actor": "board_or_agent"
+    }
+   }
+  }
+ },
+ "source": "live deployment (kubectl exec deploy/pilot -n pilot -- curl localhost:3100/api/openapi.json)"
+}

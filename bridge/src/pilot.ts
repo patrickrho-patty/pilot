@@ -11,6 +11,32 @@ export function pilotIssueUrl(
 
 type Params = Record<string, string>;
 
+/** A non-2xx response from Pilot. */
+export class PilotApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly path: string,
+    readonly body: string,
+  ) {
+    super(`Pilot API ${status} on ${path}: ${body.slice(0, 200)}`);
+    this.name = "PilotApiError";
+  }
+}
+
+/**
+ * The request never got an answer: it may or may not have reached Pilot.
+ * Callers must reconcile before retrying, never retry blind (§28).
+ */
+export class PilotNetworkError extends Error {
+  constructor(
+    readonly path: string,
+    readonly cause: unknown,
+  ) {
+    super(`Pilot API unreachable on ${path}: ${String(cause)}`);
+    this.name = "PilotNetworkError";
+  }
+}
+
 export class PilotClient {
   constructor(
     private readonly baseUrl: string,
@@ -18,19 +44,22 @@ export class PilotClient {
   ) {}
 
   private async call(path: string, init: RequestInit): Promise<Response> {
-    const resp = await fetch(`${this.baseUrl}${path}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-        ...((init.headers as Params) ?? {}),
-      },
-    });
+    let resp: Response;
+    try {
+      resp = await fetch(`${this.baseUrl}${path}`, {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+          ...((init.headers as Params) ?? {}),
+        },
+      });
+    } catch (err) {
+      throw new PilotNetworkError(path, err);
+    }
     if (!resp.ok) {
       const body = await resp.text().catch(() => "");
-      throw new Error(
-        `Pilot API ${resp.status} on ${path}: ${body.slice(0, 200)}`,
-      );
+      throw new PilotApiError(resp.status, path, body);
     }
     return resp;
   }
@@ -40,29 +69,95 @@ export class PilotClient {
     title: string;
     description: string;
     assigneeAgentId?: string;
+    projectId?: string;
+    goalId?: string;
+    /**
+     * Supplying a key makes the write safe to repeat: Pilot replays the
+     * original issue instead of filing a duplicate, so a timed-out create is
+     * retried rather than reconciled by search.
+     */
+    idempotencyKey?: string;
   }): Promise<{ id: string; url: string }> {
     const path = ISSUE_CREATE_PATH.replace("{companyId}", input.companyId);
-    const resp = await this.call(path, {
-      method: "POST",
-      body: JSON.stringify({
-        title: input.title,
-        description: input.description,
-        ...(input.assigneeAgentId
-          ? { assigneeAgentId: input.assigneeAgentId }
-          : {}),
-      }),
+    const body = JSON.stringify({
+      title: input.title,
+      description: input.description,
+      ...(input.assigneeAgentId ? { assigneeAgentId: input.assigneeAgentId } : {}),
+      ...(input.projectId ? { projectId: input.projectId } : {}),
+      ...(input.goalId ? { goalId: input.goalId } : {}),
+      ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
     });
-    const body = (await resp.json()) as { id: string; companyId?: string };
-    const companyId = body.companyId ?? input.companyId;
-    return { id: body.id, url: pilotIssueUrl(this.baseUrl, companyId, body.id) };
+
+    let resp: Response;
+    try {
+      resp = await this.call(path, { method: "POST", body });
+    } catch (err) {
+      // Only a keyed create is safe to repeat.
+      if (!(err instanceof PilotNetworkError) || !input.idempotencyKey) throw err;
+      resp = await this.call(path, { method: "POST", body });
+    }
+    const created = (await resp.json()) as { id: string; companyId?: string };
+    const companyId = created.companyId ?? input.companyId;
+    return { id: created.id, url: pilotIssueUrl(this.baseUrl, companyId, created.id) };
   }
 
+  /**
+   * Atomically claim an issue for the calling agent.
+   *
+   * A 409 is not a lost race: Pilot returns it when the issue's **project is
+   * paused** (budget hard-stop). Reported as a distinct outcome so the bridge
+   * surfaces "paused" instead of a generic failure.
+   */
+  async checkoutIssue(
+    issueId: string,
+  ): Promise<{ ok: true } | { ok: false; reason: "project-paused"; message: string }> {
+    try {
+      await this.call(`/api/issues/${issueId}/checkout`, { method: "POST" });
+      return { ok: true };
+    } catch (err) {
+      if (err instanceof PilotApiError && err.status === 409) {
+        let message = "Project is paused";
+        try {
+          const parsed = JSON.parse(err.body) as { error?: string };
+          if (typeof parsed.error === "string") message = parsed.error;
+        } catch {
+          // keep the default message
+        }
+        return { ok: false, reason: "project-paused", message };
+      }
+      throw err;
+    }
+  }
+
+  /** Read the issue's comments, for reconciliation before a retry. */
+  async listIssueComments(issueId: string): Promise<Array<{ id: string; body?: string }>> {
+    const resp = await this.call(`/api/issues/${issueId}/comments`, { method: "GET" });
+    const body = (await resp.json()) as unknown;
+    return Array.isArray(body) ? (body as Array<{ id: string; body?: string }>) : [];
+  }
+
+  /**
+   * Post a comment, reconciling before any retry (§28): a timed-out POST may
+   * have landed, so re-read the thread and treat an identical body as
+   * delivered rather than posting it twice.
+   */
   async addIssueComment(issueId: string, bodyText: string): Promise<void> {
     const path = ISSUE_COMMENT_PATH.replace("{issueId}", issueId);
-    await this.call(path, {
-      method: "POST",
-      body: JSON.stringify({ body: bodyText }),
-    });
+    try {
+      await this.call(path, {
+        method: "POST",
+        body: JSON.stringify({ body: bodyText }),
+      });
+      return;
+    } catch (err) {
+      if (!(err instanceof PilotNetworkError)) throw err;
+      const existing = await this.listIssueComments(issueId);
+      if (existing.some((c) => c.body === bodyText)) return;
+      await this.call(path, {
+        method: "POST",
+        body: JSON.stringify({ body: bodyText }),
+      });
+    }
   }
 
   /** Company secret store (PAT-1979). Returns the created secret id. */
