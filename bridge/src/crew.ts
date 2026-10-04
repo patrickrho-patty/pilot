@@ -66,6 +66,12 @@ export type BridgeMapping = {
     string,
     { pilotAgentId: string; pubkey: string; allowedSenders: string[] }
   >;
+  /**
+   * PAT-2008: Git/PR routing for security and release employees. Keyed by the
+   * Crew repo coordinate (`30617:<owner-hex>:<repo-id>`), which is the `a` tag
+   * a pull-request event carries.
+   */
+  repos?: Record<string, { companyId: string; agent: string; projectId?: string }>;
 };
 
 const HEX64 = /^[0-9a-f]{64}$/i;
@@ -85,6 +91,7 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
 
   const channels: BridgeMapping["channels"] = {};
   const agents: BridgeMapping["agents"] = {};
+  const repos: NonNullable<BridgeMapping["repos"]> = {};
 
   if (raw.channels === undefined) {
     errors.push("channels: required");
@@ -178,12 +185,58 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
     }
   }
 
+  if (raw.repos !== undefined) {
+    if (!isRecord(raw.repos)) {
+      errors.push("repos: must be an object keyed by repo coordinate (30617:<owner>:<id>)");
+    } else {
+      for (const [repoRef, value] of Object.entries(raw.repos)) {
+        if (!/^30617:[0-9a-f]{64}:.+$/i.test(repoRef)) {
+          errors.push(`repos.${repoRef}: key must be 30617:<owner-hex>:<repo-id>`);
+          continue;
+        }
+        if (!isRecord(value)) {
+          errors.push(`repos.${repoRef}: must be an object`);
+          continue;
+        }
+        const { companyId, agent, projectId } = value;
+        if (typeof companyId !== "string" || companyId.length === 0) {
+          errors.push(`repos.${repoRef}.companyId: required`);
+        }
+        if (typeof agent !== "string" || agent.length === 0) {
+          errors.push(`repos.${repoRef}.agent: required (an agents.<name> key)`);
+        } else if (!(agent in agents)) {
+          // Checked after the agents loop below when ordering differs; recorded
+          // here as a forward reference and re-validated at the end.
+        }
+        if (projectId !== undefined && (typeof projectId !== "string" || !UUID.test(projectId))) {
+          errors.push(`repos.${repoRef}.projectId: must be a Pilot project GUID`);
+        }
+        if (typeof companyId === "string" && typeof agent === "string") {
+          repos[repoRef] = {
+            companyId,
+            agent,
+            ...(typeof projectId === "string" ? { projectId } : {}),
+          };
+        }
+      }
+    }
+  }
+
   // Cross-check: every agent's channel set is reachable (at least one channel).
   if (Object.keys(channels).length === 0 && errors.length === 0) {
     errors.push("channels: at least one channel mapping is required");
   }
 
-  return errors.length > 0 ? { errors } : { errors, mapping: { channels, agents } };
+  // A repo route naming an unknown agent would silently drop PRs.
+  for (const [repoRef, route] of Object.entries(repos)) {
+    if (!(route.agent in agents)) {
+      errors.push(`repos.${repoRef}.agent: '${route.agent}' is not defined in agents`);
+    }
+  }
+
+  return errors.length > 0
+    ? { errors }
+    : { errors, mapping: { channels, agents, ...(Object.keys(repos).length > 0 ? { repos } : {}) } };
 }
 
 /**

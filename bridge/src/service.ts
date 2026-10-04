@@ -12,7 +12,8 @@ export type HandleResult =
   | { action: "ignored"; reason: string }
   | { action: "issue-created"; issueId: string; issueUrl: string }
   | { action: "commented"; issueId: string }
-  | { action: "edited"; issueId: string; mode: "description" | "revision-comment" };
+  | { action: "edited"; issueId: string; mode: "description" | "revision-comment" }
+  | { action: "git-issue-created"; issueId: string; issueUrl: string };
 
 export type AckSender = (
   channelUuid: string,
@@ -28,6 +29,47 @@ export type BridgeServiceOptions = {
 };
 
 const MAX_TITLE = 80;
+
+/** Crew Git pull request (crates/crew-core/src/kind.rs: KIND_GIT_PULL_REQUEST). */
+export const GIT_PULL_REQUEST_KIND = 1618;
+
+/** The repo coordinate an event refers to, from its `a` tag. */
+function aTagOf(event: NostrEvent): string | null {
+  for (const [tag, value] of event.tags) {
+    if (tag === "a" && typeof value === "string" && value.startsWith("30617:")) return value;
+  }
+  return null;
+}
+
+/** First value of a single-value tag. */
+function tagValue(event: NostrEvent, name: string): string | null {
+  for (const [tag, value] of event.tags) {
+    if (tag === name && typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
+/** §36: origin footer for work filed from a Git/PR event. */
+export function renderGitOriginFooter(
+  repoRef: string,
+  event: NostrEvent,
+  correlationId: string,
+): string {
+  const lines = [
+    "## Origin",
+    "",
+    "- Source: Crew (Git)",
+    `- Crew repo: \`crew://repo/${repoRef}\``,
+    `- Crew event: \`crew://git/${event.kind}/${event.id}\``,
+    `- Author pubkey: \`${event.pubkey}\``,
+    `- Gateway correlation id: \`${correlationId}\``,
+  ];
+  const commit = tagValue(event, "c");
+  if (commit) lines.push(`- Commit: \`${commit}\``);
+  const branch = tagValue(event, "branch-name");
+  if (branch) lines.push(`- Branch: \`${branch}\``);
+  return lines.join("\n");
+}
 
 function hTagOf(event: NostrEvent): string | null {
   for (const [tag, value] of event.tags) {
@@ -209,7 +251,65 @@ export class BridgeService {
     return { action: "edited", issueId: linked.issueId, mode: "revision-comment" };
   }
 
+  /**
+   * §36/PAT-2008: route a Git pull request (kind 1618) to the employee that
+   * owns the repo. Uses the create idempotency key, so a replay cannot file
+   * the same PR twice.
+   */
+  private async handleGitEvent(event: NostrEvent): Promise<HandleResult> {
+    const repoRef = aTagOf(event);
+    if (!repoRef) return { action: "ignored", reason: "missing-a-tag" };
+    const route = this.mapping.repos?.[repoRef];
+    if (!route) return { action: "ignored", reason: "unmapped-repo" };
+    const agent = this.mapping.agents[route.agent];
+    if (!agent) return { action: "ignored", reason: "unmapped-agent" };
+
+    const correlationId = this.uuid();
+    const subject = tagValue(event, "subject") ?? "Pull request";
+    const labels = event.tags
+      .filter(([t, v]) => t === "t" && typeof v === "string")
+      .map(([, v]) => v as string);
+    const description = [
+      event.content,
+      labels.length > 0 ? `Labels: ${labels.join(", ")}` : "",
+      "",
+      renderGitOriginFooter(repoRef, event, correlationId),
+    ]
+      .filter((part) => part.length > 0)
+      .join("\n");
+
+    const created = await this.pilot.createIssue({
+      companyId: route.companyId,
+      title: subject.slice(0, MAX_TITLE),
+      description,
+      assigneeAgentId: agent.pilotAgentId,
+      ...(route.projectId ? { projectId: route.projectId } : {}),
+      // Deterministic: a replayed PR event replays the original issue.
+      idempotencyKey: `crew-git:${event.id}`,
+    });
+    this.store.markSeen(event.id);
+    this.store.linkMessage(event.id, created.id, created.url, route.companyId, repoRef);
+    this.store.recordAudit({
+      action: "git-issue-created",
+      correlationId,
+      crewEventId: event.id,
+      crewChannelId: tagValue(event, "h"),
+      crewThreadRoot: repoRef,
+      senderPubkey: event.pubkey,
+      issueId: created.id,
+      issueUrl: created.url,
+      agentId: agent.pilotAgentId,
+      detail: `repo ${repoRef}`,
+    });
+    return { action: "git-issue-created", issueId: created.id, issueUrl: created.url };
+  }
+
   async handleEvent(event: NostrEvent): Promise<HandleResult> {
+    if (event.kind === GIT_PULL_REQUEST_KIND) {
+      if (this.store.seen(event.id)) return { action: "ignored", reason: "duplicate" };
+      return this.handleGitEvent(event);
+    }
+
     if (event.kind === 40003) {
       if (this.store.seen(event.id)) return { action: "ignored", reason: "duplicate" };
       return this.handleEdit(event);

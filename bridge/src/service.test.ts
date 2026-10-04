@@ -244,6 +244,62 @@ describe("BridgeService", () => {
     expect(pilot.created[0]?.title.endsWith("…")).toBe(true);
   });
 
+  it("routes a repo pull request to the mapped employee with an idempotency key", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bridge-svc-"));
+    const store = new BridgeStore(join(dir, "db.sqlite"));
+    const pilot = new FakePilot();
+    const ack = makeAck();
+    const repoRef = `30617:${AGENT_PUBKEY}:pilot`;
+    const gitMapping: BridgeMapping = {
+      ...mapping,
+      repos: { [repoRef]: { companyId: "co-1", agent: "christina" } },
+    };
+    const service = new BridgeService(gitMapping, gitMapping, store as never, pilot as never, {
+      uuid: () => "corr-git",
+      sendAck: ack.sendAck,
+    });
+
+    const pr = makeEvent({
+      id: "7a".repeat(32),
+      kind: 1618,
+      tags: [
+        ["a", repoRef],
+        ["subject", "Harden the release signing path"],
+        ["t", "security"],
+        ["c", "a".repeat(40)],
+      ],
+      content: "Signs releases with the wrong key on retry.",
+    });
+
+    const result = await service.handleEvent(pr);
+    expect(result).toMatchObject({ action: "git-issue-created", issueId: "iss-1" });
+    const created = pilot.created[0];
+    expect(created.assigneeAgentId).toBe("agent-1");
+    expect(created.title).toBe("Harden the release signing path");
+    expect(created.idempotencyKey).toBe(`crew-git:${pr.id}`);
+    expect(created.description).toContain("crew://repo/" + repoRef);
+    expect(created.description).toContain("Labels: security");
+    expect(created.description).toContain("Commit: `" + "a".repeat(40) + "`");
+
+    // A replay of the same PR event must not file a second issue.
+    expect(await service.handleEvent(pr)).toEqual({ action: "ignored", reason: "duplicate" });
+    expect(pilot.created).toHaveLength(1);
+    store.close();
+  });
+
+  it("ignores git events for unmapped repos", async () => {
+    const { service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "8b".repeat(32),
+        kind: 1618,
+        tags: [["a", `30617:${AGENT_PUBKEY}:other`], ["subject", "x"]],
+        content: "body",
+      }),
+    );
+    expect(result).toEqual({ action: "ignored", reason: "unmapped-repo" });
+  });
+
   it("still succeeds when the gateway ack fails", async () => {
     const dir = mkdtempSync(join(tmpdir(), "bridge-svc-"));
     const store = new BridgeStore(join(dir, "db.sqlite"));
