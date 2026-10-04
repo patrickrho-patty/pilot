@@ -4,6 +4,7 @@ import {
   type BridgeMapping,
 } from "./crew.js";
 import { parseMentionTargets, threadRootOf } from "./mentions.js";
+import { projectApprovalDecision } from "./approval.js";
 import type { PilotClient } from "./pilot.js";
 import type { NostrEvent } from "./relay.js";
 import type { BridgeStore } from "./store.js";
@@ -13,7 +14,8 @@ export type HandleResult =
   | { action: "issue-created"; issueId: string; issueUrl: string }
   | { action: "commented"; issueId: string }
   | { action: "edited"; issueId: string; mode: "description" | "revision-comment" }
-  | { action: "git-issue-created"; issueId: string; issueUrl: string };
+  | { action: "git-issue-created"; issueId: string; issueUrl: string }
+  | { action: "decision-applied"; approvalId: string; decision: string };
 
 export type AckSender = (
   channelUuid: string,
@@ -32,6 +34,22 @@ const MAX_TITLE = 80;
 
 /** PAT-2004: the tag a "Create Pilot work" message carries. */
 export const WORK_MARKER = "pilot-work";
+
+/**
+ * PAT-1999: the tag a Crew approval decision carries.
+ *
+ * A decision is a normal channel message the deciding human sends, tagged so
+ * the bridge can find it:
+ *
+ *   ["t", "pilot-decision"]
+ *   ["approval", "<approval id>"]
+ *   ["decision", "approve" | "reject" | "request-revision"]
+ *
+ * The message content is the reason. The bridge never trusts the tag alone —
+ * `projectApprovalDecision` re-checks that the sender maps to a Pilot user,
+ * that the approval is still open, and that the decision has not been replayed.
+ */
+export const DECISION_MARKER = "pilot-decision";
 
 /**
  * Message kinds the bridge consumes.
@@ -158,6 +176,43 @@ export class BridgeService {
           replyToEventId,
           text,
         ));
+  }
+
+  /**
+   * PAT-1999: a Crew message carrying an approval decision. The bridge is a
+   * courier — `projectApprovalDecision` owns every authority check, so this
+   * only assembles the decision it validates.
+   */
+  private async handleDecision(event: NostrEvent): Promise<HandleResult> {
+    const approvalId = tagValue(event, "approval");
+    const decision = tagValue(event, "decision");
+    if (!approvalId) return { action: "ignored", reason: "missing-approval-tag" };
+    if (
+      decision !== "approve" &&
+      decision !== "reject" &&
+      decision !== "request-revision"
+    ) {
+      return { action: "ignored", reason: "unknown-decision" };
+    }
+
+    const outcome = await projectApprovalDecision(this.pilot, this.mapping, this.store, {
+      decisionId: event.id,
+      approvalId,
+      decision,
+      reason: event.content.trim(),
+      decidedByPubkey: event.pubkey,
+      decidedAt: new Date(event.created_at * 1000).toISOString(),
+    });
+
+    // A refused decision is not a duplicate: report why, so the thread can see
+    // it rather than assuming the click worked. The receipt is marked only on
+    // success, so a refusal caused by a fixable cause (an unmapped decider, a
+    // missing reason) can be corrected and re-sent.
+    if (!outcome.applied) {
+      return { action: "ignored", reason: outcome.reason };
+    }
+    this.store.markSeen(event.id);
+    return { action: "decision-applied", approvalId, decision };
   }
 
   /** PAT-2004: a "Create Pilot work" message from the message menu. */
@@ -351,6 +406,12 @@ export class BridgeService {
 
     if (!this.withinRateLimit(event.pubkey, channelId)) {
       return { action: "ignored", reason: "rate-limited" };
+    }
+
+    // PAT-1999: an approval decision is not work — it must not be filed as an
+    // issue, so it is handled before the work paths below.
+    if (event.tags.some(([tag, value]) => tag === "t" && value === DECISION_MARKER)) {
+      return this.handleDecision(event);
     }
 
     const threadRoot = threadRootOf(event);

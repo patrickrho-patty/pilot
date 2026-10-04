@@ -28,6 +28,8 @@ export type IssueSnapshot = {
   status: string;
   assigneeAgentId: string | null;
   children: IssueChild[];
+  /** Pending approval ids (PAT-1999). A new one is worth telling the thread. */
+  pendingApprovalIds: string[];
 };
 
 /** A single-value projection: what changed, and the text to post. */
@@ -55,6 +57,7 @@ export function issueSnapshot(issue: {
   status?: string;
   assigneeAgentId?: string | null;
   children?: IssueChild[];
+  pendingApprovalIds?: string[];
 }): IssueSnapshot {
   return {
     status: issue.status ?? "unknown",
@@ -64,6 +67,7 @@ export function issueSnapshot(issue: {
       ...(child.status ? { status: child.status } : {}),
       assigneeAgentId: child.assigneeAgentId ?? null,
     })),
+    pendingApprovalIds: [...(issue.pendingApprovalIds ?? [])].sort(),
   };
 }
 
@@ -71,6 +75,9 @@ export function sameSnapshot(a: IssueSnapshot | null, b: IssueSnapshot): boolean
   if (!a) return false;
   if (a.status !== b.status) return false;
   if (a.assigneeAgentId !== b.assigneeAgentId) return false;
+  if ((a.pendingApprovalIds ?? []).join(",") !== (b.pendingApprovalIds ?? []).join(",")) {
+    return false;
+  }
   if (a.children.length !== b.children.length) return false;
   return a.children.every((child, index) => {
     const other = b.children[index];
@@ -112,6 +119,15 @@ export function renderProjection(
     }
   }
 
+  // PAT-1999: a pending decision is the one thing in the tree that needs a
+  // human, so it is named rather than left to be discovered on the board.
+  if ((snapshot.pendingApprovalIds ?? []).length > 0) {
+    lines.push(
+      "",
+      `Waiting on a decision: ${snapshot.pendingApprovalIds.length} pending approval(s).`,
+    );
+  }
+
   lines.push("", `Board: ${issueUrl}`);
   return lines.join("\n");
 }
@@ -129,7 +145,17 @@ export async function runProjection(deps: ProjectionDeps): Promise<ProjectionCha
 
   for (const link of deps.store.linkedThreads(deps.limit ?? 200)) {
     const issue = await deps.pilot.getIssue(link.issueId);
-    const snapshot = issueSnapshot(issue);
+    // Read approvals too: a pending decision is part of the work tree's state.
+    const approvals = deps.pilot.listIssueApprovals
+      ? await deps.pilot.listIssueApprovals(link.issueId)
+      : [];
+    const snapshot = issueSnapshot({
+      ...issue,
+      pendingApprovalIds: approvals
+        .filter((a) => !a.status || a.status === "pending")
+        .map((a) => a.id)
+        .filter((id) => id.length > 0),
+    });
     const previous = deps.store.projectionSnapshot(link.threadRoot);
     if (sameSnapshot(previous, snapshot)) continue;
 

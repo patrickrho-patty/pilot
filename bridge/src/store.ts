@@ -417,13 +417,22 @@ export class BridgeStore {
     status: string;
     assigneeAgentId: string | null;
     children: Array<{ id: string; status?: string; assigneeAgentId?: string | null }>;
+    pendingApprovalIds: string[];
   } | null {
     const row = this.db
       .prepare("SELECT snapshot FROM thread_projection WHERE thread_root = ?")
       .get(threadRoot) as { snapshot: string } | undefined;
     if (!row) return null;
     try {
-      return JSON.parse(row.snapshot);
+      const parsed = JSON.parse(row.snapshot) as {
+        status: string;
+        assigneeAgentId: string | null;
+        children: Array<{ id: string; status?: string; assigneeAgentId?: string | null }>;
+        pendingApprovalIds?: string[];
+      };
+      // Normalize: snapshots written before PAT-1999 have no approval list, and
+      // an undefined here would read as "changed" on every pass and repost.
+      return { ...parsed, pendingApprovalIds: parsed.pendingApprovalIds ?? [] };
     } catch {
       // A corrupt snapshot must not wedge the projection loop: treat it as
       // never-projected and repost once.

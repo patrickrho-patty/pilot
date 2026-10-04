@@ -34,6 +34,11 @@ const mapping: BridgeMapping = {
       allowedSenders: [BOSS_PUBKEY],
     },
   },
+  // PAT-1999: the manager who may decide an approval.
+  users: {
+    [BOSS_PUBKEY]: { userId: "user-manager", role: "member" },
+    [STRANGER_PUBKEY]: { userId: "user-viewer", role: "viewer" },
+  },
 };
 
 class FakePilot {
@@ -56,6 +61,18 @@ class FakePilot {
 
   async getIssue(issueId: string) {
     return { id: issueId, assigneeAgentId: this.assigneeAgentId };
+  }
+
+  /** PAT-1999: approval state the decision path reads. */
+  approvalStatus = "pending";
+  decisions: Array<{ approvalId: string; decision: string; note?: string }> = [];
+
+  async getApproval(approvalId: string) {
+    return { id: approvalId, status: this.approvalStatus, requestedByAgentId: "agent-1" };
+  }
+
+  async decideApproval(approvalId: string, decision: string, note?: string) {
+    this.decisions.push({ approvalId, decision, ...(note ? { note } : {}) });
   }
 
   async updateIssueDescription(issueId: string, description: string): Promise<void> {
@@ -427,6 +444,125 @@ describe("BridgeService", () => {
     expect(result).toMatchObject({ action: "issue-created" });
     expect(pilot.created[0]?.assigneeAgentId).toBe("agent-alex");
     store.close();
+  });
+
+  it("applies a Crew approval decision from a mapped manager (PAT-1999)", async () => {
+    const { pilot, service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "d1".repeat(32),
+        tags: [
+          ["h", CHANNEL_ID],
+          ["t", "pilot-decision"],
+          ["approval", "11111111-1111-1111-1111-111111111111"],
+          ["decision", "approve"],
+        ],
+        content: "Approved — the SLA clause checks out.",
+      }),
+    );
+
+    expect(result).toEqual({
+      action: "decision-applied",
+      approvalId: "11111111-1111-1111-1111-111111111111",
+      decision: "approve",
+    });
+    expect(pilot.decisions).toEqual([
+      { approvalId: "11111111-1111-1111-1111-111111111111", decision: "approve", note: "Approved — the SLA clause checks out." },
+    ]);
+    // A decision is not work: no issue may be filed for it.
+    expect(pilot.created).toHaveLength(0);
+  });
+
+  it("refuses a decision from a viewer and never applies it", async () => {
+    const { pilot, service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "d2".repeat(32),
+        pubkey: STRANGER_PUBKEY,
+        tags: [
+          ["h", CHANNEL_ID],
+          ["t", "pilot-decision"],
+          ["approval", "11111111-1111-1111-1111-111111111111"],
+          ["decision", "approve"],
+        ],
+        content: "approved",
+      }),
+    );
+
+    expect(result).toEqual({ action: "ignored", reason: "decider-lacks-role" });
+    expect(pilot.decisions).toHaveLength(0);
+  });
+
+  it("refuses a replayed decision message", async () => {
+    const { pilot, service } = makeService();
+    const decision = makeEvent({
+      id: "d3".repeat(32),
+      tags: [
+        ["h", CHANNEL_ID],
+        ["t", "pilot-decision"],
+        ["approval", "11111111-1111-1111-1111-111111111111"],
+        ["decision", "approve"],
+      ],
+      content: "approved",
+    });
+
+    expect(await service.handleEvent(decision)).toMatchObject({ action: "decision-applied" });
+    // The receipt store suppresses the replay before the protocol is reached.
+    expect(await service.handleEvent(decision)).toEqual({ action: "ignored", reason: "duplicate" });
+    expect(pilot.decisions).toHaveLength(1);
+  });
+
+  it("refuses a decision on an approval that already moved on", async () => {
+    const { pilot, service } = makeService();
+    pilot.approvalStatus = "approved";
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "d4".repeat(32),
+        tags: [
+          ["h", CHANNEL_ID],
+          ["t", "pilot-decision"],
+          ["approval", "11111111-1111-1111-1111-111111111111"],
+          ["decision", "approve"],
+        ],
+        content: "approved",
+      }),
+    );
+
+    expect(result).toEqual({ action: "ignored", reason: "approval-approved" });
+    expect(pilot.decisions).toHaveLength(0);
+  });
+
+  it("refuses a rejection with no reason for the agent to act on", async () => {
+    const { pilot, service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "d5".repeat(32),
+        tags: [
+          ["h", CHANNEL_ID],
+          ["t", "pilot-decision"],
+          ["approval", "11111111-1111-1111-1111-111111111111"],
+          ["decision", "reject"],
+        ],
+        content: "   ",
+      }),
+    );
+
+    expect(result).toEqual({ action: "ignored", reason: "missing-reason" });
+    expect(pilot.decisions).toHaveLength(0);
+  });
+
+  it("ignores a decision marker with no approval tag", async () => {
+    const { pilot, service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "d6".repeat(32),
+        tags: [["h", CHANNEL_ID], ["t", "pilot-decision"], ["decision", "approve"]],
+        content: "approved",
+      }),
+    );
+
+    expect(result).toEqual({ action: "ignored", reason: "missing-approval-tag" });
+    expect(pilot.decisions).toHaveLength(0);
   });
 
   it("still succeeds when the gateway ack fails", async () => {

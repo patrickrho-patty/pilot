@@ -192,6 +192,22 @@ export class PilotClient {
     }
   }
 
+  /** Pending approvals on an issue (PAT-1999). */
+  async listIssueApprovals(issueId: string): Promise<
+    Array<{ id: string; status?: string; requestedByAgentId?: string | null; decisionNote?: string | null }>
+  > {
+    const resp = await this.call(`/api/issues/${issueId}/approvals`, { method: "GET" });
+    const body = (await resp.json()) as unknown;
+    if (!Array.isArray(body)) return [];
+    return (body as Array<Record<string, unknown>>).map((row) => ({
+      id: String(row.id ?? row.approvalId ?? ""),
+      ...(typeof row.status === "string" ? { status: row.status } : {}),
+      requestedByAgentId:
+        typeof row.requestedByAgentId === "string" ? row.requestedByAgentId : null,
+      decisionNote: typeof row.decisionNote === "string" ? row.decisionNote : null,
+    }));
+  }
+
   /** Read an approval (PAT-1987). */
   async getApproval(approvalId: string): Promise<{
     id: string;
