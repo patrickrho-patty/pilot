@@ -1064,42 +1064,56 @@ issue reaches a terminal state.
 
 ---
 
-### Task 11: Publish the integration flag to the relay
+### Task 11: Publish the pilot-mode gate to the relay
 
 **Files:**
 - Create: `bridge/src/integration.ts`, `bridge/src/integration.test.ts`
 - Modify: `bridge/src/index.ts` (call once at startup after successful Pilot validation)
 
 **Interfaces:**
-- Produces: `publishIntegrationFlag(cfg): Promise<void>` — publishes community metadata (kind
-  39000 extension or dedicated tag per the pinned relay build) adding:
+- Produces: `publishPilotPolicy(cfg): Promise<void>` — publishes the Crew community policy head
+  (kind **39090** `KIND_AGENT_CREATION_POLICY`, `d` tag = `community`) with content:
 
 ```json
-{ "pilot_integration": { "board_url": "https://pilot.patty.io", "status": "connected" } }
+{ "policy": "pilot" }
 ```
 
-Signed with the relay-admin key (`cfg.admin.relayAdminKeyPath`) via a `crew-admin` subprocess
-fallback if direct event construction is not exposed. Crew desktops read this at startup and
-flip into pilot mode (§101/§103 of `doc/CREW_INTEGRATION.md`).
+The kind-39090 head is the deterministic read the desktop consumes:
+`crates/crew-relay/src/api/agents.rs` (`effective_creation_policy`, `parse_policy_content`) →
+desktop `fetch_creation_policy` → `pilotTeamGate`. Accepted values are `admin-only`,
+`members`, and `pilot`.
 
-- [ ] **Step 1:** Failing test — metadata merge logic (preserve existing 39000 fields).
-- [ ] **Step 2:** Implement; call at startup only when Pilot validation succeeds.
-- [ ] **Step 3:** Run tests; commit `git commit -s -m "feat(bridge): publish pilot_integration flag to relay"`.
+**Superseded (2026-10-02):** the original task published a `pilot_integration` object into kind
+39000 channel metadata. Crew never implemented a reader for that shape, and no code ever consumed
+it. Corrected here and in PAT-1982.
+
+**Authorization:** the ingest gate (`crates/crew-relay/src/handlers/ingest.rs`) lets any
+authenticated writer carry the token scope, but a durable owner/admin ROLE check is the real
+authorization whenever the current policy is not `members`. The bridge gateway identity must hold
+admin in the community, or the relay rejects the publish with
+`restricted: the agent creation policy can only be changed by community admins`. Bearer/long-lived
+relay credentials that are not used by a running browser must be rotated to a fresh kind:0 `key`
+tag after enrollment (Crew's `--login-with-fresh-dotenv-values` path).
+
+- [ ] **Step 1:** Failing test — payload is exactly `{"policy":"pilot"}`, and unknown values stay rejected.
+- [ ] **Step 2:** Implement; publish at startup only when Pilot validation succeeds.
+- [ ] **Step 3:** Run tests; commit `git commit -s -m "feat(bridge): publish pilot policy head to relay"`.
 
 ---
 
-### Task 12: Crew-side pilot mode (cross-repo; patty-io/crew)
+### Task 12: Crew-side pilot mode (cross-repo; patty-io/crew) — DONE
 
-**Not a bridge file.** Tracked here because V1 acceptance depends on it:
+Shipped as **PAT-1995** (completed 2026-10-01). Landed in the crew repo, not here:
 
-- [ ] **Step 1:** Desktop reads `pilot_integration` from community metadata at startup.
-- [ ] **Step 2:** Agents section renders **"Your team"**: pilot-provisioned employees as read-only
-  cards ("Managed in Pilot" badge; card action = open `${board_url}` deep-link). "New agent"
-  replaced by "Hire an employee" → board. Local creation hidden while the flag is present
-  (`agents.creation` policy, guide §101). Flag absent → unchanged standalone behavior.
-- [ ] **Step 3:** Accept in the live app: with the flag present, `@hire`-flow agents appear as
-  read-only; without it, nothing changes.
-- [ ] **Step 4:** Commit in the crew repo: `git commit -s -m "feat(agents): pilot-integration mode from community metadata"`.
+- `desktop/src/features/agents/lib/pilotTeamGate.ts` — `pilotTeamGate(policy)`,
+  `isPilotManagedCommunity()`
+- `desktop/src/features/agents/ui/AgentsView.tsx` — gate applied to the Agents section
+- `desktop/src-tauri/src/commands/agent_creation_policy.rs` — `fetch_creation_policy`
+- `desktop/src/i18n/locales/en/agents.json` — "Managed in Pilot", "Your team is managed in
+  Pilot — this roster is read-only.", "Hire an employee"
+
+The gate value is `pilot` on the kind-39090 head, not a `pilot_integration` metadata flag.
+Remaining dependency: Task 11 must publish that head. Until it does, the desktop stays standalone.
 
 ---
 
