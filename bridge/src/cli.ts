@@ -18,6 +18,7 @@ commands:
         [--channels <uuid,uuid>] [--mapping <path>] [--db <path>]
   dlq list [--status pending|replayed|abandoned] [--db <path>]
   dlq replay <event-id>|--all [--db <path>]
+  mapping validate [--mapping <path>]
 
 dlq replays dead-lettered events: it clears the receipt so the relay replays
 the event into the normal loop. Fix the cause (mapping, credentials) first.
@@ -146,6 +147,30 @@ async function main(): Promise<void> {
       usage();
     } finally {
       store.close();
+    }
+  }
+
+  if (command === "mapping") {
+    if (rest[0] !== "validate") usage();
+    // Dry-run: report every problem, exit non-zero so GitOps can gate on it.
+    try {
+      const mapping = loadMapping(mappingPath);
+      console.log(
+        JSON.stringify(
+          {
+            ok: true,
+            mapping: mappingPath,
+            channels: Object.keys(mapping.channels).length,
+            agents: Object.keys(mapping.agents).length,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(1);
     }
   }
 
