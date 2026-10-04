@@ -84,3 +84,37 @@ existingSecretKeys:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# Crew–Pilot bridge (PAT-1982). Ships with Pilot: it is the Pilot-side half of
+# the integration. Secret values are never rendered here — create an Opaque
+# secret out-of-band and reference it:
+#   kubectl create secret generic crew-bridge-secrets -n pilot \
+#     --from-literal=CREW_GATEWAY_PRIVATE_KEY=<64 hex> \
+#     --from-literal=PILOT_API_KEY=<agent api key> \
+#     --from-file=relay-admin-key=<path to hex key file>
+bridge:
+  enabled: true
+  image:
+    repository: 361645878435.dkr.ecr.ap-northeast-2.amazonaws.com/crew-bridge
+    tag: latest
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  crewRelayUrl: wss://crew.patty.io
+  pilotBaseUrl: https://pilot.patty.io
+  existingSecret: crew-bridge-secrets
+  # Channel → company and agent → pubkey mapping (bridge/mapping.json.example).
+  # Operators override this per community in deploy/rho-eks.yaml.
+  mapping:
+    channels: {}
+    agents: {}
+  persistence:
+    # Holds the mention→issue idempotency + thread-correlation SQLite file.
+    size: 1Gi
+    storageClass: ""   # cluster default; production pins gp3-encrypted
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

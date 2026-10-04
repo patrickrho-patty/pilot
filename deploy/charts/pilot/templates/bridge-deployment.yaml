@@ -1,0 +1,126 @@
+{{- if .Values.bridge.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "pilot.fullname" . }}-bridge-config
+  labels:
+    {{- include "pilot.labels" . | nindent 4 }}
+data:
+  CREW_RELAY_URL: {{ .Values.bridge.crewRelayUrl | quote }}
+  PILOT_BASE_URL: {{ .Values.bridge.pilotBaseUrl | quote }}
+  mapping.json: |
+    {{- toJson .Values.bridge.mapping | nindent 4 }}
+---
+# Crew–Pilot bridge (PAT-1982). Single replica on purpose: the bridge keeps its
+# mention→issue idempotency + thread-correlation state in an embedded SQLite
+# file, so two pods on one RWO volume would split-brain the receipt store.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "pilot.fullname" . }}-bridge-data
+  labels:
+    {{- include "pilot.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.bridge.persistence.size }}
+  {{- if .Values.bridge.persistence.storageClass }}
+  storageClassName: {{ .Values.bridge.persistence.storageClass }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pilot.fullname" . }}-bridge
+  labels:
+    {{- include "pilot.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.bridge.replicaCount }}
+  strategy:
+    # RWO volume: never attach the receipt store to two pods at once.
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "pilot.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: bridge
+  template:
+    metadata:
+      labels:
+        {{- include "pilot.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: bridge
+    spec:
+      serviceAccountName: {{ include "pilot.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: bridge
+          image: "{{ .Values.bridge.image.repository }}:{{ .Values.bridge.image.tag }}"
+          imagePullPolicy: {{ .Values.bridge.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3101
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "pilot.fullname" . }}-bridge-config
+            - secretRef:
+                name: {{ .Values.bridge.existingSecret }}
+          env:
+            - name: BRIDGE_DB_PATH
+              value: /data/bridge.db
+            - name: BRIDGE_PORT
+              value: "3101"
+            - name: BRIDGE_MAPPING_PATH
+              value: /etc/crew-bridge/mapping.json
+            # Crew's relay-admin key signs channel joins and the pilot-mode
+            # policy head. Mounted as a file, never as an env value.
+            - name: CREW_RELAY_ADMIN_KEY_PATH
+              value: /etc/crew-bridge/relay-admin-key
+          # httpGet is safe here: unlike the Pilot server, the bridge has no
+          # private-hostname guard, so kubelet's Host=<pod-ip> is accepted.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 10
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.bridge.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: mapping
+              mountPath: /etc/crew-bridge/mapping.json
+              subPath: mapping.json
+              readOnly: true
+            - name: relay-admin-key
+              mountPath: /etc/crew-bridge/relay-admin-key
+              subPath: relay-admin-key
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "pilot.fullname" . }}-bridge-data
+        - name: mapping
+          configMap:
+            name: {{ include "pilot.fullname" . }}-bridge-config
+        - name: relay-admin-key
+          secret:
+            secretName: {{ .Values.bridge.existingSecret }}
+{{- end }}

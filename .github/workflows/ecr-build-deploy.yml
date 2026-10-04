@@ -133,8 +133,46 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  bridge-build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push bridge
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./bridge/Dockerfile
+          platforms: linux/amd64
+          push: true
+          # The bridge image copies Crew's own `crew` binary out of the
+          # published agent-runtime image instead of reimplementing
+          # crew_sdk's message builder.
+          build-args: |
+            CREW_RUNTIME_IMAGE=${{ env.ECR_REGISTRY }}/crew-agent-runtime:${{ inputs.tag }}
+          tags: |
+            ${{ env.ECR_REGISTRY }}/crew-bridge:${{ inputs.tag }}
+            ${{ env.ECR_REGISTRY }}/crew-bridge:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy:
-    needs: build-and-push
+    needs: [build-and-push, bridge-build-and-push]
     if: ${{ inputs.deploy_enabled }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -168,6 +206,7 @@ jobs:
             --create-namespace \
             -f deploy/rho-eks.yaml \
             --set image.tag="${{ inputs.tag }}" \
+            --set bridge.image.tag="${{ inputs.tag }}" \
             --atomic \
             --wait \
             --timeout 15m
@@ -175,6 +214,9 @@ jobs:
       - name: Verify rollout
         run: |
           kubectl rollout status deployment/"${HELM_RELEASE}" \
+            --namespace "${HELM_NAMESPACE}" \
+            --timeout=5m
+          kubectl rollout status deployment/"${HELM_RELEASE}-bridge" \
             --namespace "${HELM_NAMESPACE}" \
             --timeout=5m
           kubectl get pods -n "${HELM_NAMESPACE}" -o wide

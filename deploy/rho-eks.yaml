@@ -46,3 +46,13 @@ persistence:
   storageClass: gp3-encrypted
 
 existingSecret: pilot-secrets
+
+# Crew–Pilot bridge (PAT-1982). Its worker identity and the relay-admin key
+# live in the crew-bridge-secrets secret, created out-of-band in the cluster.
+bridge:
+  image:
+    tag: v0.1.0-pilot
+  crewRelayUrl: wss://crew.patty.io
+  pilotBaseUrl: https://pilot.patty.io
+  persistence:
+    storageClass: gp3-encrypted
