@@ -300,6 +300,117 @@ describe("BridgeService", () => {
     expect(result).toEqual({ action: "ignored", reason: "unmapped-repo" });
   });
 
+  it("files work from a 'Create Pilot work' message for the channel's default agent (PAT-2004)", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bridge-svc-"));
+    const store = new BridgeStore(join(dir, "db.sqlite"));
+    const pilot = new FakePilot();
+    const ack = makeAck();
+    const withDefault: BridgeMapping = {
+      ...mapping,
+      channels: { [CHANNEL_ID]: { companyId: "co-1", name: "market-intel", defaultAgent: "christina" } },
+    };
+    const service = new BridgeService(config, withDefault, store as never, pilot as never, {
+      uuid: () => "corr-work",
+      sendAck: ack.sendAck,
+    });
+
+    // No mention at all: the channel decides who owns it.
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "4a".repeat(32),
+        tags: [["h", CHANNEL_ID], ["t", "pilot-work"]],
+        content: "Turn this into work: audit the ACME renewal terms.",
+      }),
+    );
+
+    expect(result).toMatchObject({ action: "issue-created", issueId: "iss-1" });
+    expect(pilot.created[0]?.assigneeAgentId).toBe("agent-1");
+    expect(pilot.created[0]?.title).toContain("audit the ACME renewal terms");
+    store.close();
+  });
+
+  it("refuses the menu action in a channel with no default agent", async () => {
+    const { pilot, service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "4b".repeat(32),
+        tags: [["h", CHANNEL_ID], ["t", "pilot-work"]],
+        content: "file this",
+      }),
+    );
+    expect(result).toEqual({ action: "ignored", reason: "no-default-agent" });
+    expect(pilot.created).toHaveLength(0);
+  });
+
+  it("the menu action follows the same sender authorization as a mention", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bridge-svc-"));
+    const store = new BridgeStore(join(dir, "db.sqlite"));
+    const pilot = new FakePilot();
+    const ack = makeAck();
+    const withDefault: BridgeMapping = {
+      ...mapping,
+      channels: { [CHANNEL_ID]: { companyId: "co-1", name: "market-intel", defaultAgent: "christina" } },
+    };
+    const service = new BridgeService(config, withDefault, store as never, pilot as never, {
+      uuid: () => "corr-work",
+      sendAck: ack.sendAck,
+    });
+
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "4c".repeat(32),
+        pubkey: STRANGER_PUBKEY,
+        tags: [["h", CHANNEL_ID], ["t", "pilot-work"]],
+        content: "file this for me",
+      }),
+    );
+
+    expect(result).toEqual({ action: "ignored", reason: "unauthorized-sender" });
+    expect(pilot.created).toHaveLength(0);
+    expect(store.listAudit()[0]?.action).toBe("unauthorized-sender");
+    store.close();
+  });
+
+  it("an explicit mention still wins over the channel default", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bridge-svc-"));
+    const store = new BridgeStore(join(dir, "db.sqlite"));
+    const pilot = new FakePilot();
+    const ack = makeAck();
+    const twoAgents: BridgeMapping = {
+      channels: {
+        [CHANNEL_ID]: { companyId: "co-1", name: "market-intel", defaultAgent: "christina" },
+      },
+      agents: {
+        christina: {
+          pilotAgentId: "agent-1",
+          pubkey: AGENT_PUBKEY,
+          allowedSenders: [BOSS_PUBKEY],
+        },
+        alex: {
+          pilotAgentId: "agent-alex",
+          pubkey: "e".repeat(64),
+          allowedSenders: [BOSS_PUBKEY],
+        },
+      },
+    };
+    const service = new BridgeService(config, twoAgents, store as never, pilot as never, {
+      uuid: () => "corr-work",
+      sendAck: ack.sendAck,
+    });
+
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "4d".repeat(32),
+        tags: [["h", CHANNEL_ID], ["t", "pilot-work"], ["p", "e".repeat(64)]],
+        content: "security review of the renewal terms",
+      }),
+    );
+
+    expect(result).toMatchObject({ action: "issue-created" });
+    expect(pilot.created[0]?.assigneeAgentId).toBe("agent-alex");
+    store.close();
+  });
+
   it("still succeeds when the gateway ack fails", async () => {
     const dir = mkdtempSync(join(tmpdir(), "bridge-svc-"));
     const store = new BridgeStore(join(dir, "db.sqlite"));

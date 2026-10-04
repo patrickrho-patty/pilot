@@ -60,7 +60,18 @@ export function parseChannelList(stdout: string, channelName: string): string | 
 export type BridgeMapping = {
   channels: Record<
     string,
-    { companyId: string; name: string; projectId?: string; retentionDays?: number }
+    {
+      companyId: string;
+      name: string;
+      projectId?: string;
+      retentionDays?: number;
+      /**
+       * PAT-2004: the employee a "Create Pilot work" message in this channel
+       * belongs to. Lets a human file work from the message menu without
+       * naming an agent. Must be an agents.<name> key.
+       */
+      defaultAgent?: string;
+    }
   >;
   agents: Record<
     string,
@@ -121,9 +132,12 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
         errors.push(`channels.${channelId}: must be an object`);
         continue;
       }
-      const { companyId, name, projectId, retentionDays } = value;
+      const { companyId, name, projectId, retentionDays, defaultAgent } = value;
       if (typeof companyId !== "string" || companyId.length === 0) {
         errors.push(`channels.${channelId}.companyId: required`);
+      }
+      if (defaultAgent !== undefined && (typeof defaultAgent !== "string" || defaultAgent.length === 0)) {
+        errors.push(`channels.${channelId}.defaultAgent: must be an agents.<name> key`);
       }
       if (
         retentionDays !== undefined &&
@@ -147,6 +161,7 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
           name: typeof name === "string" ? name : channelId.slice(0, 8),
           ...(typeof projectId === "string" ? { projectId } : {}),
           ...(typeof retentionDays === "number" ? { retentionDays } : {}),
+          ...(typeof defaultAgent === "string" ? { defaultAgent } : {}),
         };
       }
     }
@@ -293,6 +308,15 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
           };
         }
       }
+    }
+  }
+
+  // A channel default naming an unknown agent would silently drop work.
+  for (const [channelId, channel] of Object.entries(channels)) {
+    if (channel.defaultAgent && !(channel.defaultAgent in agents)) {
+      errors.push(
+        `channels.${channelId}.defaultAgent: '${channel.defaultAgent}' is not defined in agents`,
+      );
     }
   }
 

@@ -30,6 +30,9 @@ export type BridgeServiceOptions = {
 
 const MAX_TITLE = 80;
 
+/** PAT-2004: the tag a "Create Pilot work" message carries. */
+export const WORK_MARKER = "pilot-work";
+
 /** Crew Git pull request (crates/crew-core/src/kind.rs: KIND_GIT_PULL_REQUEST). */
 export const GIT_PULL_REQUEST_KIND = 1618;
 
@@ -144,6 +147,11 @@ export class BridgeService {
           replyToEventId,
           text,
         ));
+  }
+
+  /** PAT-2004: a "Create Pilot work" message from the message menu. */
+  private hasWorkMarker(event: NostrEvent): boolean {
+    return event.tags.some(([tag, value]) => tag === "t" && value === WORK_MARKER);
   }
 
   /** Agent (name, mapping entry) mentioned by pubkey, or null. */
@@ -335,8 +343,20 @@ export class BridgeService {
     }
 
     const threadRoot = threadRootOf(event);
+
+    // PAT-2004: work requested from the message menu names no agent, so the
+    // channel decides who owns it. A mention still wins if both are present.
     const mentioned = parseMentionTargets(event);
-    const resolved = this.resolveAgent(mentioned);
+    let resolved = this.resolveAgent(mentioned);
+    if (!resolved && this.hasWorkMarker(event)) {
+      const defaultAgent = channel.defaultAgent;
+      if (!defaultAgent) {
+        return { action: "ignored", reason: "no-default-agent" };
+      }
+      const entry = this.mapping.agents[defaultAgent];
+      if (!entry) return { action: "ignored", reason: "unmapped-agent" };
+      resolved = [defaultAgent, entry];
+    }
     if (!resolved) return { action: "ignored", reason: "no-agent-mention" };
     const [agentName, agent] = resolved;
 
