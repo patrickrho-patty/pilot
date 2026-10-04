@@ -209,6 +209,24 @@ describe("BridgeService", () => {
     expect(pilot.created).toHaveLength(0);
   });
 
+  it("accepts both message kinds — clients publish 9, the read-compat kind is 40002", async () => {
+    // Regression: the relay stores 9 and 40002 as separate events and does not
+    // expand one into the other on read, so a bridge that only accepted 40002
+    // dropped every message a client sent.
+    const nine = makeService();
+    const r9 = await nine.service.handleEvent(makeEvent({ id: "9a".repeat(32), kind: 9 }));
+    expect(r9).toMatchObject({ action: "issue-created" });
+    expect(nine.pilot.created).toHaveLength(1);
+    nine.store.close();
+
+    const v2 = makeService();
+    const r40002 = await v2.service.handleEvent(
+      makeEvent({ id: "9b".repeat(32), kind: 40002 }),
+    );
+    expect(r40002).toMatchObject({ action: "issue-created" });
+    v2.store.close();
+  });
+
   it("does not mark the receipt when the Pilot write fails, so it can retry", async () => {
     const dir = mkdtempSync(join(tmpdir(), "bridge-svc-"));
     const store = new BridgeStore(join(dir, "db.sqlite"));

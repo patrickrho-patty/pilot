@@ -33,6 +33,17 @@ const MAX_TITLE = 80;
 /** PAT-2004: the tag a "Create Pilot work" message carries. */
 export const WORK_MARKER = "pilot-work";
 
+/**
+ * Message kinds the bridge consumes.
+ *
+ * Crew stores kind 9 (the write kind clients publish) and kind 40002 (the
+ * v2/read-compat kind) as **separate events** — the relay does not expand one
+ * into the other on read. The desktop subscribes to both
+ * (desktop/src/shared/api/relayChannelFilters.ts:58), and so must the bridge:
+ * subscribing to 40002 alone silently drops every message a client sends.
+ */
+export const MESSAGE_KINDS = [9, 40002] as const;
+
 /** Crew Git pull request (crates/crew-core/src/kind.rs: KIND_GIT_PULL_REQUEST). */
 export const GIT_PULL_REQUEST_KIND = 1618;
 
@@ -323,7 +334,7 @@ export class BridgeService {
       return this.handleEdit(event);
     }
 
-    if (event.kind !== 40002) {
+    if (event.kind !== 9 && event.kind !== 40002) {
       return { action: "ignored", reason: "unsupported-kind" };
     }
 

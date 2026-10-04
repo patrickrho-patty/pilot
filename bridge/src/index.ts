@@ -5,7 +5,7 @@ import { publishPilotPolicy } from "./integration.js";
 import { threadRootOf } from "./mentions.js";
 import { backoffMs, classifyFailure, isRetryable, PilotClient, scopeCoversProjects } from "./pilot.js";
 import { CrewRelay } from "./relay.js";
-import { BridgeService, GIT_PULL_REQUEST_KIND } from "./service.js";
+import { BridgeService, GIT_PULL_REQUEST_KIND, MESSAGE_KINDS } from "./service.js";
 import { BridgeStore } from "./store.js";
 
 const mappingPath = process.env.BRIDGE_MAPPING_PATH ?? "./mapping.json";
@@ -117,7 +117,7 @@ async function handleWithRetry(
 
 async function main(): Promise<void> {
   await relay.subscribe(
-    { kinds: [40002, 40003, GIT_PULL_REQUEST_KIND], "#p": agentPubkeys },
+    { kinds: [...MESSAGE_KINDS, 40003, GIT_PULL_REQUEST_KIND], "#p": agentPubkeys },
     (event) => {
       void handleWithRetry(event, health);
     },
