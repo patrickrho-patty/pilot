@@ -120,16 +120,38 @@ export function renderProjection(
   }
 
   // PAT-1999: a pending decision is the one thing in the tree that needs a
-  // human, so it is named rather than left to be discovered on the board.
+  // human, so it is named rather than left to be discovered on the board. The
+  // approval id is written on its own line in a fixed shape because Crew's CLI
+  // cannot attach tags to a message, and the desktop card needs to know which
+  // approval a decision answers. Same convention as the Origin footer: a
+  // documented, machine-readable line inside the body.
   if ((snapshot.pendingApprovalIds ?? []).length > 0) {
     lines.push(
       "",
       `Waiting on a decision: ${snapshot.pendingApprovalIds.length} pending approval(s).`,
+      "",
     );
+    for (const approvalId of snapshot.pendingApprovalIds) {
+      lines.push(`Approval: ${approvalId}`);
+    }
   }
 
   lines.push("", `Board: ${issueUrl}`);
   return lines.join("\n");
+}
+
+/**
+ * PAT-1999: the approval ids a projection message carries, so the desktop can
+ * render a decision card. Reads the fixed `Approval: <id>` line written by
+ * `renderProjection`; a message without one simply has no card.
+ */
+export function approvalsInProjection(body: string): string[] {
+  const ids: string[] = [];
+  for (const line of body.split("\n")) {
+    const match = /^Approval:\s*([0-9a-f-]{36})\s*$/i.exec(line.trim());
+    if (match) ids.push(match[1]);
+  }
+  return ids;
 }
 
 /**
