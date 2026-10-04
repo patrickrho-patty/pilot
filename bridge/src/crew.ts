@@ -72,6 +72,11 @@ export type BridgeMapping = {
    * a pull-request event carries.
    */
   repos?: Record<string, { companyId: string; agent: string; projectId?: string }>;
+  /**
+   * PAT-1987 §18.4(1): human Crew pubkey → Pilot board user. A decision from a
+   * pubkey not listed here is refused — the bridge never infers identity.
+   */
+  users?: Record<string, { userId: string; role?: string }>;
 };
 
 const HEX64 = /^[0-9a-f]{64}$/i;
@@ -92,6 +97,7 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
   const channels: BridgeMapping["channels"] = {};
   const agents: BridgeMapping["agents"] = {};
   const repos: NonNullable<BridgeMapping["repos"]> = {};
+  const users: NonNullable<BridgeMapping["users"]> = {};
 
   if (raw.channels === undefined) {
     errors.push("channels: required");
@@ -227,6 +233,36 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
     errors.push("channels: at least one channel mapping is required");
   }
 
+  if (raw.users !== undefined) {
+    if (!isRecord(raw.users)) {
+      errors.push("users: must be an object keyed by Crew pubkey (64 hex)");
+    } else {
+      for (const [pubkey, value] of Object.entries(raw.users)) {
+        if (!HEX64.test(pubkey)) {
+          errors.push(`users.${pubkey}: key must be a 64-hex Crew pubkey`);
+          continue;
+        }
+        if (!isRecord(value)) {
+          errors.push(`users.${pubkey}: must be an object`);
+          continue;
+        }
+        const { userId, role } = value;
+        if (typeof userId !== "string" || userId.length === 0) {
+          errors.push(`users.${pubkey}.userId: required (Pilot board user id)`);
+        }
+        if (role !== undefined && typeof role !== "string") {
+          errors.push(`users.${pubkey}.role: must be a string`);
+        }
+        if (typeof userId === "string" && userId.length > 0) {
+          users[pubkey.toLowerCase()] = {
+            userId,
+            ...(typeof role === "string" ? { role } : {}),
+          };
+        }
+      }
+    }
+  }
+
   // A repo route naming an unknown agent would silently drop PRs.
   for (const [repoRef, route] of Object.entries(repos)) {
     if (!(route.agent in agents)) {
@@ -236,7 +272,15 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
 
   return errors.length > 0
     ? { errors }
-    : { errors, mapping: { channels, agents, ...(Object.keys(repos).length > 0 ? { repos } : {}) } };
+    : {
+        errors,
+        mapping: {
+          channels,
+          agents,
+          ...(Object.keys(repos).length > 0 ? { repos } : {}),
+          ...(Object.keys(users).length > 0 ? { users } : {}),
+        },
+      };
 }
 
 /**

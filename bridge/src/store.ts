@@ -85,6 +85,14 @@ export class BridgeStore {
         detail TEXT
       );
       CREATE INDEX IF NOT EXISTS audit_at ON audit (at);
+      CREATE TABLE IF NOT EXISTS decision_receipts (
+        decision_id TEXT PRIMARY KEY,
+        approval_id TEXT NOT NULL,
+        decided_by_pubkey TEXT NOT NULL,
+        decided_by_user_id TEXT NOT NULL,
+        decision TEXT NOT NULL,
+        applied_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS dlq (
         event_id TEXT PRIMARY KEY,
         channel_id TEXT,
@@ -271,6 +279,54 @@ export class BridgeStore {
     });
     run();
     return removed;
+  }
+
+  /**
+   * §18.4(3) anti-replay. Claims a decision id exactly once. Returns false
+   * when the id was already applied, so a replayed Crew decision can never
+   * approve twice.
+   */
+  claimDecision(receipt: {
+    decisionId: string;
+    approvalId: string;
+    decidedByPubkey: string;
+    decidedByUserId: string;
+    decision: string;
+  }): boolean {
+    const info = this.db
+      .prepare(
+        `INSERT OR IGNORE INTO decision_receipts
+           (decision_id, approval_id, decided_by_pubkey, decided_by_user_id, decision, applied_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        receipt.decisionId,
+        receipt.approvalId,
+        receipt.decidedByPubkey.toLowerCase(),
+        receipt.decidedByUserId,
+        receipt.decision,
+        new Date().toISOString(),
+      );
+    return Number(info.changes) === 1;
+  }
+
+  decisionReceipt(decisionId: string):
+    | { approvalId: string; decision: string; decidedByUserId: string }
+    | null {
+    const row = this.db
+      .prepare(
+        "SELECT approval_id, decision, decided_by_user_id FROM decision_receipts WHERE decision_id = ?",
+      )
+      .get(decisionId) as
+      | { approval_id: string; decision: string; decided_by_user_id: string }
+      | undefined;
+    return row
+      ? {
+          approvalId: row.approval_id,
+          decision: row.decision,
+          decidedByUserId: row.decided_by_user_id,
+        }
+      : null;
   }
 
   /**

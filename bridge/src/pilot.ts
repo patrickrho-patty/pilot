@@ -192,6 +192,43 @@ export class PilotClient {
     }
   }
 
+  /** Read an approval (PAT-1987). */
+  async getApproval(approvalId: string): Promise<{
+    id: string;
+    status?: string;
+    companyId?: string;
+    requestedByAgentId?: string | null;
+  }> {
+    const resp = await this.call(`/api/approvals/${approvalId}`, { method: "GET" });
+    return (await resp.json()) as {
+      id: string;
+      status?: string;
+      companyId?: string;
+      requestedByAgentId?: string | null;
+    };
+  }
+
+  /**
+   * Apply an approval decision (PAT-1987). Pilot requires a board actor here,
+   * so the bridge uses its board credential and the human's identity is
+   * carried in the audit record, never silently replaced by "board".
+   */
+  async decideApproval(
+    approvalId: string,
+    decision: "approve" | "reject" | "request-revision",
+    decisionNote?: string,
+  ): Promise<void> {
+    const path = {
+      approve: `/api/approvals/${approvalId}/approve`,
+      reject: `/api/approvals/${approvalId}/reject`,
+      "request-revision": `/api/approvals/${approvalId}/request-revision`,
+    }[decision];
+    await this.call(path, {
+      method: "POST",
+      body: JSON.stringify(decisionNote ? { decisionNote } : {}),
+    });
+  }
+
   /** Read an issue. The edit policy needs its checkout state (§29). */
   async getIssue(issueId: string): Promise<{
     id: string;
