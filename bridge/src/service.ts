@@ -11,7 +11,8 @@ import type { BridgeStore } from "./store.js";
 export type HandleResult =
   | { action: "ignored"; reason: string }
   | { action: "issue-created"; issueId: string; issueUrl: string }
-  | { action: "commented"; issueId: string };
+  | { action: "commented"; issueId: string }
+  | { action: "edited"; issueId: string; mode: "description" | "revision-comment" };
 
 export type AckSender = (
   channelUuid: string,
@@ -31,6 +32,14 @@ const MAX_TITLE = 80;
 function hTagOf(event: NostrEvent): string | null {
   for (const [tag, value] of event.tags) {
     if (tag === "h" && typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
+/** The event an edit (kind 40003) targets, from its `e` tag. */
+function editedTargetOf(event: NostrEvent): string | null {
+  for (const [tag, value] of event.tags) {
+    if (tag === "e" && typeof value === "string" && value.length === 64) return value;
   }
   return null;
 }
@@ -124,7 +133,64 @@ export class BridgeService {
     }
   }
 
+  /**
+   * §29 per-sender/per-channel budget. Returns true when the message may be
+   * processed. Counted in fixed windows persisted in the store, so a restart
+   * cannot reset the budget.
+   */
+  private withinRateLimit(senderPubkey: string, channelId: string): boolean {
+    const { perWindow, windowSeconds } = this.config.rateLimit;
+    const windowStart = new Date(
+      Math.floor(Date.now() / (windowSeconds * 1000)) * windowSeconds * 1000,
+    ).toISOString();
+    this.store.pruneRateWindows(
+      new Date(Date.now() - 2 * windowSeconds * 1000).toISOString(),
+    );
+    const key = `${senderPubkey.toLowerCase()}:${channelId}`;
+    return this.store.bumpRateWindow(key, windowStart) <= perWindow;
+  }
+
+  /**
+   * §29 edit race. A Crew edit never silently rewrites an in-flight request:
+   * before checkout the description is updated, after checkout the change is
+   * appended as a revision comment so the agent sees it.
+   */
+  private async handleEdit(event: NostrEvent): Promise<HandleResult> {
+    const target = editedTargetOf(event);
+    if (!target) return { action: "ignored", reason: "missing-e-tag" };
+
+    const linked = this.store.issueForMessage(target);
+    if (!linked) return { action: "ignored", reason: "unlinked-message" };
+
+    const issue = await this.pilot.getIssue(linked.issueId);
+    // An assigned issue may already be in the agent's hands; an unassigned one
+    // has not been picked up yet.
+    const checkedOut = Boolean(issue.assigneeAgentId);
+
+    if (!checkedOut) {
+      await this.pilot.updateIssueDescription(linked.issueId, event.content);
+      this.store.markSeen(event.id);
+      return { action: "edited", issueId: linked.issueId, mode: "description" };
+    }
+
+    const revision = [
+      "**Source request was edited in Crew.**",
+      "",
+      `> ${event.content}`,
+      "",
+      `Source: \`crew://message?channel=${hTagOf(event) ?? "unknown"}&id=${event.id}\``,
+    ].join("\n");
+    await this.pilot.addIssueComment(linked.issueId, revision);
+    this.store.markSeen(event.id);
+    return { action: "edited", issueId: linked.issueId, mode: "revision-comment" };
+  }
+
   async handleEvent(event: NostrEvent): Promise<HandleResult> {
+    if (event.kind === 40003) {
+      if (this.store.seen(event.id)) return { action: "ignored", reason: "duplicate" };
+      return this.handleEdit(event);
+    }
+
     if (event.kind !== 40002) {
       return { action: "ignored", reason: "unsupported-kind" };
     }
@@ -139,6 +205,10 @@ export class BridgeService {
     if (!channelId) return { action: "ignored", reason: "missing-h-tag" };
     const channel = this.mapping.channels[channelId];
     if (!channel) return { action: "ignored", reason: "unmapped-channel" };
+
+    if (!this.withinRateLimit(event.pubkey, channelId)) {
+      return { action: "ignored", reason: "rate-limited" };
+    }
 
     const threadRoot = threadRootOf(event);
     const mentioned = parseMentionTargets(event);
@@ -164,6 +234,13 @@ export class BridgeService {
         `[@${agentName}](agent://${agent.pilotAgentId}) please incorporate this follow-up into the current work.`,
       ].join("\n");
       await this.pilot.addIssueComment(existing.issueId, comment);
+      this.store.linkMessage(
+        event.id,
+        existing.issueId,
+        existing.issueUrl,
+        existing.companyId,
+        threadRoot,
+      );
       this.store.markSeen(event.id);
       await this.ackSafely(
         channelId,
@@ -183,6 +260,7 @@ export class BridgeService {
       assigneeAgentId: agent.pilotAgentId,
     });
     this.store.linkThread(threadRoot, channelId, created.id, created.url, channel.companyId);
+    this.store.linkMessage(event.id, created.id, created.url, channel.companyId, threadRoot);
 
     // §13.3 step 14: receipt completes only after success.
     this.store.markSeen(event.id);

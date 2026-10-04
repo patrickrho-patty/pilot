@@ -22,6 +22,7 @@ const config: BridgeConfig = {
   dbPath: ":memory:",
   port: 0,
   admin: { crewCliPath: "crew", relayAdminKeyPath: "/tmp/admin-key" },
+  rateLimit: { perWindow: 20, windowSeconds: 60 },
 };
 
 const mapping: BridgeMapping = {
@@ -38,6 +39,9 @@ const mapping: BridgeMapping = {
 class FakePilot {
   created: Array<Parameters<PilotClient["createIssue"]>[0]> = [];
   comments: Array<{ issueId: string; bodyText: string }> = [];
+  descriptionUpdates: Array<{ issueId: string; description: string }> = [];
+  /** Checkout state returned by getIssue; null means not yet picked up. */
+  assigneeAgentId: string | null = null;
   private nextId = 1;
 
   async createIssue(input: Parameters<PilotClient["createIssue"]>[0]) {
@@ -48,6 +52,14 @@ class FakePilot {
 
   async addIssueComment(issueId: string, bodyText: string): Promise<void> {
     this.comments.push({ issueId, bodyText });
+  }
+
+  async getIssue(issueId: string) {
+    return { id: issueId, assigneeAgentId: this.assigneeAgentId };
+  }
+
+  async updateIssueDescription(issueId: string, description: string): Promise<void> {
+    this.descriptionUpdates.push({ issueId, description });
   }
 }
 
@@ -245,6 +257,103 @@ describe("BridgeService", () => {
     });
     const result = await service.handleEvent(makeEvent());
     expect(result).toMatchObject({ action: "issue-created" });
+    store.close();
+  });
+
+  it("rewrites the description when the source message is edited before checkout", async () => {
+    const { pilot, service } = makeService();
+    const root = makeEvent();
+    await service.handleEvent(root);
+
+    const edit = makeEvent({
+      id: "a1".repeat(32),
+      kind: 40003,
+      tags: [["h", CHANNEL_ID], ["e", root.id]],
+      content: "Revised: compare five competitors instead of three.",
+    });
+    const result = await service.handleEvent(edit);
+
+    expect(result).toEqual({ action: "edited", issueId: "iss-1", mode: "description" });
+    expect(pilot.descriptionUpdates).toEqual([
+      { issueId: "iss-1", description: "Revised: compare five competitors instead of three." },
+    ]);
+    expect(pilot.comments).toHaveLength(0);
+  });
+
+  it("appends a revision comment when the source is edited after checkout", async () => {
+    const { pilot, service } = makeService();
+    const root = makeEvent();
+    await service.handleEvent(root);
+    pilot.assigneeAgentId = "agent-1"; // agent picked the issue up
+
+    const edit = makeEvent({
+      id: "b2".repeat(32),
+      kind: 40003,
+      tags: [["h", CHANNEL_ID], ["e", root.id]],
+      content: "Actually, hold the enterprise comparison.",
+    });
+    const result = await service.handleEvent(edit);
+
+    expect(result).toEqual({ action: "edited", issueId: "iss-1", mode: "revision-comment" });
+    expect(pilot.descriptionUpdates).toHaveLength(0);
+    expect(pilot.comments[0]?.issueId).toBe("iss-1");
+    expect(pilot.comments[0]?.bodyText).toContain("Source request was edited in Crew");
+    expect(pilot.comments[0]?.bodyText).toContain("hold the enterprise comparison");
+  });
+
+  it("resolves an edit of a follow-up message to the same issue", async () => {
+    const { pilot, service } = makeService();
+    const root = makeEvent();
+    await service.handleEvent(root);
+    const followUp = makeEvent({
+      id: "f".repeat(64),
+      tags: [["h", CHANNEL_ID], ["e", root.id, "", "root"], ["p", AGENT_PUBKEY]],
+      content: "Please add screenshots.",
+    });
+    await service.handleEvent(followUp);
+
+    const edit = makeEvent({
+      id: "c3".repeat(32),
+      kind: 40003,
+      tags: [["h", CHANNEL_ID], ["e", followUp.id]],
+      content: "Please add screenshots and a pricing table.",
+    });
+    const result = await service.handleEvent(edit);
+    expect(result).toMatchObject({ action: "edited", issueId: "iss-1" });
+  });
+
+  it("ignores an edit whose target message is not linked to an issue", async () => {
+    const { service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "d4".repeat(32),
+        kind: 40003,
+        tags: [["h", CHANNEL_ID], ["e", "9".repeat(64)]],
+        content: "edited",
+      }),
+    );
+    expect(result).toEqual({ action: "ignored", reason: "unlinked-message" });
+  });
+
+  it("rate-limits a sender past the per-window budget", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "bridge-svc-"));
+    const store = new BridgeStore(join(dir, "db.sqlite"));
+    const pilot = new FakePilot();
+    const ack = makeAck();
+    const tight = { ...config, rateLimit: { perWindow: 2, windowSeconds: 60 } };
+    const service = new BridgeService(tight, mapping, store as never, pilot as never, {
+      uuid: () => "corr-r",
+      sendAck: ack.sendAck,
+    });
+
+    const first = await service.handleEvent(makeEvent({ id: "1".repeat(64) }));
+    const second = await service.handleEvent(makeEvent({ id: "2".repeat(64) }));
+    const third = await service.handleEvent(makeEvent({ id: "3".repeat(64) }));
+
+    expect(first).toMatchObject({ action: "issue-created" });
+    expect(second).toMatchObject({ action: "issue-created" });
+    expect(third).toEqual({ action: "ignored", reason: "rate-limited" });
+    expect(pilot.created).toHaveLength(2);
     store.close();
   });
 });

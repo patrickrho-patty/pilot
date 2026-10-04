@@ -22,6 +22,7 @@ const config: BridgeConfig = {
   dbPath: ":memory:",
   port: 0,
   admin: { crewCliPath: "crew", relayAdminKeyPath: adminKeyPath },
+  rateLimit: { perWindow: 20, windowSeconds: 60 },
 };
 
 function fakeRelay() {

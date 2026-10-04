@@ -46,13 +46,13 @@ function channelOf(event: { tags: string[][] }): string | null {
  * always record the failure so nothing is lost silently.
  */
 async function handleWithRetry(
-  event: { id: string; pubkey: string; tags: string[][] },
+  event: { id: string; kind: number; pubkey: string; tags: string[][] },
   health: HealthState,
 ): Promise<void> {
   const channelId = channelOf(event);
   const threadRoot = threadRootOf(event as never);
   bump(health, "crew_pilot_events_received_total", {
-    kind: "40002",
+    kind: String(event.kind),
     channel: channelId ?? "none",
   });
 
@@ -117,7 +117,7 @@ async function handleWithRetry(
 
 async function main(): Promise<void> {
   await relay.subscribe(
-    { kinds: [40002], "#p": agentPubkeys },
+    { kinds: [40002, 40003], "#p": agentPubkeys },
     (event) => {
       void handleWithRetry(event, health);
     },

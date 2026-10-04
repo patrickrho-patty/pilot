@@ -6,6 +6,8 @@ export type BridgeConfig = {
   dbPath: string;
   port: number;
   admin: { crewCliPath: string; relayAdminKeyPath: string; crewAdminPath?: string };
+  /** Per-sender, per-channel message budget (§29, §67 P1). */
+  rateLimit: { perWindow: number; windowSeconds: number };
 };
 
 const HEX64 = /^[0-9a-f]{64}$/i;
@@ -34,6 +36,10 @@ export function loadConfig(
       crewCliPath: env["CREW_CLI_PATH"] ?? "crew",
       relayAdminKeyPath: req("CREW_RELAY_ADMIN_KEY_PATH"),
       crewAdminPath: env["CREW_ADMIN_PATH"],
+    },
+    rateLimit: {
+      perWindow: Number(env["BRIDGE_RATE_LIMIT_PER_WINDOW"] ?? "20"),
+      windowSeconds: Number(env["BRIDGE_RATE_LIMIT_WINDOW_SECONDS"] ?? "60"),
     },
   };
 }

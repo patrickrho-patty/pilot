@@ -161,6 +161,30 @@ export class PilotClient {
     }
   }
 
+  /** Read an issue. The edit policy needs its checkout state (§29). */
+  async getIssue(issueId: string): Promise<{
+    id: string;
+    description?: string | null;
+    assigneeAgentId?: string | null;
+    status?: string;
+  }> {
+    const resp = await this.call(`/api/issues/${issueId}`, { method: "GET" });
+    return (await resp.json()) as {
+      id: string;
+      description?: string | null;
+      assigneeAgentId?: string | null;
+      status?: string;
+    };
+  }
+
+  /** Replace the issue description — only before the agent checks out (§29). */
+  async updateIssueDescription(issueId: string, description: string): Promise<void> {
+    await this.call(`/api/issues/${issueId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ description }),
+    });
+  }
+
   /** Read the issue's comments, for reconciliation before a retry. */
   async listIssueComments(issueId: string): Promise<Array<{ id: string; body?: string }>> {
     const resp = await this.call(`/api/issues/${issueId}/comments`, { method: "GET" });

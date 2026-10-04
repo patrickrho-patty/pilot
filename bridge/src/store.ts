@@ -42,6 +42,19 @@ export class BridgeStore {
         issue_url TEXT NOT NULL,
         company_id TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS message_issue (
+        event_id TEXT PRIMARY KEY,
+        issue_id TEXT NOT NULL,
+        issue_url TEXT NOT NULL,
+        company_id TEXT NOT NULL,
+        thread_root TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS rate_window (
+        key TEXT NOT NULL,
+        window_start TEXT NOT NULL,
+        count INTEGER NOT NULL,
+        PRIMARY KEY (key, window_start)
+      );
       CREATE TABLE IF NOT EXISTS dlq (
         event_id TEXT PRIMARY KEY,
         channel_id TEXT,
@@ -84,6 +97,57 @@ export class BridgeStore {
     companyId: string,
   ): void {
     this.linkStmt.run(threadRoot, crewChannelId, issueId, issueUrl, companyId);
+  }
+
+  /**
+   * Link every Crew message that maps to an issue, not just the thread root:
+   * an edit event (kind 40003) names the message it edits, which may be a
+   * follow-up rather than the root (§29 edit race).
+   */
+  linkMessage(
+    eventId: string,
+    issueId: string,
+    issueUrl: string,
+    companyId: string,
+    threadRoot: string,
+  ): void {
+    this.db
+      .prepare(
+        "INSERT OR REPLACE INTO message_issue (event_id, issue_id, issue_url, company_id, thread_root) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(eventId, issueId, issueUrl, companyId, threadRoot);
+  }
+
+  issueForMessage(eventId: string): ThreadIssueLink | null {
+    const row = this.db
+      .prepare("SELECT issue_id, issue_url, company_id FROM message_issue WHERE event_id = ?")
+      .get(eventId) as
+      | { issue_id: string; issue_url: string; company_id: string }
+      | undefined;
+    return row
+      ? { issueId: row.issue_id, issueUrl: row.issue_url, companyId: row.company_id }
+      : null;
+  }
+
+  /**
+   * Per-sender/per-channel rate limit counter (§29, §67 P1). Persisted per
+   * window so a restart cannot reset the budget.
+   */
+  bumpRateWindow(key: string, windowStart: string): number {
+    this.db
+      .prepare(
+        "INSERT INTO rate_window (key, window_start, count) VALUES (?, ?, 1) ON CONFLICT(key, window_start) DO UPDATE SET count = count + 1",
+      )
+      .run(key, windowStart);
+    const row = this.db
+      .prepare("SELECT count FROM rate_window WHERE key = ? AND window_start = ?")
+      .get(key, windowStart) as { count: number } | undefined;
+    return row?.count ?? 0;
+  }
+
+  /** Drop rate windows older than the given instant. */
+  pruneRateWindows(before: string): void {
+    this.db.prepare("DELETE FROM rate_window WHERE window_start < ?").run(before);
   }
 
   issueForThread(threadRoot: string): ThreadIssueLink | null {
