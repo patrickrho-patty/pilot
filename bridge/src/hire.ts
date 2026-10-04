@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { finalizeEvent, type Event as NostrEvent } from "nostr-tools";
 import type { BridgeConfig } from "./config.js";
 import { runCrewCli } from "./crew.js";
@@ -18,6 +19,8 @@ export type HireInput = {
   channelIds: string[];
   /** Optional #welcome-style channel for the intro post. */
   welcomeChannelId?: string;
+  /** NIP-OA owner attestation, when the target community requires one. */
+  crewAuthTag?: string;
 };
 
 export type HireResult = {
@@ -27,6 +30,7 @@ export type HireResult = {
   joinedChannelIds: string[];
   secretId: string;
   welcomeEventId?: string;
+  skillKey?: string;
 };
 
 /**
@@ -52,6 +56,8 @@ export type HirePorts = {
     agentId: string,
     entries: Record<string, string | { type: "secret_ref"; secretId: string }>,
   ) => Promise<void>;
+  /** Create the Crew channel-duty skill and assign it; returns the skill key. */
+  installSkill?: (companyId: string, agentId: string) => Promise<string>;
 };
 
 /** Unsigned event template (no id/sig yet). */
@@ -179,6 +185,28 @@ function resolvePorts(
 
     bindAgentEnv:
       overrides.bindAgentEnv ?? ((agentId, entries) => pilot.updateAgentEnv(agentId, entries)),
+
+    installSkill:
+      overrides.installSkill ??
+      (async (companyId, agentId) => {
+        const markdown = readFileSync(
+          fileURLToPath(new URL("../CREW_AGENT_SKILL.md", import.meta.url)),
+          "utf8",
+        );
+        const skill = await pilot.createCompanySkill({
+          companyId,
+          name: "crew-channel-duty",
+          slug: "crew-channel-duty",
+          description:
+            "Reply in the Crew thread when Pilot assigns you an issue that came from a Crew mention.",
+          markdown,
+          categories: ["crew-bridge"],
+        });
+        const key = skill.key ?? skill.slug;
+        // "add" so an operator's own skill assignments survive the hire.
+        await pilot.syncAgentSkills(agentId, [key], "add");
+        return key;
+      }),
   };
 }
 
@@ -248,7 +276,13 @@ export async function hireEmployee(
   await ports.bindAgentEnv(input.agentId, {
     CREW_PRIVATE_KEY: { type: "secret_ref", secretId },
     CREW_RELAY_URL: config.relayUrl,
+    ...(input.crewAuthTag ? { CREW_AUTH_TAG: input.crewAuthTag } : {}),
   });
+
+  // 5b. Operating contract: the Crew channel-duty skill, assigned to the agent.
+  // A failure here fails the hire — without the skill the employee has no
+  // instruction to answer in the thread it was mentioned in (§30-34).
+  const skillKey = await ports.installSkill(input.companyId, input.agentId);
 
   // 6. Announcement as the gateway identity (optional).
   let welcomeEventId: string | undefined;
@@ -265,6 +299,7 @@ export async function hireEmployee(
     enrolledInRelay,
     joinedChannelIds,
     secretId,
+    skillKey,
     ...(welcomeEventId ? { welcomeEventId } : {}),
   };
 }

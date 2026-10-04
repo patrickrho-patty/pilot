@@ -87,6 +87,53 @@ export class PilotClient {
     return { id: body.id };
   }
 
+  /**
+   * Create a company skill from inline markdown (PAT-1981). Returns the
+   * server-assigned id and slug; `key` is the handle the skill-sync call
+   * wants, so we carry whatever the server returns.
+   */
+  async createCompanySkill(input: {
+    companyId: string;
+    name: string;
+    markdown: string;
+    description?: string;
+    slug?: string;
+    categories?: string[];
+  }): Promise<{ id: string; slug: string; key?: string }> {
+    const resp = await this.call(`/api/companies/${input.companyId}/skills`, {
+      method: "POST",
+      body: JSON.stringify({
+        name: input.name,
+        markdown: input.markdown,
+        ...(input.description ? { description: input.description } : {}),
+        ...(input.slug ? { slug: input.slug } : {}),
+        ...(input.categories ? { categories: input.categories } : {}),
+      }),
+    });
+    const body = (await resp.json()) as { id: string; slug?: string; key?: string };
+    return {
+      id: body.id,
+      slug: body.slug ?? input.slug ?? input.name,
+      ...(body.key ? { key: body.key } : {}),
+    };
+  }
+
+  /**
+   * Assign skills to an agent (PAT-1981). `mode: "add"` keeps any skill the
+   * agent already carries; `"replace"` drops everything else, so this uses
+   * `add` and never silently removes an operator's own assignments.
+   */
+  async syncAgentSkills(
+    agentId: string,
+    desiredSkills: string[],
+    mode: "add" | "remove" | "replace" = "add",
+  ): Promise<void> {
+    await this.call(`/api/agents/${agentId}/skills/sync`, {
+      method: "POST",
+      body: JSON.stringify({ mode, desiredSkills }),
+    });
+  }
+
   async getAgent(agentId: string): Promise<{
     id: string;
     adapterConfig?: Record<string, unknown>;

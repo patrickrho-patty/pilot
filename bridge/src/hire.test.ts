@@ -20,6 +20,7 @@ function makeFakes() {
   const secrets: Array<{ companyId: string; name: string; key: string; value: string }> = [];
   const envBindings: Array<Record<string, unknown>> = [];
   const welcomeMessages: string[] = [];
+  const installedSkills: Array<{ companyId: string; agentId: string }> = [];
   let mintCount = 0;
 
   const ports: HirePorts = {
@@ -56,8 +57,12 @@ function makeFakes() {
     bindAgentEnv: async (_agentId, entries) => {
       envBindings.push(entries);
     },
+    installSkill: async (companyId, agentId) => {
+      installedSkills.push({ companyId, agentId });
+      return "crew-bridge/channel-duty";
+    },
   };
-  return { ports, published, secrets, envBindings, welcomeMessages };
+  return { ports, published, secrets, envBindings, welcomeMessages, installedSkills };
 }
 
 const relay = null as unknown as CrewRelay;
@@ -75,7 +80,8 @@ const input = {
 
 describe("hireEmployee", () => {
   it("runs the full §95 pipeline in order and never leaks the private key", async () => {
-    const { ports, published, secrets, envBindings, welcomeMessages } = makeFakes();
+    const { ports, published, secrets, envBindings, welcomeMessages, installedSkills } =
+      makeFakes();
     const result = await hireEmployee(config, relay, pilot, input, ports);
 
     // profile: kind 0, signed by agent key, with name + role + reports-to
@@ -97,6 +103,9 @@ describe("hireEmployee", () => {
       CREW_RELAY_URL: "wss://relay.test",
     });
 
+    // operating contract: the Crew channel-duty skill is assigned to the agent
+    expect(installedSkills).toEqual([{ companyId: "co-1", agentId: "agent-1" }]);
+
     // welcome posted as gateway identity
     expect(welcomeMessages[0]).toContain("Christina");
 
@@ -107,9 +116,36 @@ describe("hireEmployee", () => {
       enrolledInRelay: true,
       joinedChannelIds: ["ch-1", "ch-2"],
       secretId: "secret-1",
+      skillKey: "crew-bridge/channel-duty",
       welcomeEventId: "welcome-1",
     });
     expect(JSON.stringify(result)).not.toContain("sk1");
+  });
+
+  it("binds CREW_AUTH_TAG only when the community requires an attestation", async () => {
+    const withTag = makeFakes();
+    await hireEmployee(
+      config,
+      relay,
+      pilot,
+      { ...input, crewAuthTag: '{"owner":"abc"}' },
+      withTag.ports,
+    );
+    expect(withTag.envBindings[0]).toMatchObject({ CREW_AUTH_TAG: '{"owner":"abc"}' });
+
+    const withoutTag = makeFakes();
+    await hireEmployee(config, relay, pilot, input, withoutTag.ports);
+    expect(withoutTag.envBindings[0]).not.toHaveProperty("CREW_AUTH_TAG");
+  });
+
+  it("fails the hire when the operating-contract skill cannot be installed", async () => {
+    const { ports } = makeFakes();
+    ports.installSkill = async () => {
+      throw new Error("Pilot API 404 on /skills/sync");
+    };
+    await expect(hireEmployee(config, relay, pilot, input, ports)).rejects.toThrow(
+      "Pilot API 404 on /skills/sync",
+    );
   });
 
   it("degrades on enrollment failure but still completes custody", async () => {
