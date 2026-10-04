@@ -1,9 +1,11 @@
 {
-  "$comment": "crew-bridge mapping (PAT-1977). Channel keys are Crew channel UUIDs (the h tag). Agent keys are display names; pubkey is the agent's Crew npub (hex); allowedSenders are the only pubkeys whose mentions may assign that agent. Point BRIDGE_MAPPING_PATH at this file.",
+  "$comment": "crew-bridge mapping. Validate before applying: crew-bridge mapping validate --mapping mapping.json (reports every problem at once and exits non-zero). Channel keys are Crew channel UUIDs (the h tag). Agent keys are display names; pubkey is the agent's Crew npub (hex); allowedSenders are the only pubkeys whose mentions may assign that agent. projectId is required for a task_bridge-scoped Pilot key (PAT-1992). retentionDays is per channel (PAT-2007). repos keys are Crew repo coordinates, 30617:<owner-hex>:<repo-id> (PAT-2008).",
   "channels": {
     "11111111-1111-1111-1111-111111111111": {
       "companyId": "your-pilot-company-id",
-      "name": "market-intel"
+      "name": "market-intel",
+      "projectId": "22222222-2222-2222-2222-222222222222",
+      "retentionDays": 90
     }
   },
   "agents": {
@@ -11,6 +13,13 @@
       "pilotAgentId": "your-pilot-agent-id",
       "pubkey": "64-char-hex-agent-pubkey",
       "allowedSenders": ["64-char-hex-allowed-human-pubkey"]
+    }
+  },
+  "repos": {
+    "30617:64-char-hex-repo-owner:pilot": {
+      "companyId": "your-pilot-company-id",
+      "agent": "christina",
+      "projectId": "22222222-2222-2222-2222-222222222222"
     }
   }
 }

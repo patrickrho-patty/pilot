@@ -146,7 +146,9 @@ async function main(): Promise<void> {
         const targets = rest.includes("--all")
           ? store.listFailures("pending").map((e) => e.eventId)
           : [rest[1]].filter((v): v is string => Boolean(v));
-        if (targets.length === 0) usage();
+        // `--all` on an empty queue is a successful no-op; only a missing
+        // explicit event id is a usage error.
+        if (targets.length === 0 && !rest.includes("--all")) usage();
         for (const eventId of targets) store.markForReplay(eventId);
         console.log(
           JSON.stringify({ requeued: targets.length, eventIds: targets }),
