@@ -1,5 +1,6 @@
 import { loadConfig } from "./config.js";
-import { loadMapping } from "./crew.js";
+import { loadMapping, runCrewCli } from "./crew.js";
+import { runAwarenessDigest } from "./digest.js";
 import { hireEmployee } from "./hire.js";
 import { offboardEmployee } from "./offboard.js";
 import { PilotClient } from "./pilot.js";
@@ -21,6 +22,11 @@ commands:
   mapping validate [--mapping <path>]
   audit export [--since <iso>] [--limit <n>] [--db <path>]
   retention prune [--dry-run] [--days <n>] [--mapping <path>] [--db <path>]
+  digest run [--limit <n>] [--mapping <path>] [--db <path>]
+
+digest run is the awareness pass (§100): it digests each mapped channel's
+activity since the last run and files it for the employee. Run it on a
+schedule. Quiet hours and maxProactivePerDay are per agent in the mapping.
 
 retention prune applies per-channel retentionDays (default --days, or
 BRIDGE_RETENTION_DAYS). Only bridge-side identifiers and metadata are
@@ -240,6 +246,81 @@ async function main(): Promise<void> {
       console.log(
         JSON.stringify({ dryRun, defaultDays, cutoffs, globalBefore, removed }, null, 2),
       );
+      return;
+    } finally {
+      store.close();
+    }
+  }
+
+  if (command === "digest") {
+    if (rest[0] !== "run") usage();
+    const config = loadConfig(process.env, dbPath);
+    const mapping = loadMapping(mappingPath);
+    const store = new BridgeStore(dbPath);
+    const pilot = new PilotClient(config.pilotBaseUrl, config.pilotApiKey);
+    try {
+      const limitArg = arg("--limit", rest);
+      const outcomes = await runAwarenessDigest({
+        mapping,
+        store,
+        limit: limitArg ? Number(limitArg) : 100,
+        readActivity: async ({ channelId, since, limit }) => {
+          const args = [
+            "messages",
+            "get",
+            "--channel",
+            channelId,
+            "--limit",
+            String(limit),
+            "--format",
+            "json",
+          ];
+          if (since) args.push("--since", String(Math.floor(Date.parse(since) / 1000)));
+          const res = await runCrewCli(config.admin.crewCliPath, args, {
+            CREW_RELAY_URL: config.relayUrl,
+            CREW_PRIVATE_KEY: config.gatewayPrivateKey,
+          });
+          if (!res.ok) throw new Error(`crew messages get failed for ${channelId}`);
+          const parsed = JSON.parse(res.stdout) as Array<{
+            id: string;
+            pubkey: string;
+            created_at: number;
+            content: string;
+          }>;
+          return parsed.map((m) => ({
+            id: m.id,
+            pubkey: m.pubkey,
+            created_at: m.created_at,
+            content: m.content,
+          }));
+        },
+        file: async ({ agentName, agent, channelId, channelName, digest, messageCount, correlationId }) => {
+          const channel = mapping.channels[channelId];
+          const created = await pilot.createIssue({
+            companyId: channel.companyId,
+            title: `Channel awareness: #${channelName} (${messageCount} new)`,
+            description: digest,
+            assigneeAgentId: agent.pilotAgentId,
+            ...(channel.projectId ? { projectId: channel.projectId } : {}),
+            // One awareness issue per channel per digest window.
+            idempotencyKey: `crew-digest:${channelId}:${correlationId.slice(0, 8)}`,
+          });
+          store.recordAudit({
+            action: "awareness-digest-filed",
+            correlationId,
+            crewEventId: null,
+            crewChannelId: channelId,
+            crewThreadRoot: null,
+            senderPubkey: null,
+            issueId: created.id,
+            issueUrl: created.url,
+            agentId: agent.pilotAgentId,
+            detail: `#${channelName} for ${agentName}`,
+          });
+          return { issueId: created.id, issueUrl: created.url };
+        },
+      });
+      console.log(JSON.stringify({ outcomes }, null, 2));
       return;
     } finally {
       store.close();

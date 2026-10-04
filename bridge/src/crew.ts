@@ -64,7 +64,15 @@ export type BridgeMapping = {
   >;
   agents: Record<
     string,
-    { pilotAgentId: string; pubkey: string; allowedSenders: string[] }
+    {
+      pilotAgentId: string;
+      pubkey: string;
+      allowedSenders: string[];
+      /** §100 initiative governance: local quiet hours, "HH:MM" 24h. */
+      quietHours?: { start: string; end: string };
+      /** §100: cap on proactive wakes per UTC day. */
+      maxProactivePerDay?: number;
+    }
   >;
   /**
    * PAT-2008: Git/PR routing for security and release employees. Keyed by the
@@ -154,7 +162,26 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
         errors.push(`agents.${name}: must be an object`);
         continue;
       }
-      const { pilotAgentId, pubkey, allowedSenders } = value;
+      const { pilotAgentId, pubkey, allowedSenders, quietHours, maxProactivePerDay } = value;
+      const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+      if (
+        quietHours !== undefined &&
+        (!isRecord(quietHours) ||
+          typeof quietHours.start !== "string" ||
+          typeof quietHours.end !== "string" ||
+          !TIME.test(quietHours.start) ||
+          !TIME.test(quietHours.end))
+      ) {
+        errors.push(`agents.${name}.quietHours: must be { start: "HH:MM", end: "HH:MM" }`);
+      }
+      if (
+        maxProactivePerDay !== undefined &&
+        (typeof maxProactivePerDay !== "number" ||
+          !Number.isInteger(maxProactivePerDay) ||
+          maxProactivePerDay < 0)
+      ) {
+        errors.push(`agents.${name}.maxProactivePerDay: must be a non-negative integer`);
+      }
       if (typeof pilotAgentId !== "string" || pilotAgentId.length === 0) {
         errors.push(`agents.${name}.pilotAgentId: required`);
       }
@@ -186,6 +213,12 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
           pilotAgentId,
           pubkey: pubkey.toLowerCase(),
           allowedSenders: allowedSenders.map((s) => String(s).toLowerCase()),
+          ...(isRecord(quietHours) && typeof quietHours.start === "string" && typeof quietHours.end === "string"
+            ? { quietHours: { start: quietHours.start, end: quietHours.end } }
+            : {}),
+          ...(typeof maxProactivePerDay === "number"
+            ? { maxProactivePerDay }
+            : {}),
         };
       }
     }

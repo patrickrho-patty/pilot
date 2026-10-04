@@ -93,6 +93,16 @@ export class BridgeStore {
         decision TEXT NOT NULL,
         applied_at TEXT NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS digest_cursor (
+        channel_id TEXT PRIMARY KEY,
+        last_at TEXT NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS proactive_count (
+        agent TEXT NOT NULL,
+        day TEXT NOT NULL,
+        count INTEGER NOT NULL,
+        PRIMARY KEY (agent, day)
+      );
       CREATE TABLE IF NOT EXISTS dlq (
         event_id TEXT PRIMARY KEY,
         channel_id TEXT,
@@ -279,6 +289,45 @@ export class BridgeStore {
     });
     run();
     return removed;
+  }
+
+  /** Last digested instant for a channel, so each run sees only new activity. */
+  digestCursor(channelId: string): string | null {
+    const row = this.db
+      .prepare("SELECT last_at FROM digest_cursor WHERE channel_id = ?")
+      .get(channelId) as { last_at: string } | undefined;
+    return row?.last_at ?? null;
+  }
+
+  setDigestCursor(channelId: string, lastAt: string): void {
+    this.db
+      .prepare(
+        "INSERT OR REPLACE INTO digest_cursor (channel_id, last_at) VALUES (?, ?)",
+      )
+      .run(channelId, lastAt);
+  }
+
+  /**
+   * §100 initiative governance. Counts proactive wakes per agent per UTC day
+   * so maxProactivePerDay survives a restart.
+   */
+  bumpProactive(agent: string, day: string): number {
+    this.db
+      .prepare(
+        "INSERT INTO proactive_count (agent, day, count) VALUES (?, ?, 1) ON CONFLICT(agent, day) DO UPDATE SET count = count + 1",
+      )
+      .run(agent, day);
+    const row = this.db
+      .prepare("SELECT count FROM proactive_count WHERE agent = ? AND day = ?")
+      .get(agent, day) as { count: number } | undefined;
+    return row?.count ?? 0;
+  }
+
+  proactiveToday(agent: string, day: string): number {
+    const row = this.db
+      .prepare("SELECT count FROM proactive_count WHERE agent = ? AND day = ?")
+      .get(agent, day) as { count: number } | undefined;
+    return row?.count ?? 0;
   }
 
   /**
