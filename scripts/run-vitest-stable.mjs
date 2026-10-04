@@ -29,6 +29,7 @@ const nonServerProjects = [
   "@pilotai/plugin-sdk",
   "@pilotai/create-pilot-plugin",
   "@pilotai/ui",
+  "@pilotai/crew-bridge",
   "pilotai",
 ];
 const routeTestPattern = /[^/]*(?:route|routes|authz)[^/]*\.test\.ts$/;
