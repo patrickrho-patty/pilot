@@ -235,6 +235,8 @@ export class PilotClient {
     description?: string | null;
     assigneeAgentId?: string | null;
     status?: string;
+    /** Present when the API returns the work tree; absent otherwise. */
+    children?: Array<{ id: string; status?: string; assigneeAgentId?: string | null }>;
   }> {
     const resp = await this.call(`/api/issues/${issueId}`, { method: "GET" });
     return (await resp.json()) as {
@@ -242,6 +244,7 @@ export class PilotClient {
       description?: string | null;
       assigneeAgentId?: string | null;
       status?: string;
+      children?: Array<{ id: string; status?: string; assigneeAgentId?: string | null }>;
     };
   }
 

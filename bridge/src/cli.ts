@@ -1,6 +1,7 @@
 import { loadConfig } from "./config.js";
 import { loadMapping, runCrewCli } from "./crew.js";
 import { runAwarenessDigest } from "./digest.js";
+import { runProjection } from "./projection.js";
 import { hireEmployee } from "./hire.js";
 import { offboardEmployee } from "./offboard.js";
 import { PilotClient } from "./pilot.js";
@@ -23,6 +24,11 @@ commands:
   audit export [--since <iso>] [--limit <n>] [--db <path>]
   retention prune [--dry-run] [--days <n>] [--mapping <path>] [--db <path>]
   digest run [--limit <n>] [--mapping <path>] [--db <path>]
+  project run [--limit <n>] [--mapping <path>] [--db <path>]
+
+project run posts delegation/review status into linked Crew threads when the
+Pilot work tree moves (PAT-2002). Run it on a schedule; it is silent unless
+something changed.
 
 digest run is the awareness pass (§100): it digests each mapped channel's
 activity since the last run and files it for the employee. Run it on a
@@ -321,6 +327,54 @@ async function main(): Promise<void> {
         },
       });
       console.log(JSON.stringify({ outcomes }, null, 2));
+      return;
+    } finally {
+      store.close();
+    }
+  }
+
+  if (command === "project") {
+    if (rest[0] !== "run") usage();
+    const config = loadConfig(process.env, dbPath);
+    const mapping = loadMapping(mappingPath);
+    const store = new BridgeStore(dbPath);
+    const pilot = new PilotClient(config.pilotBaseUrl, config.pilotApiKey);
+    try {
+      const limitArg = arg("--limit", rest);
+      const changes = await runProjection({
+        mapping,
+        store,
+        pilot,
+        limit: limitArg ? Number(limitArg) : 200,
+        agentName: (agentId) => {
+          if (!agentId) return null;
+          for (const [name, agent] of Object.entries(mapping.agents)) {
+            if (agent.pilotAgentId === agentId) return name;
+          }
+          return agentId.slice(0, 8);
+        },
+        post: async (channelId, threadRoot, text) => {
+          const res = await runCrewCli(
+            config.admin.crewCliPath,
+            [
+              "messages",
+              "send",
+              "--channel",
+              channelId,
+              "--reply-to",
+              threadRoot,
+              "--content",
+              text,
+            ],
+            {
+              CREW_RELAY_URL: config.relayUrl,
+              CREW_PRIVATE_KEY: config.gatewayPrivateKey,
+            },
+          );
+          if (!res.ok) throw new Error(`projection post failed for ${channelId}`);
+        },
+      });
+      console.log(JSON.stringify({ projected: changes.length }, null, 2));
       return;
     } finally {
       store.close();

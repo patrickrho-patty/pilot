@@ -103,6 +103,12 @@ export class BridgeStore {
         count INTEGER NOT NULL,
         PRIMARY KEY (agent, day)
       );
+      CREATE TABLE IF NOT EXISTS thread_projection (
+        thread_root TEXT PRIMARY KEY,
+        issue_id TEXT NOT NULL,
+        snapshot TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
       CREATE TABLE IF NOT EXISTS dlq (
         event_id TEXT PRIMARY KEY,
         channel_id TEXT,
@@ -376,6 +382,61 @@ export class BridgeStore {
           decidedByUserId: row.decided_by_user_id,
         }
       : null;
+  }
+
+  /**
+   * Every thread with a Pilot issue behind it (PAT-2002). Oldest-projected
+   * first, so a bounded pass rotates through a large workspace instead of
+   * re-reading the same head every run.
+   */
+  linkedThreads(limit: number): Array<{ threadRoot: string; channelId: string; issueId: string; issueUrl: string }> {
+    const rows = this.db
+      .prepare(
+        `SELECT t.thread_root, t.crew_channel_id, t.issue_id, t.issue_url
+           FROM thread_issue t
+           LEFT JOIN thread_projection p ON p.thread_root = t.thread_root
+          ORDER BY COALESCE(p.updated_at, '') ASC
+          LIMIT ?`,
+      )
+      .all(limit) as Array<{
+      thread_root: string;
+      crew_channel_id: string;
+      issue_id: string;
+      issue_url: string;
+    }>;
+    return rows.map((r) => ({
+      threadRoot: r.thread_root,
+      channelId: r.crew_channel_id,
+      issueId: r.issue_id,
+      issueUrl: r.issue_url,
+    }));
+  }
+
+  /** Last projected snapshot for a thread, or null when never projected. */
+  projectionSnapshot(threadRoot: string): {
+    status: string;
+    assigneeAgentId: string | null;
+    children: Array<{ id: string; status?: string; assigneeAgentId?: string | null }>;
+  } | null {
+    const row = this.db
+      .prepare("SELECT snapshot FROM thread_projection WHERE thread_root = ?")
+      .get(threadRoot) as { snapshot: string } | undefined;
+    if (!row) return null;
+    try {
+      return JSON.parse(row.snapshot);
+    } catch {
+      // A corrupt snapshot must not wedge the projection loop: treat it as
+      // never-projected and repost once.
+      return null;
+    }
+  }
+
+  saveProjection(threadRoot: string, issueId: string, snapshot: unknown): void {
+    this.db
+      .prepare(
+        "INSERT OR REPLACE INTO thread_projection (thread_root, issue_id, snapshot, updated_at) VALUES (?, ?, ?, ?)",
+      )
+      .run(threadRoot, issueId, JSON.stringify(snapshot), new Date().toISOString());
   }
 
   /**
