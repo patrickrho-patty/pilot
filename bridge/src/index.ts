@@ -1,6 +1,7 @@
 import { loadConfig } from "./config.js";
 import { loadMapping } from "./crew.js";
 import { createHealthApp, type HealthState } from "./health.js";
+import { publishPilotPolicy } from "./integration.js";
 import { PilotClient } from "./pilot.js";
 import { CrewRelay } from "./relay.js";
 import { BridgeService } from "./service.js";
@@ -45,6 +46,21 @@ async function main(): Promise<void> {
         });
     },
   );
+
+  // PAT-1982: flip Crew into pilot mode once the relay is connected and Pilot
+  // accepts our agent key. Loud but not fatal — a policy problem must not stop
+  // the mention → issue loop.
+  try {
+    const me = await pilot.whoami();
+    const policy = await publishPilotPolicy(config, relay);
+    console.log(
+      policy.changed
+        ? `pilot policy: ${policy.previous} -> pilot as ${me.id}`
+        : `pilot policy: already pilot (agent ${me.id})`,
+    );
+  } catch (err) {
+    console.error("pilot policy publish skipped:", err);
+  }
 
   const app = createHealthApp(health);
   const server = app.listen(config.port, () => {

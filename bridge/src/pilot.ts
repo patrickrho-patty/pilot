@@ -88,6 +88,16 @@ export class PilotClient {
   }
 
   /**
+   * Validate the bearer key against Pilot (PAT-1982 startup gate).
+   * `/agents/me` requires agent-scope authentication, so a board key or a
+   * revoked key fails here before the bridge publishes anything.
+   */
+  async whoami(): Promise<{ id: string; companyId?: string }> {
+    const resp = await this.call("/api/agents/me", { method: "GET" });
+    return (await resp.json()) as { id: string; companyId?: string };
+  }
+
+  /**
    * Create a company skill from inline markdown (PAT-1981). Returns the
    * server-assigned id and slug; `key` is the handle the skill-sync call
    * wants, so we carry whatever the server returns.
