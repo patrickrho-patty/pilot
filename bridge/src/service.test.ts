@@ -63,6 +63,13 @@ class FakePilot {
     return { id: issueId, assigneeAgentId: this.assigneeAgentId };
   }
 
+  /** PAT-2001: proposals resolved through the interaction surface. */
+  interactions: Array<{ issueId: string; interactionId: string; decision: string }> = [];
+
+  async decideInteraction(issueId: string, interactionId: string, decision: string) {
+    this.interactions.push({ issueId, interactionId, decision });
+  }
+
   /** PAT-1999: approval state the decision path reads. */
   approvalStatus = "pending";
   decisions: Array<{ approvalId: string; decision: string; note?: string }> = [];
@@ -563,6 +570,95 @@ describe("BridgeService", () => {
 
     expect(result).toEqual({ action: "ignored", reason: "missing-approval-tag" });
     expect(pilot.decisions).toHaveLength(0);
+  });
+
+  it("accepts a proposal from a mapped human (PAT-2001)", async () => {
+    const { store, pilot, service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "e1".repeat(32),
+        tags: [
+          ["h", CHANNEL_ID],
+          ["t", "pilot-decision"],
+          ["interaction", "33333333-3333-3333-3333-333333333333"],
+          ["issue", "iss-1"],
+          ["decision", "accept"],
+        ],
+        content: "worth doing",
+      }),
+    );
+
+    expect(result).toEqual({
+      action: "proposal-decided",
+      interactionId: "33333333-3333-3333-3333-333333333333",
+      decision: "accept",
+    });
+    expect(pilot.interactions).toEqual([
+      { issueId: "iss-1", interactionId: "33333333-3333-3333-3333-333333333333", decision: "accept" },
+    ]);
+    // A proposal decision is not work: it must not file an issue of its own.
+    expect(pilot.created).toHaveLength(0);
+    // Accepting a proposal is what turns it into owned work, so it is audited.
+    expect(store.listAudit()[0]?.action).toBe("proposal-accept");
+  });
+
+  it("refuses a proposal decision from a viewer", async () => {
+    const { pilot, service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "e2".repeat(32),
+        pubkey: STRANGER_PUBKEY,
+        tags: [
+          ["h", CHANNEL_ID],
+          ["t", "pilot-decision"],
+          ["interaction", "33333333-3333-3333-3333-333333333333"],
+          ["issue", "iss-1"],
+          ["decision", "accept"],
+        ],
+        content: "accept",
+      }),
+    );
+
+    expect(result).toEqual({ action: "ignored", reason: "decider-lacks-role" });
+    expect(pilot.interactions).toHaveLength(0);
+  });
+
+  it("refuses a replayed proposal decision", async () => {
+    const { pilot, service } = makeService();
+    const decision = makeEvent({
+      id: "e3".repeat(32),
+      tags: [
+        ["h", CHANNEL_ID],
+        ["t", "pilot-decision"],
+        ["interaction", "33333333-3333-3333-3333-333333333333"],
+        ["issue", "iss-1"],
+        ["decision", "accept"],
+      ],
+      content: "accept",
+    });
+
+    expect(await service.handleEvent(decision)).toMatchObject({ action: "proposal-decided" });
+    expect(await service.handleEvent(decision)).toEqual({ action: "ignored", reason: "duplicate" });
+    expect(pilot.interactions).toHaveLength(1);
+  });
+
+  it("ignores a proposal decision with no issue to act on", async () => {
+    const { pilot, service } = makeService();
+    const result = await service.handleEvent(
+      makeEvent({
+        id: "e4".repeat(32),
+        tags: [
+          ["h", CHANNEL_ID],
+          ["t", "pilot-decision"],
+          ["interaction", "33333333-3333-3333-3333-333333333333"],
+          ["decision", "accept"],
+        ],
+        content: "accept",
+      }),
+    );
+
+    expect(result).toEqual({ action: "ignored", reason: "missing-issue-tag" });
+    expect(pilot.interactions).toHaveLength(0);
   });
 
   it("still succeeds when the gateway ack fails", async () => {

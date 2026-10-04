@@ -15,7 +15,8 @@ export type HandleResult =
   | { action: "commented"; issueId: string }
   | { action: "edited"; issueId: string; mode: "description" | "revision-comment" }
   | { action: "git-issue-created"; issueId: string; issueUrl: string }
-  | { action: "decision-applied"; approvalId: string; decision: string };
+  | { action: "decision-applied"; approvalId: string; decision: string }
+  | { action: "proposal-decided"; interactionId: string; decision: string };
 
 export type AckSender = (
   channelUuid: string,
@@ -179,13 +180,63 @@ export class BridgeService {
   }
 
   /**
-   * PAT-1999: a Crew message carrying an approval decision. The bridge is a
-   * courier — `projectApprovalDecision` owns every authority check, so this
+   * PAT-1999 / PAT-2001: a Crew message carrying a decision.
+   *
+   * Two carriers ride this one path, because a proposal and an approval are the
+   * same act from the thread's point of view — a human answering a question the
+   * work tree is blocked on:
+   *
+   *   ["approval", "<id>"]     + ["decision", approve|reject|request-revision]
+   *   ["interaction", "<id>"]  + ["decision", accept|reject]
+   *
+   * The bridge is a courier — the protocol owns every authority check, so this
    * only assembles the decision it validates.
    */
   private async handleDecision(event: NostrEvent): Promise<HandleResult> {
-    const approvalId = tagValue(event, "approval");
     const decision = tagValue(event, "decision");
+
+    const interactionId = tagValue(event, "interaction");
+    if (interactionId) {
+      const issueId = tagValue(event, "issue");
+      if (!issueId) return { action: "ignored", reason: "missing-issue-tag" };
+      if (decision !== "accept" && decision !== "reject") {
+        return { action: "ignored", reason: "unknown-decision" };
+      }
+      // Accepting a proposal is what turns it into real owned work, so it is
+      // worth the same care as an approval: the decider must be mapped, and the
+      // proposal must still be open.
+      const user = this.mapping.users?.[event.pubkey.toLowerCase()];
+      if (!user) return { action: "ignored", reason: "unmapped-decider" };
+      if (user.role === "viewer") {
+        return { action: "ignored", reason: "decider-lacks-role" };
+      }
+      if (!this.store.claimDecision({
+        decisionId: event.id,
+        approvalId: interactionId,
+        decidedByPubkey: event.pubkey,
+        decidedByUserId: user.userId,
+        decision,
+      })) {
+        return { action: "ignored", reason: "replayed-decision" };
+      }
+      await this.pilot.decideInteraction(issueId, interactionId, decision);
+      this.store.markSeen(event.id);
+      this.store.recordAudit({
+        action: `proposal-${decision}`,
+        correlationId: null,
+        crewEventId: event.id,
+        crewChannelId: hTagOf(event),
+        crewThreadRoot: null,
+        senderPubkey: event.pubkey,
+        issueId,
+        issueUrl: null,
+        agentId: null,
+        detail: `proposal ${interactionId} ${decision}ed by Pilot user ${user.userId}`,
+      });
+      return { action: "proposal-decided", interactionId, decision };
+    }
+
+    const approvalId = tagValue(event, "approval");
     if (!approvalId) return { action: "ignored", reason: "missing-approval-tag" };
     if (
       decision !== "approve" &&

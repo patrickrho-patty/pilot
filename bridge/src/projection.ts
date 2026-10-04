@@ -30,6 +30,8 @@ export type IssueSnapshot = {
   children: IssueChild[];
   /** Pending approval ids (PAT-1999). A new one is worth telling the thread. */
   pendingApprovalIds: string[];
+  /** Pending proposal ids (PAT-2001): `suggest_tasks` interactions. */
+  pendingInteractionIds: string[];
 };
 
 /** A single-value projection: what changed, and the text to post. */
@@ -58,6 +60,7 @@ export function issueSnapshot(issue: {
   assigneeAgentId?: string | null;
   children?: IssueChild[];
   pendingApprovalIds?: string[];
+  pendingInteractionIds?: string[];
 }): IssueSnapshot {
   return {
     status: issue.status ?? "unknown",
@@ -68,6 +71,7 @@ export function issueSnapshot(issue: {
       assigneeAgentId: child.assigneeAgentId ?? null,
     })),
     pendingApprovalIds: [...(issue.pendingApprovalIds ?? [])].sort(),
+    pendingInteractionIds: [...(issue.pendingInteractionIds ?? [])].sort(),
   };
 }
 
@@ -76,6 +80,9 @@ export function sameSnapshot(a: IssueSnapshot | null, b: IssueSnapshot): boolean
   if (a.status !== b.status) return false;
   if (a.assigneeAgentId !== b.assigneeAgentId) return false;
   if ((a.pendingApprovalIds ?? []).join(",") !== (b.pendingApprovalIds ?? []).join(",")) {
+    return false;
+  }
+  if ((a.pendingInteractionIds ?? []).join(",") !== (b.pendingInteractionIds ?? []).join(",")) {
     return false;
   }
   if (a.children.length !== b.children.length) return false;
@@ -136,6 +143,20 @@ export function renderProjection(
     }
   }
 
+  // PAT-2001: a proposal is a decision-queue item (§100). It rides the same
+  // carrier as an approval, named on its own line so the desktop can offer
+  // accept or reject without inventing a second lane.
+  if ((snapshot.pendingInteractionIds ?? []).length > 0) {
+    lines.push(
+      "",
+      `Worth doing? ${snapshot.pendingInteractionIds.length} proposal(s) waiting on you.`,
+      "",
+    );
+    for (const interactionId of snapshot.pendingInteractionIds) {
+      lines.push(`Proposal: ${interactionId}`);
+    }
+  }
+
   lines.push("", `Board: ${issueUrl}`);
   return lines.join("\n");
 }
@@ -171,11 +192,22 @@ export async function runProjection(deps: ProjectionDeps): Promise<ProjectionCha
     const approvals = deps.pilot.listIssueApprovals
       ? await deps.pilot.listIssueApprovals(link.issueId)
       : [];
+    const interactions = deps.pilot.listIssueInteractions
+      ? await deps.pilot.listIssueInteractions(link.issueId)
+      : [];
     const snapshot = issueSnapshot({
       ...issue,
       pendingApprovalIds: approvals
         .filter((a) => !a.status || a.status === "pending")
         .map((a) => a.id)
+        .filter((id) => id.length > 0),
+      pendingInteractionIds: interactions
+        .filter(
+          (i) =>
+            (!i.kind || i.kind === "suggest_tasks") &&
+            (!i.status || i.status === "pending"),
+        )
+        .map((i) => i.id)
         .filter((id) => id.length > 0),
     });
     const previous = deps.store.projectionSnapshot(link.threadRoot);

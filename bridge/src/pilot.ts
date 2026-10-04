@@ -192,6 +192,39 @@ export class PilotClient {
     }
   }
 
+  /**
+   * Pending proposals on an issue (PAT-2001). A `suggest_tasks` interaction is
+   * Pilot's decision-queue item; §100 says a proposal rides that surface rather
+   * than a new lane.
+   */
+  async listIssueInteractions(issueId: string): Promise<
+    Array<{ id: string; kind?: string; status?: string }>
+  > {
+    const resp = await this.call(`/api/issues/${issueId}/interactions`, { method: "GET" });
+    const body = (await resp.json()) as unknown;
+    if (!Array.isArray(body)) return [];
+    return (body as Array<Record<string, unknown>>).map((row) => ({
+      id: String(row.id ?? row.interactionId ?? ""),
+      ...(typeof row.kind === "string" ? { kind: row.kind } : {}),
+      ...(typeof row.status === "string" ? { status: row.status } : {}),
+    }));
+  }
+
+  /**
+   * Resolve a proposal. Accepting it is what turns a proposal into real owned
+   * work, so this is the one call that makes a proposal consequential.
+   */
+  async decideInteraction(
+    issueId: string,
+    interactionId: string,
+    decision: "accept" | "reject",
+  ): Promise<void> {
+    await this.call(`/api/issues/${issueId}/interactions/${interactionId}/${decision}`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+  }
+
   /** Pending approvals on an issue (PAT-1999). */
   async listIssueApprovals(issueId: string): Promise<
     Array<{ id: string; status?: string; requestedByAgentId?: string | null; decisionNote?: string | null }>
