@@ -1,7 +1,7 @@
 import { loadConfig } from "./config.js";
 import { loadMapping } from "./crew.js";
 import { bump, createHealthApp, type HealthState } from "./health.js";
-import { publishPilotPolicy } from "./integration.js";
+import { applyIntegrationConfig, publishPilotPolicy, readIntegrationConfig } from "./integration.js";
 import { threadRootOf } from "./mentions.js";
 import { backoffMs, classifyFailure, isRetryable, PilotClient, scopeCoversProjects } from "./pilot.js";
 import { CrewRelay } from "./relay.js";
@@ -11,7 +11,10 @@ import { BridgeStore } from "./store.js";
 const mappingPath = process.env.BRIDGE_MAPPING_PATH ?? "./mapping.json";
 
 const config = loadConfig(process.env);
-const mapping = loadMapping(mappingPath);
+// The file mapping is the baseline; the relay's community config is overlaid on
+// it at startup (PAT-1998/PAT-2005), so `mapping` and `service` are assigned
+// again once that read completes.
+let mapping = loadMapping(mappingPath);
 const store = new BridgeStore(config.dbPath);
 const pilot = new PilotClient(config.pilotBaseUrl, config.pilotApiKey);
 const relay = new CrewRelay(config.relayUrl, config.gatewayPrivateKey);
@@ -28,7 +31,7 @@ const health: HealthState = {
   dlq: () => store.listFailures("pending"),
 };
 
-const service = new BridgeService(config, mapping, store, pilot);
+let service = new BridgeService(config, mapping, store, pilot);
 
 const agentPubkeys = Object.values(mapping.agents).map((a) => a.pubkey);
 
@@ -116,6 +119,24 @@ async function handleWithRetry(
 }
 
 async function main(): Promise<void> {
+  // PAT-1998/PAT-2005: the community's integration config lives on the relay so
+  // an admin can change it without an operator restarting this pod. A read
+  // failure is loud but not fatal: the file mapping still routes work, and
+  // refusing to start because an admin surface is down would take the whole
+  // mention → issue loop with it.
+  try {
+    const integration = await readIntegrationConfig(config.relayUrl);
+    mapping = applyIntegrationConfig(mapping, integration);
+    service = new BridgeService(config, mapping, store, pilot);
+    console.log(
+      integration.integrated
+        ? `integration config: ${Object.keys(integration.channels).length} channel(s) from the relay`
+        : "integration config: not configured on the relay; using the mapping file",
+    );
+  } catch (err) {
+    console.error("integration config read skipped:", err);
+  }
+
   await relay.subscribe(
     { kinds: [...MESSAGE_KINDS, 40003, GIT_PULL_REQUEST_KIND], "#p": agentPubkeys },
     (event) => {
