@@ -37,6 +37,38 @@ export class PilotNetworkError extends Error {
   }
 }
 
+/**
+ * §28.4 retry classes. The bridge must not retry an authorization failure or
+ * a paused project — those need a human, and looping hides the cause.
+ */
+export type FailureClass =
+  | "retryable-transport"
+  | "retryable-server"
+  | "auth"
+  | "project-paused"
+  | "client-error";
+
+export function classifyFailure(err: unknown): FailureClass {
+  if (err instanceof PilotNetworkError) return "retryable-transport";
+  if (err instanceof PilotApiError) {
+    if (err.status === 401 || err.status === 403) return "auth";
+    if (err.status === 409) return "project-paused";
+    if (err.status >= 500) return "retryable-server";
+    return "client-error";
+  }
+  return "client-error";
+}
+
+export function isRetryable(cls: FailureClass): boolean {
+  return cls === "retryable-transport" || cls === "retryable-server";
+}
+
+/** Exponential backoff with full jitter (§28.4). */
+export function backoffMs(attempt: number, baseMs = 500, capMs = 30_000): number {
+  const ceiling = Math.min(capMs, baseMs * 2 ** Math.max(0, attempt - 1));
+  return Math.floor(Math.random() * ceiling);
+}
+
 export class PilotClient {
   constructor(
     private readonly baseUrl: string,

@@ -2,7 +2,8 @@ import { loadConfig } from "./config.js";
 import { loadMapping } from "./crew.js";
 import { createHealthApp, type HealthState } from "./health.js";
 import { publishPilotPolicy } from "./integration.js";
-import { PilotClient } from "./pilot.js";
+import { threadRootOf } from "./mentions.js";
+import { backoffMs, classifyFailure, isRetryable, PilotClient } from "./pilot.js";
 import { CrewRelay } from "./relay.js";
 import { BridgeService } from "./service.js";
 import { BridgeStore } from "./store.js";
@@ -27,23 +28,68 @@ const service = new BridgeService(config, mapping, store, pilot);
 
 const agentPubkeys = Object.values(mapping.agents).map((a) => a.pubkey);
 
+const MAX_ATTEMPTS = 5;
+
+function channelOf(event: { tags: string[][] }): string | null {
+  for (const [tag, value] of event.tags) {
+    if (tag === "h" && typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
+/**
+ * §28.4/§28.5: retry the classes that can succeed, dead-letter the rest, and
+ * always record the failure so nothing is lost silently.
+ */
+async function handleWithRetry(
+  event: { id: string; pubkey: string; tags: string[][] },
+  health: HealthState,
+): Promise<void> {
+  const channelId = channelOf(event);
+  const threadRoot = threadRootOf(event as never);
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const result = await service.handleEvent(event as never);
+      health.eventsHandled += 1;
+      health.lastEventAt = new Date().toISOString();
+      if (result.action === "issue-created") health.issuesCreated += 1;
+      if (result.action === "commented") health.commentsPosted += 1;
+      console.log(
+        `event ${event.id.slice(0, 8)}: ${result.action}${result.action === "ignored" ? ` (${result.reason})` : ""}`,
+      );
+      return;
+    } catch (err) {
+      const failureClass = classifyFailure(err);
+      const retryable = isRetryable(failureClass) && attempt < MAX_ATTEMPTS;
+      store.recordFailure({
+        eventId: event.id,
+        channelId,
+        threadRoot,
+        senderPubkey: event.pubkey,
+        targetMapping: channelId ? (mapping.channels[channelId]?.companyId ?? null) : null,
+        failureClass,
+        diagnostic: err instanceof Error ? err.message : String(err),
+        replayStatus: retryable ? "pending" : "abandoned",
+      });
+      if (!retryable) {
+        console.error(`event ${event.id.slice(0, 8)} dead-lettered (${failureClass}):`, err);
+        return;
+      }
+      const wait = backoffMs(attempt);
+      console.warn(
+        `event ${event.id.slice(0, 8)} attempt ${attempt}/${MAX_ATTEMPTS} failed (${failureClass}); retry in ${wait}ms`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
+  }
+}
+
 async function main(): Promise<void> {
   await relay.subscribe(
     { kinds: [40002], "#p": agentPubkeys },
     (event) => {
-      void service
-        .handleEvent(event)
-        .then((result) => {
-          health.eventsHandled += 1;
-          health.lastEventAt = new Date().toISOString();
-          if (result.action === "issue-created") health.issuesCreated += 1;
-          if (result.action === "commented") health.commentsPosted += 1;
-          console.log(`event ${event.id.slice(0, 8)}: ${result.action}${result.action === "ignored" ? ` (${result.reason})` : ""}`);
-        })
-        .catch((err) => {
-          // Receipt not marked — the event replays on reconnect for retry.
-          console.error(`event ${event.id.slice(0, 8)} failed:`, err);
-        });
+      void handleWithRetry(event, health);
     },
   );
 

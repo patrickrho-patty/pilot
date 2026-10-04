@@ -16,6 +16,11 @@ commands:
         [--mapping <path>] [--db <path>]
   offboard <name> [--pubkey <hex>] [--reason <text>] [--agent-key-file <path>]
         [--channels <uuid,uuid>] [--mapping <path>] [--db <path>]
+  dlq list [--status pending|replayed|abandoned] [--db <path>]
+  dlq replay <event-id>|--all [--db <path>]
+
+dlq replays dead-lettered events: it clears the receipt so the relay replays
+the event into the normal loop. Fix the cause (mapping, credentials) first.
 
 hire mints the employee's Crew identity, publishes their profile, enrolls them
 on the relay, joins the mapped channels, and places the signing key into Pilot
@@ -112,6 +117,36 @@ async function main(): Promise<void> {
       }),
     );
     return;
+  }
+
+  if (command === "dlq") {
+    const sub = rest[0];
+    const store = new BridgeStore(dbPath);
+    try {
+      if (sub === "list") {
+        const statusArg = arg("--status", rest);
+        const status =
+          statusArg === "replayed" || statusArg === "abandoned" || statusArg === "pending"
+            ? statusArg
+            : "pending";
+        console.log(JSON.stringify(store.listFailures(status), null, 2));
+        return;
+      }
+      if (sub === "replay") {
+        const targets = rest.includes("--all")
+          ? store.listFailures("pending").map((e) => e.eventId)
+          : [rest[1]].filter((v): v is string => Boolean(v));
+        if (targets.length === 0) usage();
+        for (const eventId of targets) store.markForReplay(eventId);
+        console.log(
+          JSON.stringify({ requeued: targets.length, eventIds: targets }),
+        );
+        return;
+      }
+      usage();
+    } finally {
+      store.close();
+    }
   }
 
   if (command === "serve") {
