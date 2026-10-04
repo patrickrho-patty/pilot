@@ -19,6 +19,10 @@ commands:
   dlq list [--status pending|replayed|abandoned] [--db <path>]
   dlq replay <event-id>|--all [--db <path>]
   mapping validate [--mapping <path>]
+  audit export [--since <iso>] [--limit <n>] [--db <path>]
+
+audit export writes NDJSON (§58) for SIEM ingestion: one line per state
+transition, joinable on correlation id, Crew event id and Pilot issue id.
 
 dlq replays dead-lettered events: it clears the receipt so the relay replays
 the event into the normal loop. Fix the cause (mapping, credentials) first.
@@ -171,6 +175,20 @@ async function main(): Promise<void> {
     } catch (err) {
       console.error(err instanceof Error ? err.message : String(err));
       process.exit(1);
+    }
+  }
+
+  if (command === "audit") {
+    if (rest[0] !== "export") usage();
+    const store = new BridgeStore(dbPath);
+    try {
+      const since = arg("--since", rest);
+      const limitArg = arg("--limit", rest);
+      const rows = store.listAudit(since, limitArg ? Number(limitArg) : 1000);
+      for (const row of rows) console.log(JSON.stringify(row));
+      return;
+    } finally {
+      store.close();
     }
   }
 

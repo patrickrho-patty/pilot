@@ -170,6 +170,18 @@ export class BridgeService {
     if (!checkedOut) {
       await this.pilot.updateIssueDescription(linked.issueId, event.content);
       this.store.markSeen(event.id);
+      this.store.recordAudit({
+        action: "issue-edited",
+        correlationId: null,
+        crewEventId: event.id,
+        crewChannelId: hTagOf(event),
+        crewThreadRoot: target,
+        senderPubkey: event.pubkey,
+        issueId: linked.issueId,
+        issueUrl: linked.issueUrl,
+        agentId: null,
+        detail: "description rewritten before checkout",
+      });
       return { action: "edited", issueId: linked.issueId, mode: "description" };
     }
 
@@ -182,6 +194,18 @@ export class BridgeService {
     ].join("\n");
     await this.pilot.addIssueComment(linked.issueId, revision);
     this.store.markSeen(event.id);
+    this.store.recordAudit({
+      action: "issue-revision-commented",
+      correlationId: null,
+      crewEventId: event.id,
+      crewChannelId: hTagOf(event),
+      crewThreadRoot: target,
+      senderPubkey: event.pubkey,
+      issueId: linked.issueId,
+      issueUrl: linked.issueUrl,
+      agentId: null,
+      detail: "source edited after checkout",
+    });
     return { action: "edited", issueId: linked.issueId, mode: "revision-comment" };
   }
 
@@ -218,6 +242,19 @@ export class BridgeService {
 
     // §13.3 step 8: sender authorization gate.
     if (!this.senderAuthorized(agent, event.pubkey)) {
+      // Security-relevant: a bypass attempt is a P1 alert source (§59).
+      this.store.recordAudit({
+        action: "unauthorized-sender",
+        correlationId: null,
+        crewEventId: event.id,
+        crewChannelId: channelId,
+        crewThreadRoot: threadRoot,
+        senderPubkey: event.pubkey,
+        issueId: null,
+        issueUrl: null,
+        agentId: agent.pilotAgentId,
+        detail: `sender not in allowedSenders for ${agentName}`,
+      });
       return { action: "ignored", reason: "unauthorized-sender" };
     }
 
@@ -242,6 +279,18 @@ export class BridgeService {
         threadRoot,
       );
       this.store.markSeen(event.id);
+      this.store.recordAudit({
+        action: "issue-commented",
+        correlationId: null,
+        crewEventId: event.id,
+        crewChannelId: channelId,
+        crewThreadRoot: threadRoot,
+        senderPubkey: event.pubkey,
+        issueId: existing.issueId,
+        issueUrl: existing.issueUrl,
+        agentId: agent.pilotAgentId,
+        detail: "follow-up in linked thread",
+      });
       await this.ackSafely(
         channelId,
         event.id,
@@ -264,6 +313,18 @@ export class BridgeService {
 
     // §13.3 step 14: receipt completes only after success.
     this.store.markSeen(event.id);
+    this.store.recordAudit({
+      action: "issue-created",
+      correlationId,
+      crewEventId: event.id,
+      crewChannelId: channelId,
+      crewThreadRoot: threadRoot,
+      senderPubkey: event.pubkey,
+      issueId: created.id,
+      issueUrl: created.url,
+      agentId: agent.pilotAgentId,
+      detail: `assigned to ${agentName}`,
+    });
 
     // §13.3 step 13: optional gateway acknowledgment with the issue id.
     await this.ackSafely(

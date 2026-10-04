@@ -39,6 +39,33 @@ describe("BridgeStore", () => {
     store.close();
   });
 
+  it("records and exports §58 audit rows oldest first", () => {
+    const dir = mkdtempSync("/tmp/bridge-test-");
+    const store = new BridgeStore(`${dir}/db.sqlite`);
+    const base = {
+      correlationId: "corr-1",
+      crewEventId: "e1",
+      crewChannelId: "ch1",
+      crewThreadRoot: "root1",
+      senderPubkey: "pk1",
+      issueId: "iss1",
+      issueUrl: "https://pilot.test/co/issues/iss1",
+      agentId: "agent-1",
+      detail: null,
+    };
+    store.recordAudit({ ...base, action: "issue-created", at: "2026-10-02T00:00:00.000Z" });
+    store.recordAudit({ ...base, action: "issue-commented", at: "2026-10-02T00:01:00.000Z" });
+
+    const all = store.listAudit();
+    expect(all.map((r) => r.action)).toEqual(["issue-created", "issue-commented"]);
+    expect(all[0].correlationId).toBe("corr-1");
+    expect(all[0].issueId).toBe("iss1");
+
+    const since = store.listAudit("2026-10-02T00:00:30.000Z");
+    expect(since.map((r) => r.action)).toEqual(["issue-commented"]);
+    store.close();
+  });
+
   it("replay clears the receipt so the relay can replay the event", () => {
     const dir = mkdtempSync("/tmp/bridge-test-");
     const store = new BridgeStore(`${dir}/db.sqlite`);

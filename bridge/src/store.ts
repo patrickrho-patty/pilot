@@ -6,6 +6,22 @@ export type ThreadIssueLink = {
   companyId: string;
 };
 
+/** §58 audit record: everything a SIEM needs to join Crew to Pilot. */
+export type AuditEntry = {
+  at: string;
+  action: string;
+  /** Gateway correlation id, also embedded in the issue description. */
+  correlationId: string | null;
+  crewEventId: string | null;
+  crewChannelId: string | null;
+  crewThreadRoot: string | null;
+  senderPubkey: string | null;
+  issueId: string | null;
+  issueUrl: string | null;
+  agentId: string | null;
+  detail: string | null;
+};
+
 /** §28.5 dead-letter row. Never carries raw message content. */
 export type DlqEntry = {
   eventId: string;
@@ -55,6 +71,21 @@ export class BridgeStore {
         count INTEGER NOT NULL,
         PRIMARY KEY (key, window_start)
       );
+      CREATE TABLE IF NOT EXISTS audit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        at TEXT NOT NULL,
+        action TEXT NOT NULL,
+        correlation_id TEXT,
+        crew_event_id TEXT,
+        crew_channel_id TEXT,
+        crew_thread_root TEXT,
+        sender_pubkey TEXT,
+        issue_id TEXT,
+        issue_url TEXT,
+        agent_id TEXT,
+        detail TEXT
+      );
+      CREATE INDEX IF NOT EXISTS audit_at ON audit (at);
       CREATE TABLE IF NOT EXISTS dlq (
         event_id TEXT PRIMARY KEY,
         channel_id TEXT,
@@ -97,6 +128,53 @@ export class BridgeStore {
     companyId: string,
   ): void {
     this.linkStmt.run(threadRoot, crewChannelId, issueId, issueUrl, companyId);
+  }
+
+  /** Append a §58 audit record. Never carries message content. */
+  recordAudit(entry: Omit<AuditEntry, "at"> & { at?: string }): void {
+    this.db
+      .prepare(
+        `INSERT INTO audit (at, action, correlation_id, crew_event_id, crew_channel_id,
+                            crew_thread_root, sender_pubkey, issue_id, issue_url, agent_id, detail)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        entry.at ?? new Date().toISOString(),
+        entry.action,
+        entry.correlationId,
+        entry.crewEventId,
+        entry.crewChannelId,
+        entry.crewThreadRoot,
+        entry.senderPubkey,
+        entry.issueId,
+        entry.issueUrl,
+        entry.agentId,
+        entry.detail,
+      );
+  }
+
+  /** Audit records at or after `since` (ISO), oldest first — the SIEM export. */
+  listAudit(since?: string, limit = 1000): AuditEntry[] {
+    const rows = (
+      since
+        ? this.db
+            .prepare("SELECT * FROM audit WHERE at >= ? ORDER BY id LIMIT ?")
+            .all(since, limit)
+        : this.db.prepare("SELECT * FROM audit ORDER BY id LIMIT ?").all(limit)
+    ) as Array<Record<string, string | number | null>>;
+    return rows.map((r) => ({
+      at: String(r.at),
+      action: String(r.action),
+      correlationId: (r.correlation_id as string | null) ?? null,
+      crewEventId: (r.crew_event_id as string | null) ?? null,
+      crewChannelId: (r.crew_channel_id as string | null) ?? null,
+      crewThreadRoot: (r.crew_thread_root as string | null) ?? null,
+      senderPubkey: (r.sender_pubkey as string | null) ?? null,
+      issueId: (r.issue_id as string | null) ?? null,
+      issueUrl: (r.issue_url as string | null) ?? null,
+      agentId: (r.agent_id as string | null) ?? null,
+      detail: (r.detail as string | null) ?? null,
+    }));
   }
 
   /**
