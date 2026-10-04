@@ -26,11 +26,17 @@ RUN apt-get update \
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+# pnpm applies patchedDependencies from the root manifest during install.
+COPY patches patches
 COPY bridge/package.json bridge/
-RUN pnpm install --filter @pilotai/crew-bridge --frozen-lockfile
+# --ignore-scripts: the workspace root postinstall runs dev-only tooling
+# (scripts/link-plugin-dev-sdk.mjs) that a production image must not carry.
+# Rebuild just the native addon the bridge actually loads.
+RUN pnpm install --filter @pilotai/crew-bridge --frozen-lockfile --ignore-scripts \
+    && pnpm rebuild better-sqlite3
 COPY bridge bridge
 RUN pnpm --filter @pilotai/crew-bridge build \
-    && pnpm --filter @pilotai/crew-bridge --prod deploy /out
+    && pnpm --filter @pilotai/crew-bridge --prod --ignore-scripts deploy /out
 
 FROM node:24-trixie-slim AS runtime
 WORKDIR /app
@@ -38,11 +44,10 @@ ENV NODE_ENV=production \
     BRIDGE_DB_PATH=/data/bridge.db \
     BRIDGE_PORT=3101 \
     CREW_CLI_PATH=/usr/local/bin/crew
-RUN groupadd --system --gid 1000 bridge \
-    && useradd --system --uid 1000 --gid 1000 --home-dir /app --shell /usr/sbin/nologin bridge \
-    && mkdir -p /data && chown bridge:bridge /data
+# Reuse the node image's uid/gid 1000; the chart runs the pod as 1000:1000.
+RUN mkdir -p /data && chown 1000:1000 /data
 COPY --from=crewtools /usr/local/bin/crew /usr/local/bin/crew
 COPY --from=build /out /app
-USER bridge
+USER 1000:1000
 EXPOSE 3101
 CMD ["node", "dist/index.js"]
