@@ -407,6 +407,12 @@ export class BridgeService {
       title: titleFrom(event.content),
       description,
       assigneeAgentId: agent.pilotAgentId,
+      // Land the issue in the channel's project: the mapping carries the
+      // boundary, and a task_bridge-scoped key rejects writes outside it.
+      ...(channel.projectId ? { projectId: channel.projectId } : {}),
+      // The receipt store already dedupes replays; the key makes a retried
+      // create replay the original issue instead of filing a second one.
+      idempotencyKey: `crew-mention:${event.id}`,
     });
     this.store.linkThread(threadRoot, channelId, created.id, created.url, channel.companyId);
     this.store.linkMessage(event.id, created.id, created.url, channel.companyId, threadRoot);
