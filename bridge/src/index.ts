@@ -1,6 +1,6 @@
 import { loadConfig } from "./config.js";
 import { loadMapping } from "./crew.js";
-import { createHealthApp, type HealthState } from "./health.js";
+import { bump, createHealthApp, type HealthState } from "./health.js";
 import { publishPilotPolicy } from "./integration.js";
 import { threadRootOf } from "./mentions.js";
 import { backoffMs, classifyFailure, isRetryable, PilotClient } from "./pilot.js";
@@ -22,6 +22,10 @@ const health: HealthState = {
   issuesCreated: 0,
   commentsPosted: 0,
   lastEventAt: null,
+  relayConnected: false,
+  pilotReachable: false,
+  counters: new Map(),
+  dlq: () => store.listFailures("pending"),
 };
 
 const service = new BridgeService(config, mapping, store, pilot);
@@ -47,6 +51,10 @@ async function handleWithRetry(
 ): Promise<void> {
   const channelId = channelOf(event);
   const threadRoot = threadRootOf(event as never);
+  bump(health, "crew_pilot_events_received_total", {
+    kind: "40002",
+    channel: channelId ?? "none",
+  });
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
@@ -55,6 +63,21 @@ async function handleWithRetry(
       health.lastEventAt = new Date().toISOString();
       if (result.action === "issue-created") health.issuesCreated += 1;
       if (result.action === "commented") health.commentsPosted += 1;
+      bump(health, "crew_pilot_events_processed_total", { result: result.action });
+      if (result.action === "issue-created") {
+        bump(health, "crew_pilot_issue_create_total", { result: "success" });
+      }
+      if (result.action === "commented") {
+        bump(health, "crew_pilot_comment_create_total", { result: "success" });
+      }
+      if (result.action === "ignored") {
+        if (result.reason === "unmapped-channel" || result.reason === "no-agent-mention") {
+          bump(health, "crew_pilot_mapping_miss_total", { type: result.reason });
+        }
+        if (result.reason === "unauthorized-sender") {
+          bump(health, "crew_pilot_unauthorized_request_total");
+        }
+      }
       console.log(
         `event ${event.id.slice(0, 8)}: ${result.action}${result.action === "ignored" ? ` (${result.reason})` : ""}`,
       );
@@ -62,6 +85,13 @@ async function handleWithRetry(
     } catch (err) {
       const failureClass = classifyFailure(err);
       const retryable = isRetryable(failureClass) && attempt < MAX_ATTEMPTS;
+      bump(health, "crew_pilot_issue_create_total", { result: failureClass });
+      if (retryable) {
+        bump(health, "crew_pilot_retries_total", {
+          operation: "handle-event",
+          reason: failureClass,
+        });
+      }
       store.recordFailure({
         eventId: event.id,
         channelId,
@@ -92,12 +122,14 @@ async function main(): Promise<void> {
       void handleWithRetry(event, health);
     },
   );
+  health.relayConnected = true;
 
   // PAT-1982: flip Crew into pilot mode once the relay is connected and Pilot
   // accepts our agent key. Loud but not fatal — a policy problem must not stop
   // the mention → issue loop.
   try {
     const me = await pilot.whoami();
+    health.pilotReachable = true;
     const policy = await publishPilotPolicy(config, relay);
     console.log(
       policy.changed
