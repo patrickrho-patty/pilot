@@ -149,6 +149,41 @@ describe("hireEmployee", () => {
     );
   });
 
+  it("the default skill install ships the real skill file and assigns it with mode add", async () => {
+    // Exercises the production path rather than a stubbed port: read
+    // bridge/CREW_AGENT_SKILL.md, create the company skill, assign it.
+    const { ports } = makeFakes();
+    delete ports.installSkill;
+
+    const created: Array<Record<string, unknown>> = [];
+    const synced: Array<{ agentId: string; keys: string[]; mode: string }> = [];
+    const fakePilot = {
+      createCompanySkill: async (input: Record<string, unknown>) => {
+        created.push(input);
+        return { id: "skill-1", slug: "crew-channel-duty", key: "crew-bridge/channel-duty" };
+      },
+      syncAgentSkills: async (agentId: string, keys: string[], mode: string) => {
+        synced.push({ agentId, keys, mode });
+      },
+    } as unknown as PilotClient;
+
+    const result = await hireEmployee(config, relay, fakePilot, input, ports);
+
+    expect(result.skillKey).toBe("crew-bridge/channel-duty");
+    expect(created).toHaveLength(1);
+    expect(created[0].name).toBe("crew-channel-duty");
+    expect(created[0].companyId).toBe("co-1");
+    // The shipped file, not a stub string.
+    const markdown = String(created[0].markdown);
+    expect(markdown).toContain("name: crew-channel-duty");
+    expect(markdown).toContain("crew messages send --channel");
+    expect(markdown).toContain("--reply-to");
+    // "add" so an operator's own assignments survive the hire.
+    expect(synced).toEqual([
+      { agentId: "agent-1", keys: ["crew-bridge/channel-duty"], mode: "add" },
+    ]);
+  });
+
   it("degrades on enrollment failure but still completes custody", async () => {
     const { ports, secrets } = makeFakes();
     ports.enrollRelayMember = async () => {
