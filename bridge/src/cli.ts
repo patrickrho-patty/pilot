@@ -20,6 +20,11 @@ commands:
   dlq replay <event-id>|--all [--db <path>]
   mapping validate [--mapping <path>]
   audit export [--since <iso>] [--limit <n>] [--db <path>]
+  retention prune [--dry-run] [--days <n>] [--mapping <path>] [--db <path>]
+
+retention prune applies per-channel retentionDays (default --days, or
+BRIDGE_RETENTION_DAYS). Only bridge-side identifiers and metadata are
+removed; the bridge never stores message bodies.
 
 audit export writes NDJSON (§58) for SIEM ingestion: one line per state
 transition, joinable on correlation id, Crew event id and Pilot issue id.
@@ -186,6 +191,53 @@ async function main(): Promise<void> {
       const limitArg = arg("--limit", rest);
       const rows = store.listAudit(since, limitArg ? Number(limitArg) : 1000);
       for (const row of rows) console.log(JSON.stringify(row));
+      return;
+    } finally {
+      store.close();
+    }
+  }
+
+  if (command === "retention") {
+    if (rest[0] !== "prune") usage();
+    const mapping = loadMapping(mappingPath);
+    const store = new BridgeStore(dbPath);
+    try {
+      const daysArg = arg("--days", rest);
+      const defaultDays = Number(daysArg ?? process.env.BRIDGE_RETENTION_DAYS ?? "90");
+      const dryRun = rest.includes("--dry-run");
+
+      const cutoffs: Array<{ channel: string; days: number; before: string }> = [];
+      for (const [channelId, channel] of Object.entries(mapping.channels)) {
+        const days = channel.retentionDays ?? defaultDays;
+        cutoffs.push({
+          channel: channelId,
+          days,
+          before: new Date(Date.now() - days * 86_400_000).toISOString(),
+        });
+      }
+      const globalBefore = new Date(
+        Date.now() - Math.min(defaultDays, ...cutoffs.map((c) => c.days)) * 86_400_000,
+      ).toISOString();
+
+      // Dry run runs the real deletes inside a transaction and rolls it back,
+      // so the reported counts are the true counts.
+      const ROLLBACK = "__dry_run__";
+      let removed: Record<string, Record<string, number>> = {};
+      try {
+        store.transaction(() => {
+          for (const c of cutoffs) {
+            removed[c.channel] = store.pruneChannelRetention(c.channel, c.before);
+          }
+          removed["__global__"] = store.pruneRetention(globalBefore);
+          if (dryRun) throw new Error(ROLLBACK);
+        });
+      } catch (err) {
+        if (!(err instanceof Error) || err.message !== ROLLBACK) throw err;
+      }
+
+      console.log(
+        JSON.stringify({ dryRun, defaultDays, cutoffs, globalBefore, removed }, null, 2),
+      );
       return;
     } finally {
       store.close();

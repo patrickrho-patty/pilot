@@ -66,6 +66,43 @@ describe("BridgeStore", () => {
     store.close();
   });
 
+  it("prunes only rows older than the cutoff, per channel", () => {
+    const dir = mkdtempSync("/tmp/bridge-test-");
+    const store = new BridgeStore(`${dir}/db.sqlite`);
+    store.markSeen("old-event");
+    store.markSeen("new-event");
+    store.linkThread("root-old", "ch1", "iss1", "u1", "co1");
+    store.linkThread("root-new", "ch1", "iss2", "u2", "co1");
+    store.linkThread("root-other", "ch2", "iss3", "u3", "co1");
+    store.linkMessage("msg-old", "iss1", "u1", "co1", "root-old");
+
+    const old = "2020-01-01T00:00:00.000Z";
+    store.transaction(() => {
+      // Backdate two rows to simulate age.
+      (store as unknown as { db: { prepare: (s: string) => { run: (...a: string[]) => void } } }).db
+        .prepare("UPDATE seen_events SET created_at = ? WHERE id = ?")
+        .run(old, "old-event");
+      (store as unknown as { db: { prepare: (s: string) => { run: (...a: string[]) => void } } }).db
+        .prepare("UPDATE thread_issue SET created_at = ? WHERE thread_root = ?")
+        .run(old, "root-old");
+      (store as unknown as { db: { prepare: (s: string) => { run: (...a: string[]) => void } } }).db
+        .prepare("UPDATE message_issue SET created_at = ? WHERE event_id = ?")
+        .run(old, "msg-old");
+    });
+
+    const cutoff = "2021-01-01T00:00:00.000Z";
+    expect(store.pruneChannelRetention("ch1", cutoff).thread_issue).toBe(1);
+    expect(store.issueForThread("root-old")).toBeNull();
+    expect(store.issueForThread("root-new")?.issueId).toBe("iss2");
+    // ch2 is a different channel and keeps its own retention window
+    expect(store.issueForThread("root-other")?.issueId).toBe("iss3");
+
+    const global = store.pruneRetention(cutoff);
+    expect(global.seen_events).toBe(1);
+    expect(store.seen("new-event")).toBe(true);
+    store.close();
+  });
+
   it("replay clears the receipt so the relay can replay the event", () => {
     const dir = mkdtempSync("/tmp/bridge-test-");
     const store = new BridgeStore(`${dir}/db.sqlite`);

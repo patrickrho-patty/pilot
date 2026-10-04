@@ -50,8 +50,7 @@ export class BridgeStore {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS seen_events (
         id TEXT PRIMARY KEY
-      );
-      CREATE TABLE IF NOT EXISTS thread_issue (
+      );      CREATE TABLE IF NOT EXISTS thread_issue (
         thread_root TEXT PRIMARY KEY,
         crew_channel_id TEXT NOT NULL,
         issue_id TEXT NOT NULL,
@@ -100,10 +99,28 @@ export class BridgeStore {
         replay_status TEXT NOT NULL
       );
     `);
+
+    // Retention (PAT-2007) needs an age on every row it prunes. CREATE TABLE
+    // IF NOT EXISTS cannot add a column to a database that already exists, so
+    // the columns are added explicitly for pre-existing bridge DBs.
+    for (const [table, column] of [
+      ["seen_events", "created_at"],
+      ["thread_issue", "created_at"],
+      ["message_issue", "created_at"],
+    ] as const) {
+      const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+      if (!cols.some((c) => c.name === column)) {
+        this.db.exec(
+          `ALTER TABLE ${table} ADD COLUMN ${column} TEXT NOT NULL DEFAULT '1970-01-01T00:00:00.000Z'`,
+        );
+      }
+    }
     this.hasSeen = this.db.prepare("SELECT 1 FROM seen_events WHERE id = ?");
-    this.insertSeen = this.db.prepare("INSERT INTO seen_events (id) VALUES (?)");
+    this.insertSeen = this.db.prepare(
+      "INSERT INTO seen_events (id, created_at) VALUES (?, ?)",
+    );
     this.linkStmt = this.db.prepare(
-      "INSERT OR REPLACE INTO thread_issue (thread_root, crew_channel_id, issue_id, issue_url, company_id) VALUES (?, ?, ?, ?, ?)",
+      "INSERT OR REPLACE INTO thread_issue (thread_root, crew_channel_id, issue_id, issue_url, company_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
     );
     this.lookupStmt = this.db.prepare(
       "SELECT issue_id, issue_url, company_id FROM thread_issue WHERE thread_root = ?",
@@ -116,7 +133,7 @@ export class BridgeStore {
   }
 
   markSeen(eventId: string): void {
-    this.insertSeen.run(eventId);
+    this.insertSeen.run(eventId, new Date().toISOString());
   }
 
 
@@ -127,7 +144,14 @@ export class BridgeStore {
     issueUrl: string,
     companyId: string,
   ): void {
-    this.linkStmt.run(threadRoot, crewChannelId, issueId, issueUrl, companyId);
+    this.linkStmt.run(
+      threadRoot,
+      crewChannelId,
+      issueId,
+      issueUrl,
+      companyId,
+      new Date().toISOString(),
+    );
   }
 
   /** Append a §58 audit record. Never carries message content. */
@@ -191,9 +215,9 @@ export class BridgeStore {
   ): void {
     this.db
       .prepare(
-        "INSERT OR REPLACE INTO message_issue (event_id, issue_id, issue_url, company_id, thread_root) VALUES (?, ?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO message_issue (event_id, issue_id, issue_url, company_id, thread_root, created_at) VALUES (?, ?, ?, ?, ?, ?)",
       )
-      .run(eventId, issueId, issueUrl, companyId, threadRoot);
+      .run(eventId, issueId, issueUrl, companyId, threadRoot, new Date().toISOString());
   }
 
   issueForMessage(eventId: string): ThreadIssueLink | null {
@@ -221,6 +245,65 @@ export class BridgeStore {
       .prepare("SELECT count FROM rate_window WHERE key = ? AND window_start = ?")
       .get(key, windowStart) as { count: number } | undefined;
     return row?.count ?? 0;
+  }
+
+  /**
+   * §50/PAT-2007 retention. Deletes bridge-side rows older than `before` and
+   * reports what it removed. Only identifiers and metadata live here — no
+   * message bodies are stored, so nothing customer-authored is deleted.
+   */
+  pruneRetention(before: string): Record<string, number> {
+    const targets: Array<[string, string]> = [
+      ["seen_events", "created_at"],
+      ["thread_issue", "created_at"],
+      ["message_issue", "created_at"],
+      ["audit", "at"],
+      ["rate_window", "window_start"],
+    ];
+    const removed: Record<string, number> = {};
+    const run = this.db.transaction(() => {
+      for (const [table, column] of targets) {
+        const info = this.db
+          .prepare(`DELETE FROM ${table} WHERE ${column} < ?`)
+          .run(before);
+        removed[table] = Number(info.changes);
+      }
+    });
+    run();
+    return removed;
+  }
+
+  /**
+   * Run `fn` in a single SQLite transaction. Throwing rolls the whole thing
+   * back, which is how `retention prune --dry-run` reports real counts
+   * without writing.
+   */
+  transaction(fn: () => void): void {
+    this.db.transaction(fn)();
+  }
+
+  /**
+   * §50/PAT-2007 retention for channel-scoped rows. `retentionDays` differs
+   * per channel, so each channel gets its own cutoff.
+   */
+  pruneChannelRetention(channelId: string, before: string): Record<string, number> {
+    const removed: Record<string, number> = {};
+    const run = this.db.transaction(() => {
+      removed.thread_issue = Number(
+        this.db
+          .prepare("DELETE FROM thread_issue WHERE crew_channel_id = ? AND created_at < ?")
+          .run(channelId, before).changes,
+      );
+      removed.message_issue = Number(
+        this.db
+          .prepare(
+            "DELETE FROM message_issue WHERE thread_root IN (SELECT thread_root FROM thread_issue WHERE crew_channel_id = ?) AND created_at < ?",
+          )
+          .run(channelId, before).changes,
+      );
+    });
+    run();
+    return removed;
   }
 
   /** Drop rate windows older than the given instant. */

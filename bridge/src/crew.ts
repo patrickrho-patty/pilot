@@ -58,7 +58,10 @@ export function parseChannelList(stdout: string, channelName: string): string | 
 }
 
 export type BridgeMapping = {
-  channels: Record<string, { companyId: string; name: string; projectId?: string }>;
+  channels: Record<
+    string,
+    { companyId: string; name: string; projectId?: string; retentionDays?: number }
+  >;
   agents: Record<
     string,
     { pilotAgentId: string; pubkey: string; allowedSenders: string[] }
@@ -97,9 +100,17 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
         errors.push(`channels.${channelId}: must be an object`);
         continue;
       }
-      const { companyId, name, projectId } = value;
+      const { companyId, name, projectId, retentionDays } = value;
       if (typeof companyId !== "string" || companyId.length === 0) {
         errors.push(`channels.${channelId}.companyId: required`);
+      }
+      if (
+        retentionDays !== undefined &&
+        (typeof retentionDays !== "number" || !Number.isFinite(retentionDays) || retentionDays < 0)
+      ) {
+        errors.push(
+          `channels.${channelId}.retentionDays: must be a non-negative number of days`,
+        );
       }
       if (projectId !== undefined && (typeof projectId !== "string" || !UUID.test(projectId))) {
         errors.push(
@@ -114,6 +125,7 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
           companyId,
           name: typeof name === "string" ? name : channelId.slice(0, 8),
           ...(typeof projectId === "string" ? { projectId } : {}),
+          ...(typeof retentionDays === "number" ? { retentionDays } : {}),
         };
       }
     }
