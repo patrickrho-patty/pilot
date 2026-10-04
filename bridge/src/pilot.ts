@@ -69,6 +69,37 @@ export function backoffMs(attempt: number, baseMs = 500, capMs = 30_000): number
   return Math.floor(Math.random() * ceiling);
 }
 
+/**
+ * §49/§66 least privilege: the bridge must not hold a broad `standard` agent
+ * key. A `task_bridge` key is bounded to projects (or a parent issue), so a
+ * compromised bridge cannot write anywhere else in the company.
+ */
+export function scopeCoversProjects(
+  keyScope: { kind: string; projectIds?: string[]; projectId?: string | null } | undefined,
+  requiredProjectIds: string[],
+): { ok: true } | { ok: false; reason: string } {
+  if (!keyScope) return { ok: false, reason: "key scope is missing from /agents/me" };
+  if (keyScope.kind !== "task_bridge") {
+    return {
+      ok: false,
+      reason: `key is '${keyScope.kind}'-scoped; the bridge requires a task_bridge key bounded to its mapped projects`,
+    };
+  }
+  const granted = new Set(
+    [...(keyScope.projectIds ?? []), keyScope.projectId].filter(
+      (v): v is string => typeof v === "string",
+    ),
+  );
+  const missing = requiredProjectIds.filter((id) => !granted.has(id));
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      reason: `key is not scoped to mapped project(s): ${missing.join(", ")}`,
+    };
+  }
+  return { ok: true };
+}
+
 export class PilotClient {
   constructor(
     private readonly baseUrl: string,
@@ -243,9 +274,17 @@ export class PilotClient {
    * `/agents/me` requires agent-scope authentication, so a board key or a
    * revoked key fails here before the bridge publishes anything.
    */
-  async whoami(): Promise<{ id: string; companyId?: string }> {
+  async whoami(): Promise<{
+    id: string;
+    companyId?: string;
+    keyScope?: { kind: string; projectIds?: string[]; projectId?: string | null };
+  }> {
     const resp = await this.call("/api/agents/me", { method: "GET" });
-    return (await resp.json()) as { id: string; companyId?: string };
+    return (await resp.json()) as {
+      id: string;
+      companyId?: string;
+      keyScope?: { kind: string; projectIds?: string[]; projectId?: string | null };
+    };
   }
 
   /**

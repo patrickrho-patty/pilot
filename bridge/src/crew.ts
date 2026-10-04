@@ -58,7 +58,7 @@ export function parseChannelList(stdout: string, channelName: string): string | 
 }
 
 export type BridgeMapping = {
-  channels: Record<string, { companyId: string; name: string }>;
+  channels: Record<string, { companyId: string; name: string; projectId?: string }>;
   agents: Record<
     string,
     { pilotAgentId: string; pubkey: string; allowedSenders: string[] }
@@ -97,9 +97,14 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
         errors.push(`channels.${channelId}: must be an object`);
         continue;
       }
-      const { companyId, name } = value;
+      const { companyId, name, projectId } = value;
       if (typeof companyId !== "string" || companyId.length === 0) {
         errors.push(`channels.${channelId}.companyId: required`);
+      }
+      if (projectId !== undefined && (typeof projectId !== "string" || !UUID.test(projectId))) {
+        errors.push(
+          `channels.${channelId}.projectId: must be a Pilot project GUID (needed for a task_bridge-scoped key)`,
+        );
       }
       if (name !== undefined && typeof name !== "string") {
         errors.push(`channels.${channelId}.name: must be a string`);
@@ -108,6 +113,7 @@ export function validateMapping(raw: unknown): { errors: string[]; mapping?: Bri
         channels[channelId] = {
           companyId,
           name: typeof name === "string" ? name : channelId.slice(0, 8),
+          ...(typeof projectId === "string" ? { projectId } : {}),
         };
       }
     }

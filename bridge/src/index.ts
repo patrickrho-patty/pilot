@@ -3,7 +3,7 @@ import { loadMapping } from "./crew.js";
 import { bump, createHealthApp, type HealthState } from "./health.js";
 import { publishPilotPolicy } from "./integration.js";
 import { threadRootOf } from "./mentions.js";
-import { backoffMs, classifyFailure, isRetryable, PilotClient } from "./pilot.js";
+import { backoffMs, classifyFailure, isRetryable, PilotClient, scopeCoversProjects } from "./pilot.js";
 import { CrewRelay } from "./relay.js";
 import { BridgeService } from "./service.js";
 import { BridgeStore } from "./store.js";
@@ -124,12 +124,23 @@ async function main(): Promise<void> {
   );
   health.relayConnected = true;
 
+  // PAT-1992: refuse to run on a broad key. A standard-scoped key can write
+  // anywhere in the company; a compromised bridge must not be able to.
+  const requiredProjects = Object.values(mapping.channels)
+    .map((c) => c.projectId)
+    .filter((v): v is string => typeof v === "string");
+  const me = await pilot.whoami();
+  health.pilotReachable = true;
+  const scope = scopeCoversProjects(me.keyScope, requiredProjects);
+  if (!scope.ok) {
+    console.error(`refusing to start — least-privilege check failed: ${scope.reason}`);
+    process.exit(1);
+  }
+
   // PAT-1982: flip Crew into pilot mode once the relay is connected and Pilot
   // accepts our agent key. Loud but not fatal — a policy problem must not stop
   // the mention → issue loop.
   try {
-    const me = await pilot.whoami();
-    health.pilotReachable = true;
     const policy = await publishPilotPolicy(config, relay);
     console.log(
       policy.changed

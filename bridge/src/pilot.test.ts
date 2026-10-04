@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { PilotClient, pilotIssueUrl } from "./pilot.js";
+import { PilotClient, pilotIssueUrl, scopeCoversProjects } from "./pilot.js";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
@@ -57,5 +57,68 @@ describe("PilotClient", () => {
     expect(pilotIssueUrl("https://pilot.patty.io", "co_1", "iss_1")).toBe(
       "https://pilot.patty.io/co_1/issues/iss_1",
     );
+  });
+
+  it("sends projectId, goalId and idempotencyKey when supplied", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "iss_2", companyId: "co_1" }), { status: 201 }),
+    );
+    const client = new PilotClient("https://pilot.patty.io", "pak_test");
+    await client.createIssue({
+      companyId: "co_1",
+      title: "t",
+      description: "d",
+      projectId: "11111111-1111-1111-1111-111111111111",
+      goalId: "22222222-2222-2222-2222-222222222222",
+      idempotencyKey: "corr-1",
+    });
+    const body = JSON.parse(String((fetchMock.mock.calls.at(-1)![1] as RequestInit).body));
+    expect(body).toMatchObject({
+      projectId: "11111111-1111-1111-1111-111111111111",
+      goalId: "22222222-2222-2222-2222-222222222222",
+      idempotencyKey: "corr-1",
+    });
+  });
+
+  it("reports a paused project as a distinct checkout outcome, not a failure", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "Project is paused because its budget hard-stop was reached" }), {
+        status: 409,
+      }),
+    );
+    const client = new PilotClient("https://pilot.patty.io", "pak_test");
+    await expect(client.checkoutIssue("iss_1")).resolves.toEqual({
+      ok: false,
+      reason: "project-paused",
+      message: "Project is paused because its budget hard-stop was reached",
+    });
+  });
+});
+
+describe("scopeCoversProjects (PAT-1992)", () => {
+  const P1 = "11111111-1111-1111-1111-111111111111";
+  const P2 = "22222222-2222-2222-2222-222222222222";
+
+  it("rejects a broad standard key", () => {
+    const r = scopeCoversProjects({ kind: "standard" }, [P1]);
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.reason).toContain("task_bridge");
+  });
+
+  it("accepts a task_bridge key covering every mapped project", () => {
+    expect(scopeCoversProjects({ kind: "task_bridge", projectIds: [P1, P2] }, [P1, P2])).toEqual({
+      ok: true,
+    });
+    expect(scopeCoversProjects({ kind: "task_bridge", projectId: P1 }, [P1])).toEqual({ ok: true });
+  });
+
+  it("rejects a key that does not cover a mapped project", () => {
+    const r = scopeCoversProjects({ kind: "task_bridge", projectIds: [P1] }, [P1, P2]);
+    expect(r.ok).toBe(false);
+    expect(r.ok === false && r.reason).toContain(P2);
+  });
+
+  it("rejects a missing scope rather than assuming least privilege", () => {
+    expect(scopeCoversProjects(undefined, []).ok).toBe(false);
   });
 });

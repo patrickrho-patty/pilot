@@ -60,4 +60,19 @@ describe("validateMapping", () => {
     expect(errors.length).toBeGreaterThanOrEqual(4);
     expect(errors.join("\n")).toContain("channels: required");
   });
+
+  it("accepts a projectId and rejects a non-GUID one (task_bridge boundary)", () => {
+    const ok = validateMapping({
+      channels: { [CH]: { companyId: "co-1", projectId: "11111111-1111-1111-1111-111111111111" } },
+      agents: { christina: { pilotAgentId: "agent-1", pubkey: PK, allowedSenders: ["b".repeat(64)] } },
+    });
+    expect(ok.errors).toEqual([]);
+    expect(ok.mapping?.channels[CH].projectId).toBe("11111111-1111-1111-1111-111111111111");
+
+    const bad = validateMapping({
+      channels: { [CH]: { companyId: "co-1", projectId: "not-a-guid" } },
+      agents: { christina: { pilotAgentId: "agent-1", pubkey: PK, allowedSenders: ["b".repeat(64)] } },
+    });
+    expect(bad.errors.join("\n")).toContain("projectId: must be a Pilot project GUID");
+  });
 });
