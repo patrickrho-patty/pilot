@@ -350,6 +350,103 @@ describeEmbeddedPostgres("runDatabaseBackup", () => {
   );
 
   it(
+    "restores composite foreign keys referencing standalone unique indexes",
+    async () => {
+      const sourceConnectionString = await createTempDatabase();
+      const restoreConnectionString = await createSiblingDatabase(
+        sourceConnectionString,
+        "pilot_index_fk_restore_target",
+      );
+      const backupDir = createTempDir("pilot-db-index-fk-backup-");
+      const sourceSql = postgres(sourceConnectionString, { max: 1, onnotice: () => {} });
+      const restoreSql = postgres(restoreConnectionString, { max: 1, onnotice: () => {} });
+
+      try {
+        await sourceSql.unsafe(`
+          CREATE SCHEMA "backup_index_fk";
+          CREATE TABLE "backup_index_fk"."organizations" (
+            "id" integer PRIMARY KEY,
+            "company_id" text NOT NULL,
+            "organization_id" text NOT NULL
+          );
+          CREATE UNIQUE INDEX "organizations_company_org_uq"
+            ON "backup_index_fk"."organizations" ("company_id", "organization_id");
+          CREATE TABLE "backup_index_fk"."workspaces" (
+            "id" integer PRIMARY KEY,
+            "company_id" text NOT NULL,
+            "organization_id" text NOT NULL,
+            "parent_id" integer NOT NULL,
+            "note" text NOT NULL,
+            CONSTRAINT "workspaces_company_org_fk"
+              FOREIGN KEY ("company_id", "organization_id")
+              REFERENCES "backup_index_fk"."organizations" ("company_id", "organization_id"),
+            CONSTRAINT "workspaces_parent_fk" FOREIGN KEY ("parent_id")
+              REFERENCES "backup_index_fk"."organizations" ("id")
+          );
+          CREATE INDEX "workspaces_note_idx" ON "backup_index_fk"."workspaces" ("note");
+          INSERT INTO "backup_index_fk"."organizations" VALUES (1, 'company-a', 'org-a');
+          INSERT INTO "backup_index_fk"."workspaces" VALUES (1, 'company-a', 'org-a', 1, 'workspace');
+        `);
+
+        const uniqueConstraints = await sourceSql.unsafe<{ count: number }[]>(`
+          SELECT count(*)::int AS count FROM pg_constraint
+          WHERE conrelid = 'backup_index_fk.organizations'::regclass AND contype = 'u'
+        `);
+        expect(uniqueConstraints).toEqual([{ count: 0 }]);
+
+        const result = await runDatabaseBackup({
+          connectionString: sourceConnectionString,
+          backupDir,
+          filenamePrefix: "pilot-index-fk-test",
+          retention: { dailyDays: 7, weeklyWeeks: 4, monthlyMonths: 1 },
+          backupEngine: "javascript",
+        });
+        await runDatabaseRestore({
+          connectionString: restoreConnectionString,
+          backupFile: result.backupFile,
+        });
+
+        const backupSql = gunzipSync(await fs.promises.readFile(result.backupFile)).toString("utf8");
+        const uniqueIndexDdl = "CREATE UNIQUE INDEX organizations_company_org_uq";
+        const foreignKeyDdl = 'ADD CONSTRAINT "workspaces_company_org_fk" FOREIGN KEY';
+        expect(backupSql.split(uniqueIndexDdl)).toHaveLength(2);
+        expect(backupSql.indexOf(uniqueIndexDdl)).toBeLessThan(backupSql.indexOf(foreignKeyDdl));
+        expect(backupSql.indexOf(foreignKeyDdl)).toBeGreaterThan(-1);
+
+        const rows = await restoreSql.unsafe<{ company_id: string; organization_id: string; note: string }[]>(`
+          SELECT w."company_id", w."organization_id", w."note"
+          FROM "backup_index_fk"."workspaces" w
+          JOIN "backup_index_fk"."organizations" o
+            ON o."company_id" = w."company_id" AND o."organization_id" = w."organization_id"
+           AND o."id" = w."parent_id"
+        `);
+        expect(rows).toEqual([{ company_id: "company-a", organization_id: "org-a", note: "workspace" }]);
+        const indexes = await restoreSql.unsafe<{ indexname: string }[]>(`
+          SELECT indexname FROM pg_indexes WHERE schemaname = 'backup_index_fk'
+          AND indexname IN ('organizations_company_org_uq', 'workspaces_note_idx') ORDER BY indexname
+        `);
+        expect(indexes).toEqual([
+          { indexname: "organizations_company_org_uq" },
+          { indexname: "workspaces_note_idx" },
+        ]);
+        await expect(restoreSql.unsafe(`
+          INSERT INTO "backup_index_fk"."workspaces" VALUES (2, 'company-b', 'org-a', 1, 'cross-company')
+        `)).rejects.toMatchObject({ code: "23503", constraint_name: "workspaces_company_org_fk" });
+        await expect(restoreSql.unsafe(`
+          INSERT INTO "backup_index_fk"."organizations" VALUES (2, 'company-a', 'org-a')
+        `)).rejects.toMatchObject({ code: "23505", constraint_name: "organizations_company_org_uq" });
+        await expect(restoreSql.unsafe(`
+          INSERT INTO "backup_index_fk"."workspaces" VALUES (2, 'company-a', 'org-a', 99, 'orphan')
+        `)).rejects.toMatchObject({ code: "23503", constraint_name: "workspaces_parent_fk" });
+      } finally {
+        await sourceSql.end();
+        await restoreSql.end();
+      }
+    },
+    60_000,
+  );
+
+  it(
     "preserves composite foreign key column order without duplicate referenced columns",
     async () => {
       const sourceConnectionString = await createTempDatabase();

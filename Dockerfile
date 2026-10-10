@@ -98,6 +98,20 @@ RUN echo "cli-tools-epoch: ${CLI_TOOLS_CACHE_EPOCH}" \
   && mkdir -p /pilot \
   && chown node:node /pilot
 
+# The embedded server is PostgreSQL 18. Ship matching native dump/restore
+# clients so automatic backups retain PostgreSQL's complete schema and data.
+RUN install -d /usr/share/postgresql-common/pgdg \
+  && curl --fail --silent --show-error --location \
+    https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+  && printf '%s\n' 'deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt trixie-pgdg main' \
+    > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client-18 \
+  && rm -rf /var/lib/apt/lists/* \
+  && /usr/lib/postgresql/18/bin/pg_dump --version \
+  && /usr/lib/postgresql/18/bin/psql --version
+
 COPY scripts/docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
@@ -109,6 +123,8 @@ ENV NODE_ENV=production \
   PORT=3100 \
   SERVE_UI=true \
   PILOT_HOME=/pilot \
+  PILOT_PG_DUMP_PATH=/usr/lib/postgresql/18/bin/pg_dump \
+  PILOT_PSQL_PATH=/usr/lib/postgresql/18/bin/psql \
   PILOT_INSTANCE_ID=default \
   PILOT_BUILD_VERSION=${PILOT_BUILD_VERSION} \
   PILOT_BUILD_COMMIT=${PILOT_BUILD_COMMIT} \

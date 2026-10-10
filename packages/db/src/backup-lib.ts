@@ -809,7 +809,29 @@ export async function runDatabaseBackup(opts: RunDatabaseBackupOptions): Promise
       emit("");
     }
 
-    // Foreign keys (after all tables and referenced unique constraints are created)
+    // Standalone unique indexes can also be referenced keys, so create indexes before foreign keys.
+    const allIndexes = await sql<{ schema_name: string; tablename: string; indexdef: string }[]>`
+      SELECT schemaname AS schema_name, tablename, indexdef
+      FROM pg_indexes
+      WHERE ${sql.unsafe(nonSystemSchemaPredicate("schemaname"))}
+        AND indexname NOT IN (
+          SELECT conname FROM pg_constraint c
+          JOIN pg_namespace n ON n.oid = c.connamespace
+          WHERE n.nspname = pg_indexes.schemaname
+        )
+      ORDER BY schemaname, tablename, indexname
+    `;
+    const indexes = allIndexes.filter((entry) => includedTableNames.has(tableKey(entry.schema_name, entry.tablename)));
+
+    if (indexes.length > 0) {
+      emit("-- Indexes");
+      for (const idx of indexes) {
+        emitStatement(`${idx.indexdef};`);
+      }
+      emit("");
+    }
+
+    // Foreign keys (after all tables, referenced unique constraints and indexes are created)
     const allForeignKeys = await sql<{
       constraint_name: string;
       source_schema: string;
@@ -857,28 +879,6 @@ export async function runDatabaseBackup(opts: RunDatabaseBackupOptions): Promise
         emitStatement(
           `ALTER TABLE ${quoteQualifiedName(fk.source_schema, fk.source_table)} ADD CONSTRAINT "${fk.constraint_name}" FOREIGN KEY (${srcCols}) REFERENCES ${quoteQualifiedName(fk.target_schema, fk.target_table)} (${tgtCols}) ON UPDATE ${fk.update_rule} ON DELETE ${fk.delete_rule};`,
         );
-      }
-      emit("");
-    }
-
-    // Indexes (non-primary, non-unique-constraint)
-    const allIndexes = await sql<{ schema_name: string; tablename: string; indexdef: string }[]>`
-      SELECT schemaname AS schema_name, tablename, indexdef
-      FROM pg_indexes
-      WHERE ${sql.unsafe(nonSystemSchemaPredicate("schemaname"))}
-        AND indexname NOT IN (
-          SELECT conname FROM pg_constraint c
-          JOIN pg_namespace n ON n.oid = c.connamespace
-          WHERE n.nspname = pg_indexes.schemaname
-        )
-      ORDER BY schemaname, tablename, indexname
-    `;
-    const indexes = allIndexes.filter((entry) => includedTableNames.has(tableKey(entry.schema_name, entry.tablename)));
-
-    if (indexes.length > 0) {
-      emit("-- Indexes");
-      for (const idx of indexes) {
-        emitStatement(`${idx.indexdef};`);
       }
       emit("");
     }
