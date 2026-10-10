@@ -5,6 +5,8 @@
 image:
   repository: 361645878435.dkr.ecr.ap-northeast-2.amazonaws.com/pilot
   tag: latest
+  # Optional immutable runtime pin; tag still supplies the display version.
+  digest: ""
   pullPolicy: IfNotPresent
 
 replicaCount: 1

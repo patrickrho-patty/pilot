@@ -52,7 +52,7 @@ spec:
               mountPath: /pilot
       containers:
         - name: pilot
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ include "pilot.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
