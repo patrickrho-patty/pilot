@@ -1,11 +1,14 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { and, asc, desc, eq, gte, inArray, lt, max, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lt, max, ne, sql } from "drizzle-orm";
 import type { Db } from "@pilotai/db";
 import {
   activityLog,
   agents,
   connectionGrants,
+  connectionResources,
+  connectionWorkspaceBindings,
+  connectionAvailability,
   connectionTokenIssuances,
   authUsers,
   companySecretBindings,
@@ -169,6 +172,11 @@ type ToolAccessServiceOptions = {
   deploymentExposure?: DeploymentExposure;
   trustedLocalStdioRuntimeHost?: string | null;
   now?: () => Date;
+  /** Trusted internal adapter only; never accepted from a route body. */
+  externalWorkspaceBindingId?: string;
+  externalFetch?: typeof fetch;
+  externalTokenIdentity?: (token: string) => Promise<{ issuer: string; subject: string }>;
+  externalRevalidate?: () => Promise<number>;
 };
 
 type DbTransaction = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -1367,6 +1375,23 @@ function readStdioTemplateId(config: Record<string, unknown>): string {
   return templateId.trim();
 }
 
+/** Construct the canonical PKCE URL for initial consent and exact owner-private retries. */
+export function buildToolOAuthAuthorizationUrl(input: {
+  authorizationUrl: string; clientId: string; redirectUri: string; state: string;
+  codeVerifier: string; scopes: readonly string[]; googleOffline?: boolean;
+}): URL {
+  const url = new URL(input.authorizationUrl);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("client_id", input.clientId);
+  url.searchParams.set("redirect_uri", input.redirectUri);
+  url.searchParams.set("state", input.state);
+  url.searchParams.set("code_challenge", createHash("sha256").update(input.codeVerifier).digest("base64url"));
+  url.searchParams.set("code_challenge_method", "S256");
+  if (input.scopes.length) url.searchParams.set("scope", input.scopes.join(" "));
+  if (input.googleOffline) { url.searchParams.set("access_type", "offline"); url.searchParams.set("prompt", "consent"); }
+  return url;
+}
+
 export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}) {
   const secrets = secretService(db);
   const policySvc = toolAccessPolicyService(db);
@@ -1395,7 +1420,7 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
     const method = (init.method ?? "GET").toUpperCase();
     for (let redirectCount = 0; redirectCount <= MAX_REMOTE_HTTP_REDIRECTS; redirectCount += 1) {
       const safeUrl = await assertRemoteHttpUrlAllowed(currentUrl);
-      const response = await fetch(safeUrl, { ...init, redirect: "manual" });
+      const response = await (options.externalFetch ?? fetch)(safeUrl, { ...init, redirect: "manual" });
       const location = REMOTE_HTTP_REDIRECT_STATUSES.has(response.status)
         ? response.headers?.get?.("location") ?? null
         : null;
@@ -2522,7 +2547,7 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
       ? and(identifier, eq(toolConnections.companyId, companyId))
       : identifier;
     const [row] = await db.select().from(toolConnections).where(where);
-    if (!row) throw notFound("Tool connection not found");
+    if (!row || (row.externalBindingId && row.externalBindingId !== options.externalWorkspaceBindingId)) throw notFound("Tool connection not found");
     return row;
   }
 
@@ -3755,6 +3780,7 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
     connection: typeof toolConnections.$inferSelect,
     provider: string,
   ) {
+    if (options.externalWorkspaceBindingId) return {clientIdEnv: null, clientSecretEnv: null, clientId: null, clientSecret: null};
     if (isSmokeLabOAuthFixture(connection) && provider === "smoke_lab") {
       return {
         clientIdEnv: "SMOKE_LAB_FIXED_CLIENT_ID",
@@ -3801,10 +3827,6 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
       clientId,
       clientSecret,
     };
-  }
-
-  function base64UrlSha256(input: string) {
-    return createHash("sha256").update(input).digest("base64url");
   }
 
   function randomOauthToken(bytes = 32) {
@@ -4117,15 +4139,24 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
     value: string;
     actor?: ActorInfo;
     existingRefs?: typeof connectionGrants.$inferSelect.credentialSecretRefs;
+    subjectUserId?: string | null;
+    vaultDb?: Db;
   }) {
+    const vault = input.vaultDb ? secretService(input.vaultDb) : secrets;
     const existing = input.existingRefs === undefined
       ? oauthSecretRef(input.connection, input.configPath)
       : input.existingRefs.find((ref) => ref.configPath === input.configPath);
     if (existing) {
-      await secrets.rotate(existing.secretId, { value: input.value }, actorForSecret(input.actor));
+      if (input.subjectUserId) await vault.rotateCurrentUserSecretValue(input.companyId, input.subjectUserId, existing.secretId, { value: input.value }, actorForSecret(input.actor));
+      else await vault.rotate(existing.secretId, { value: input.value }, actorForSecret(input.actor));
       return existing;
     }
-    const secret = await secrets.create(input.companyId, {
+    const definition = input.subjectUserId ? await vault.createUserSecretDefinition(input.companyId, {
+      key: `tool_oauth.${randomUUID()}`, name: "Personal connection credential", provider: "local_encrypted",
+    }, actorForSecret(input.actor)) : null;
+    const secret = input.subjectUserId && definition
+      ? await vault.createCurrentUserSecretValue(input.companyId, input.subjectUserId, { definitionId: definition.id, value: input.value }, actorForSecret(input.actor))
+      : await vault.create(input.companyId, {
       name: `${input.connection.name} ${input.label} ${randomUUID().slice(0, 8)}`,
       key: `tool_app.${randomUUID()}.${input.configPath.replace(/[^a-z0-9_:-]+/gi, "_")}`,
       provider: "local_encrypted",
@@ -4269,9 +4300,9 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
       const message = typeof record.error_description === "string"
         ? record.error_description
         : "OAuth dynamic client registration failed";
-      throw new HttpError(502, message, {
+      throw new HttpError(502, options.externalWorkspaceBindingId ? "OAuth token exchange failed" : message, {
         code: "oauth_dynamic_client_registration_failed",
-        providerError,
+        providerError: options.externalWorkspaceBindingId ? null : providerError,
         status: response.status,
       });
     }
@@ -5478,7 +5509,7 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
   async function startOAuth(
     companyId: string,
     connectionId: string,
-    input: { redirectUri: string; actor: ActorInfo; subjectUserId?: string; scopes?: string[]; returnTo?: string; issueId?: string },
+    input: { redirectUri: string; actor: ActorInfo; subjectUserId?: string; scopes?: string[]; returnTo?: string; issueId?: string; externalOperationId?: string; consentGeneration?: number },
   ): Promise<ToolOAuthStartResult> {
     let connection = await getConnectionRow(connectionId, companyId);
     if (connection.status === "archived") throw conflict("Archived app connections cannot start sign in");
@@ -5489,6 +5520,8 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
     if (endpoints.grantType === "client_credentials") {
       throw unprocessable("This app uses shared machine credentials and does not need browser sign in");
     }
+    // External registrations use the same canonical secret binding enforcement.
+    if (connection.externalBindingId) await syncCredentialBindings(connection);
     const resolvedClient = await ensureOAuthClient({
       connection,
       endpoints,
@@ -5500,7 +5533,8 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
     const client = resolvedClient.client;
     if (!client.clientId) throw unprocessable(`OAuth client id is not configured for ${endpoints.provider}`);
 
-    await db.delete(toolOauthStates).where(lt(toolOauthStates.expiresAt, new Date()));
+    await db.delete(toolOauthStates).where(and(lt(toolOauthStates.expiresAt, new Date()),
+      options.externalWorkspaceBindingId ? eq(toolOauthStates.externalBindingId, options.externalWorkspaceBindingId) : undefined));
 
     const state = randomOauthToken();
     const codeVerifier = randomOauthToken(48);
@@ -5514,6 +5548,10 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
       companyId,
       connectionId: connection.id,
       codeVerifier,
+      redirectUri: input.redirectUri,
+      externalBindingId: options.externalWorkspaceBindingId,
+      externalOperationId: input.externalOperationId,
+      consentGeneration: input.consentGeneration,
       createdByActorType: binding.actorType,
       createdByActorId: binding.actorId,
       createdBySessionId: binding.sessionId,
@@ -5524,15 +5562,11 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
       expiresAt,
     });
 
-    const authorizationUrl = new URL(endpoints.authorizationUrl);
-    authorizationUrl.searchParams.set("response_type", "code");
-    authorizationUrl.searchParams.set("client_id", client.clientId);
-    authorizationUrl.searchParams.set("redirect_uri", input.redirectUri);
-    authorizationUrl.searchParams.set("state", state);
-    authorizationUrl.searchParams.set("code_challenge", base64UrlSha256(codeVerifier));
-    authorizationUrl.searchParams.set("code_challenge_method", "S256");
-    const authorizationScopes = input.scopes ?? endpoints.scopes;
-    if (authorizationScopes.length > 0) authorizationUrl.searchParams.set("scope", authorizationScopes.join(" "));
+    const authorizationUrl = buildToolOAuthAuthorizationUrl({
+      authorizationUrl: endpoints.authorizationUrl, clientId: client.clientId,
+      redirectUri: input.redirectUri, state, codeVerifier, scopes: input.scopes ?? endpoints.scopes,
+      googleOffline: !!connection.externalBindingId && endpoints.provider === "gmail",
+    });
 
     if (input.subjectUserId && input.issueId && binding.actorType === "agent") {
       const idempotencyKey = `connection-authorization:${connection.id}:${input.subjectUserId}`;
@@ -5629,8 +5663,7 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
     redirectUri: string;
     actor?: ActorInfo;
   }): Promise<ConnectToolAppResult> {
-    if (input.error) throw badRequest(input.errorDescription ?? `OAuth provider returned ${input.error}`);
-    if (!input.code) throw badRequest("OAuth callback is missing a code");
+    if (!input.code && !input.error) throw badRequest("OAuth callback is missing a code");
     const [stateRow] = await db
       .select()
       .from(toolOauthStates)
@@ -5645,7 +5678,11 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
     } else {
       assertSameOAuthActor(stateRow, input.actor);
     }
-    await db.delete(toolOauthStates).where(eq(toolOauthStates.state, input.state));
+    if (!stateRow.redirectUri || stateRow.redirectUri !== input.redirectUri
+      || stateRow.externalBindingId !== (options.externalWorkspaceBindingId ?? null)) throw forbidden("OAuth callback context does not match");
+    const [claimed] = await db.delete(toolOauthStates).where(and(eq(toolOauthStates.state, input.state), gt(toolOauthStates.expiresAt, new Date()))).returning();
+    if (!claimed) throw badRequest("OAuth state was not found or has already been used");
+    if (input.error) throw badRequest("OAuth authorization was not completed");
 
     let connection = await getConnectionRow(stateRow.connectionId, stateRow.companyId);
     const sourceTemplateKey = typeof connection.config.sourceTemplateKey === "string" ? connection.config.sourceTemplateKey : null;
@@ -5663,162 +5700,208 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
       codeVerifier: stateRow.codeVerifier,
       code: input.code,
     });
-    const [existingUserGrant] = stateRow.subjectUserId
-      ? await db.select().from(connectionGrants).where(and(
-          eq(connectionGrants.companyId, connection.companyId),
-          eq(connectionGrants.connectionId, connection.id),
-          eq(connectionGrants.kind, "user"),
-          eq(connectionGrants.subjectUserId, stateRow.subjectUserId),
-        )).limit(1)
-      : [undefined];
-    const subjectCredentialSecretRefs = stateRow.subjectUserId
-      ? existingUserGrant?.credentialSecretRefs ?? []
-      : connection.credentialSecretRefs;
-    const accessRef = await createOrRotateOAuthSecret({
-      companyId: connection.companyId,
-      connection,
-      configPath: "oauth.access_token",
-      label: "OAuth access token",
-      value: token.accessToken,
-      actor: input.actor,
-      existingRefs: stateRow.subjectUserId ? subjectCredentialSecretRefs : undefined,
-    });
-    const nextCredentialSecretRefs = [
-      ...subjectCredentialSecretRefs.filter((ref) => ref.configPath !== "oauth.access_token" && ref.configPath !== "oauth.refresh_token"),
-      accessRef,
-    ];
-    if (token.refreshToken) {
-      nextCredentialSecretRefs.push(await createOrRotateOAuthSecret({
+    // A broader configuration never proves consent. Google can return a partial
+    // grant; publish only the scopes this exact owner OAuth attempt obtained.
+    const grantedScopes = token.scope?.split(" ");
+    if (stateRow.externalBindingId && grantedScopes &&
+      (stateRow.requestedScopes ?? endpoints.scopes).some((scope) => !grantedScopes.includes(scope)))
+      throw forbidden("Connection authorization scopes were not granted");
+    const identity = options.externalTokenIdentity ? await options.externalTokenIdentity(token.accessToken) : null;
+    const authorityExpiresAt = options.externalRevalidate ? await options.externalRevalidate() : null;
+    const publish = async (db: Db): Promise<ConnectToolAppResult> => {
+      if (stateRow.externalBindingId) {
+        await db.execute(sql`SET LOCAL lock_timeout = '5s'`);
+        await db.execute(sql`SET LOCAL statement_timeout = '10s'`);
+        const [binding] = await db.select().from(connectionWorkspaceBindings).where(eq(connectionWorkspaceBindings.id, stateRow.externalBindingId)).for("update");
+        const [resource] = await db.select().from(connectionResources).where(and(eq(connectionResources.bindingId, stateRow.externalBindingId), eq(connectionResources.connectionId, stateRow.connectionId)));
+        if (!binding?.enabled || !resource || resource.ownerAccountId !== stateRow.subjectUserId) throw forbidden("Connection consent changed");
+        if (!authorityExpiresAt || authorityExpiresAt <= Math.floor(Date.now() / 1000)) throw forbidden("Connection authority expired");
+        const [availability] = await db.select().from(connectionAvailability).where(and(eq(connectionAvailability.bindingId,binding.id),eq(connectionAvailability.appId,resource.appId)));
+        const [consent] = await db.select().from(connectionGrants).where(eq(connectionGrants.id, resource.consentId)).for("update");
+        if (!availability?.enabled || !consent || consent.consentGeneration !== stateRow.consentGeneration || consent.status !== "needs_reauthorization") throw forbidden("Connection consent changed");
+      }
+      const [existingUserGrant] = stateRow.subjectUserId
+        ? await db.select().from(connectionGrants).where(and(
+            eq(connectionGrants.companyId, connection.companyId),
+            eq(connectionGrants.connectionId, connection.id),
+            eq(connectionGrants.kind, "user"),
+            eq(connectionGrants.subjectUserId, stateRow.subjectUserId),
+          )).limit(1)
+        : [undefined];
+      let subjectCredentialSecretRefs = stateRow.subjectUserId
+        ? existingUserGrant?.credentialSecretRefs ?? []
+        : connection.credentialSecretRefs;
+      if (stateRow.subjectUserId && subjectCredentialSecretRefs.length) {
+        // Legacy user grants may reference company-scoped tokens. Reconsent creates
+        // owner-scoped replacements; it never reads or rotates that shared value.
+        const ownedSecrets = await db.select({ id: companySecrets.id }).from(companySecrets).where(and(
+          eq(companySecrets.companyId, connection.companyId), eq(companySecrets.scope, "user"),
+          eq(companySecrets.ownerUserId, stateRow.subjectUserId),
+          inArray(companySecrets.id, subjectCredentialSecretRefs.map(ref => ref.secretId)),
+        ));
+        const ownedIds = new Set(ownedSecrets.map(secret => secret.id));
+        subjectCredentialSecretRefs = subjectCredentialSecretRefs.filter(ref => ownedIds.has(ref.secretId));
+      }
+      const accessRef = await createOrRotateOAuthSecret({
         companyId: connection.companyId,
         connection,
-        configPath: "oauth.refresh_token",
-        label: "OAuth refresh token",
-        value: token.refreshToken,
+        configPath: "oauth.access_token",
+        label: "OAuth access token",
+        value: token.accessToken,
         actor: input.actor,
-        existingRefs: stateRow.subjectUserId ? subjectCredentialSecretRefs : undefined,
-      }));
-    } else {
-      const existingRefreshRef = subjectCredentialSecretRefs.find((ref) => ref.configPath === "oauth.refresh_token");
-      if (existingRefreshRef) nextCredentialSecretRefs.push(existingRefreshRef);
-    }
-    const expiresAt = token.expiresIn ? new Date(Date.now() + token.expiresIn * 1000).toISOString() : null;
-    if (stateRow.subjectUserId) {
-      const grantValues = {
-        credentialSecretRefs: nextCredentialSecretRefs,
-        status: "active" as const,
-        revokedAt: null,
-        revokedByAgentId: null,
-        revokedByUserId: null,
-        updatedAt: new Date(),
-      };
-      if (existingUserGrant) {
-        await db.update(connectionGrants).set(grantValues).where(eq(connectionGrants.id, existingUserGrant.id));
-      } else {
-        await db.insert(connectionGrants).values({
+        existingRefs: stateRow.externalBindingId ? [] : stateRow.subjectUserId ? subjectCredentialSecretRefs : undefined,
+        subjectUserId: stateRow.subjectUserId,
+        vaultDb: db,
+      });
+      const nextCredentialSecretRefs = [
+        ...subjectCredentialSecretRefs.filter((ref) => ref.configPath !== "oauth.access_token" && ref.configPath !== "oauth.refresh_token"),
+        accessRef,
+      ];
+      if (token.refreshToken) {
+        nextCredentialSecretRefs.push(await createOrRotateOAuthSecret({
           companyId: connection.companyId,
-          connectionId: connection.id,
-          kind: "user",
-          subjectUserId: stateRow.subjectUserId,
-          ...grantValues,
-          isDefault: false,
-          createdByUserId: stateRow.subjectUserId,
-        });
+          connection,
+          configPath: "oauth.refresh_token",
+          label: "OAuth refresh token",
+          value: token.refreshToken,
+          actor: input.actor,
+          existingRefs: stateRow.externalBindingId ? [] : stateRow.subjectUserId ? subjectCredentialSecretRefs : undefined,
+        subjectUserId: stateRow.subjectUserId,
+        vaultDb: db,
+        }));
+      } else {
+        const existingRefreshRef = subjectCredentialSecretRefs.find((ref) => ref.configPath === "oauth.refresh_token");
+        if (existingRefreshRef) nextCredentialSecretRefs.push(existingRefreshRef);
       }
-      if (stateRow.interactionId) {
-        await db.update(issueThreadInteractions).set({
-          status: "accepted",
-          result: { version: 1, outcome: "accepted" },
-          resolvedByUserId: stateRow.subjectUserId,
-          resolvedAt: new Date(),
+      const expiresAt = token.expiresIn ? new Date(Date.now() + token.expiresIn * 1000).toISOString() : null;
+      if (stateRow.subjectUserId) {
+        const grantValues = {
+          credentialSecretRefs: nextCredentialSecretRefs,
+          ...(identity ? { providerTenant: { name: identity.issuer, externalId: identity.subject } } : {}),
+          status: "active" as const,
+          revokedAt: null,
+          revokedByAgentId: null,
+          revokedByUserId: null,
           updatedAt: new Date(),
-        }).where(and(
-          eq(issueThreadInteractions.id, stateRow.interactionId),
-          eq(issueThreadInteractions.companyId, connection.companyId),
-        ));
+        };
+        if (existingUserGrant) {
+          await db.update(connectionGrants).set(grantValues).where(eq(connectionGrants.id, existingUserGrant.id));
+        } else {
+          await db.insert(connectionGrants).values({
+            companyId: connection.companyId,
+            connectionId: connection.id,
+            kind: "user",
+            subjectUserId: stateRow.subjectUserId,
+            ...grantValues,
+            isDefault: false,
+            createdByUserId: stateRow.subjectUserId,
+          });
+        }
+        if (stateRow.externalBindingId) await db.update(toolConnections).set({
+          status: "active", enabled: true,
+          config: {...connection.config, oauth: {...oauthConfig(connection), expiresAt, scope: token.scope ?? (stateRow.requestedScopes ?? endpoints.scopes).join(" "), tokenType: token.tokenType}},
+          updatedAt: new Date(),
+        }).where(eq(toolConnections.id, connection.id));
+        if (stateRow.interactionId) {
+          await db.update(issueThreadInteractions).set({
+            status: "accepted",
+            result: { version: 1, outcome: "accepted" },
+            resolvedByUserId: stateRow.subjectUserId,
+            resolvedAt: new Date(),
+            updatedAt: new Date(),
+          }).where(and(
+            eq(issueThreadInteractions.id, stateRow.interactionId),
+            eq(issueThreadInteractions.companyId, connection.companyId),
+          ));
+        }
+        const [application] = await db.select().from(toolApplications).where(eq(toolApplications.id, connection.applicationId));
+        if (!application) throw new Error("OAuth connection application was not found");
+        const catalog = (await db.select().from(toolCatalogEntries).where(and(
+          eq(toolCatalogEntries.companyId, connection.companyId),
+          eq(toolCatalogEntries.connectionId, connection.id),
+        ))).map(toCatalogEntry);
+        return {
+          connectionId: connection.id,
+          application: toApplication(application),
+          connection: toConnection(connection),
+          catalog,
+          actions: groupedActions(catalog),
+          suggestedDefaults: galleryEntry ? recommendedDefaultsForApp(galleryEntry) : { access: "all_agents", askFirstRiskLevels: ["write", "destructive"] },
+          auth: null,
+        };
       }
+      const nextConfig = {
+        ...connection.config,
+        oauth: {
+          ...withoutOAuthRefreshLease(oauthConfig(connection)),
+          provider: endpoints.provider,
+          authorizationUrl: endpoints.authorizationUrl,
+          tokenUrl: endpoints.tokenUrl,
+          metadataUrl: endpoints.metadataUrl ?? null,
+          scopes: endpoints.scopes,
+          clientIdEnv: client.clientIdEnv,
+          clientSecretEnv: client.clientSecret ? client.clientSecretEnv : null,
+          credentialScope: credentialScope(connection, input.actor),
+          expiresAt,
+          scope: token.scope,
+          tokenType: token.tokenType,
+          connectedAt: new Date().toISOString(),
+        },
+        providerMetadata: {
+          ...asRecord(connection.config.providerMetadata),
+          oauth: { expiresAt, scope: token.scope, tokenType: token.tokenType },
+        },
+      };
+      const [updatedConnection] = await db
+        .update(toolConnections)
+        .set({
+          status: "active",
+          enabled: true,
+          config: nextConfig,
+          transportConfig: nextConfig,
+          credentialSecretRefs: nextCredentialSecretRefs,
+          credentialRefs: [
+            ...connection.credentialRefs.filter((ref) => ref.name !== "oauth.access_token"),
+            {
+              name: "oauth.access_token",
+              secretId: accessRef.secretId,
+              version: "latest" as const,
+              placement: "header" as const,
+              key: "Authorization",
+              prefix: "Bearer ",
+            },
+          ],
+          updatedAt: new Date(),
+        })
+        .where(eq(toolConnections.id, connection.id))
+        .returning();
+      connection = updatedConnection;
+      await db
+        .update(toolApplications)
+        .set({ status: "active", updatedAt: new Date() })
+        .where(eq(toolApplications.id, connection.applicationId));
+      await syncCredentialBindings(connection);
+
+      await checkConnectionHealth(connection.id, input.actor);
+      const refresh = await refreshCatalog(connection.id, input.actor);
       const [application] = await db.select().from(toolApplications).where(eq(toolApplications.id, connection.applicationId));
-      if (!application) throw new Error("OAuth connection application was not found");
-      const catalog = (await db.select().from(toolCatalogEntries).where(and(
-        eq(toolCatalogEntries.companyId, connection.companyId),
-        eq(toolCatalogEntries.connectionId, connection.id),
-      ))).map(toCatalogEntry);
       return {
-        connectionId: connection.id,
+        connectionId: refresh.connection.id,
         application: toApplication(application),
-        connection: toConnection(connection),
-        catalog,
-        actions: groupedActions(catalog),
-        suggestedDefaults: galleryEntry ? recommendedDefaultsForApp(galleryEntry) : { access: "all_agents", askFirstRiskLevels: ["write", "destructive"] },
+        connection: refresh.connection,
+        catalog: refresh.catalog,
+        actions: groupedActions(refresh.catalog),
+        suggestedDefaults: galleryEntry ? recommendedDefaultsForApp(galleryEntry) : {
+          access: "all_agents",
+          askFirstRiskLevels: ["write", "destructive"],
+        },
         auth: null,
       };
-    }
-    const nextConfig = {
-      ...connection.config,
-      oauth: {
-        ...withoutOAuthRefreshLease(oauthConfig(connection)),
-        provider: endpoints.provider,
-        authorizationUrl: endpoints.authorizationUrl,
-        tokenUrl: endpoints.tokenUrl,
-        metadataUrl: endpoints.metadataUrl ?? null,
-        scopes: endpoints.scopes,
-        clientIdEnv: client.clientIdEnv,
-        clientSecretEnv: client.clientSecret ? client.clientSecretEnv : null,
-        credentialScope: credentialScope(connection, input.actor),
-        expiresAt,
-        scope: token.scope,
-        tokenType: token.tokenType,
-        connectedAt: new Date().toISOString(),
-      },
-      providerMetadata: {
-        ...asRecord(connection.config.providerMetadata),
-        oauth: { expiresAt, scope: token.scope, tokenType: token.tokenType },
-      },
     };
-    const [updatedConnection] = await db
-      .update(toolConnections)
-      .set({
-        status: "active",
-        enabled: true,
-        config: nextConfig,
-        transportConfig: nextConfig,
-        credentialSecretRefs: nextCredentialSecretRefs,
-        credentialRefs: [
-          ...connection.credentialRefs.filter((ref) => ref.name !== "oauth.access_token"),
-          {
-            name: "oauth.access_token",
-            secretId: accessRef.secretId,
-            version: "latest" as const,
-            placement: "header" as const,
-            key: "Authorization",
-            prefix: "Bearer ",
-          },
-        ],
-        updatedAt: new Date(),
-      })
-      .where(eq(toolConnections.id, connection.id))
-      .returning();
-    connection = updatedConnection;
-    await db
-      .update(toolApplications)
-      .set({ status: "active", updatedAt: new Date() })
-      .where(eq(toolApplications.id, connection.applicationId));
-    await syncCredentialBindings(connection);
+    return stateRow.externalBindingId
+      ? db.transaction(async tx => publish(tx as unknown as Db))
+      : publish(db);
 
-    await checkConnectionHealth(connection.id, input.actor);
-    const refresh = await refreshCatalog(connection.id, input.actor);
-    const [application] = await db.select().from(toolApplications).where(eq(toolApplications.id, connection.applicationId));
-    return {
-      connectionId: refresh.connection.id,
-      application: toApplication(application),
-      connection: refresh.connection,
-      catalog: refresh.catalog,
-      actions: groupedActions(refresh.catalog),
-      suggestedDefaults: galleryEntry ? recommendedDefaultsForApp(galleryEntry) : {
-        access: "all_agents",
-        askFirstRiskLevels: ["write", "destructive"],
-      },
-      auth: null,
-    };
   }
 
   /**
@@ -5953,6 +6036,11 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
   }
 
   return {
+    /** Internal external-consent adapter; tokens never enter the native run gateway. */
+    externalOAuthInternals: options.externalWorkspaceBindingId ? {
+      exchange: exchangeOAuthToken,
+      store: createOrRotateOAuthSecret,
+    } : undefined,
     approvedStdioTemplates: async (companyId: string): Promise<ToolStdioCommandTemplate[]> => {
       const adminTemplates = await db
         .select()
@@ -6277,7 +6365,7 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
         .from(toolConnections)
         .where(eq(toolConnections.companyId, companyId))
         .orderBy(desc(toolConnections.updatedAt));
-      const connections = rows.map(toConnection);
+      const connections = rows.filter(row => !row.externalBindingId).map(toConnection);
       if (connections.length === 0) return connections;
       const installRows = await db
         .select()

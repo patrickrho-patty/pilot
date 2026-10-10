@@ -943,7 +943,7 @@ export function toolAccessPolicyService(db: Db) {
       if (!connection || connection.companyId !== input.companyId) {
         return { ok: false, redaction, decision: decision("deny", "deny_company_boundary", "Connection is outside the company.", [], [], { redactionPlan: redaction.redactionPlan }) };
       }
-      if (!connection.enabled || connection.status === "disabled" || connection.status === "archived") {
+      if (connection.externalBindingId || !connection.enabled || connection.status === "disabled" || connection.status === "archived") {
         return { ok: false, redaction, decision: decision("deny", "deny_disabled_connection", "Connection is disabled.", [], [], { redactionPlan: redaction.redactionPlan }) };
       }
       applicationId = connection.applicationId;

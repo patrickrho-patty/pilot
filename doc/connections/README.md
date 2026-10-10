@@ -170,3 +170,90 @@ translate the intent into Apps v2:
 Do not add new work to the retired v1 branch. If an old ticket still describes a
 valid product gap, retarget it to an active Apps v2 issue or close it as
 superseded with a link to the replacement.
+
+## Shared Crew workspace authority
+
+Crew uses the existing Apps v2 resource namespace through an operator-owned
+`connection_workspace_bindings` row. Its `company_id` identifies storage; it
+does not prove a Pilot subscription and does not require a native Pilot issue,
+agent, or heartbeat run. Each row maps an exact Accounts organization, Crew
+workspace and community to a trusted HTTPS introspection endpoint. Bindings
+default to disabled. A workspace/community pair can belong to only one binding,
+including while disabled; rebinding is an explicit operator lifecycle.
+`connection_organization_bindings` maps each shared company namespace to exactly
+one Accounts organization, and that organization to exactly one namespace.
+A composite company/organization foreign key enforces this for every workspace
+binding, including concurrent inserts. Multiple Crew workspaces from the same
+organization may share the namespace; native Pilot companies need no such row.
+
+`connectionAuthorityService(db).resolveConnectionAuthority(input)` fetches the
+current persisted binding, asks its exact endpoint for a fresh verdict, and
+returns `{ binding, context }`. Management input supplies `bindingId`, opaque
+`token`, `purpose: "management"`, exact `action` and SHA256 `requestDigest`.
+Execution input supplies `bindingId`, opaque `token`, `purpose: "execution"`
+and the downstream broker action. Caller identities and URLs are rejected.
+There is no positive authority cache, and an in-flight disable or rebind also
+denies the verdict.
+
+The trusted relay receives only:
+
+```json
+{ "schema": "crew.connection-introspection/v1", "token": "opaque-capability" }
+```
+
+The strict response is `{ schema: "crew.connection-authority/v1", valid: true,
+context }`. A management context has schema `crew.connection-management/v1`,
+immutable requester account and pubkey, current `owner|admin|member` role,
+verified Nostr `requestId`, exact action and request digest. An execution context
+has schema `crew.connection-execution/v1`, requester and agent identity,
+enrollment, active generation (at least 1), channel, conversation, turn, immutable
+source member IDs and exact audience account IDs. Both contexts carry audience
+`patty.connections`, exact organization/workspace/community, and integer UTC
+`issuedAt`/`expiresAt` seconds. Lifetime is positive and at most 60 seconds;
+future-issued and expired verdicts are denied with exclusive expiry. Extra keys,
+mixed purposes, wrong scopes, and mismatched management action/digest deny.
+
+Transport accepts only a canonical HTTPS origin plus the fixed
+`/api/connections/introspect` path, with no credentials, query or fragment.
+Redirects are refused. The request and streaming response are bounded to 16 KiB
+and 64 KiB respectively, and headers plus body have a five-second budget.
+The resolver persists neither opaque tokens nor invocation/response payloads,
+and errors disclose neither tokens nor upstream bodies. Immutable IDs are bounded
+to 256 characters, actions to 128, and each unique nonempty account list to 100
+entries. Workspace/community/enrollment/channel/turn IDs are lowercase UUIDs;
+pubkeys, event IDs and digests are 64 lowercase hexadecimal characters.
+
+This foundation does not grant owner consent, application availability or tool
+permission. Those checks remain separate and must use current Apps v2/vault
+records before every resource call. A member verdict is not admin authority.
+Execution action permission belongs to the broker; it is not an extra identity
+claim sent to the relay. Native Pilot flows retain their existing authorization.
+
+> Sign-in tokens are never reused as resource tokens; id.pilot.test never
+> stores resource tokens; no connections hub on the ID service.
+
+See [the implementation contract](../plans/2026-10-08-shared-connections.md)
+for storage, exact wire fields, validation evidence and remaining integration
+gates. This foundation adds no management route, token issuer, OAuth consent,
+provider credential store or automatic binding activation.
+
+### Crew Gmail drafting and sending
+
+The shared Crew execution broker supports Gmail draft list/create/read/update
+under an explicit `write` grant and draft sending under a separate `send` grant.
+Neither is granted by default. Workspace policy, owner Google consent, current
+per-agent access and the Crew tool ceiling must all permit the action. Existing
+read-only connections require Google reauthorization for `gmail.compose`;
+changing workspace policy alone does not widen their scopes. Patty KB remains
+read/search only. These external Crew actions do not change native Pilot review
+or ask-first policies.
+
+`connection_mutations` (generated migration `0005_sturdy_maggott.sql`) records
+metadata-only operation claims before provider writes. Creation/revision use
+operation UUIDs and digests; sending permits one claim per draft. Current draft
+message IDs prevent using a stale version, and sending includes the broker-read
+raw snapshot. Unknown provider outcomes block automatic replay. Mail contents,
+recipients and credentials are not copied into mutation or audit records.
+Creation/revision supports bounded complete plain text; unsupported HTML or
+attachment drafts are refused before replacement. Live acceptance still requires
+the coordinated service/runtime release and owner consent round trip.

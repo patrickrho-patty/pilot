@@ -2,6 +2,8 @@ import { and, count, eq, gte, inArray, isNull, lt, notInArray, sql } from "drizz
 import type { Db } from "@pilotai/db";
 import {
   companies,
+  connectionWorkspaceBindings,
+  connectionOrganizationBindings,
   companyLogos,
   assets,
   agents,
@@ -33,7 +35,7 @@ import {
   routineRevisions,
   routines,
 } from "@pilotai/db";
-import { notFound, unprocessable } from "../errors.js";
+import { conflict, notFound, unprocessable } from "../errors.js";
 import { environmentService } from "./environments.js";
 import { heartbeatService } from "./heartbeat.js";
 import { logActivity } from "./activity-log.js";
@@ -439,6 +441,11 @@ export function companyService(db: Db) {
 
     remove: (id: string) =>
       db.transaction(async (tx) => {
+        const [binding] = await tx.select({ id: connectionWorkspaceBindings.id }).from(connectionWorkspaceBindings)
+          .where(eq(connectionWorkspaceBindings.companyId, id)).limit(1);
+        const [organization] = await tx.select({ id: connectionOrganizationBindings.companyId }).from(connectionOrganizationBindings)
+          .where(eq(connectionOrganizationBindings.companyId, id)).limit(1);
+        if (binding || organization) throw conflict("This organization still has Crew Connections bindings", { code: "external_connections_exist" });
         // Delete from child tables in dependency order
         const companyRunIds = await tx
           .select({ id: heartbeatRuns.id })

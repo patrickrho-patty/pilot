@@ -60,6 +60,7 @@ import type {
   ToolRuntimeKind,
   ToolRuntimeSlotStatus,
 } from "@pilotai/shared";
+import { connectionWorkspaceBindings } from "./connection_workspaces.js";
 import { agents } from "./agents.js";
 import { approvals } from "./approvals.js";
 import { companies } from "./companies.js";
@@ -101,6 +102,7 @@ export const toolConnections = pgTable(
   "tool_connections",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    externalBindingId: uuid("external_binding_id").references(() => connectionWorkspaceBindings.id, { onDelete: "restrict" }),
     companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
     // NO ACTION (not CASCADE) so the database itself refuses to delete an application that still
     // has connections. This closes the delete-vs-create race in DELETE
@@ -143,6 +145,8 @@ export const toolConnections = pgTable(
     index("tool_connections_company_enabled_idx").on(table.companyId, table.enabled),
     uniqueIndex("tool_connections_company_uid_uq").on(table.companyId, table.uid),
     unique("tool_connections_company_id_uq").on(table.companyId, table.id),
+    unique("tool_connections_external_resource_uq").on(table.externalBindingId, table.id),
+    foreignKey({ name: "tool_connections_external_company_fk", columns: [table.companyId, table.externalBindingId], foreignColumns: [connectionWorkspaceBindings.companyId, connectionWorkspaceBindings.id] }).onDelete("restrict"),
   ],
 );
 
@@ -150,6 +154,7 @@ export const connectionGrants = pgTable(
   "connection_grants",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    consentGeneration: integer("consent_generation").notNull().default(0),
     companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
     connectionId: uuid("connection_id").notNull(),
     kind: text("kind").$type<ConnectionGrantKind>().notNull(),
@@ -168,6 +173,7 @@ export const connectionGrants = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
+    unique("connection_grants_connection_id_uq").on(table.connectionId, table.id),
     check("connection_grants_kind_check", sql`${table.kind} in ('workspace', 'user')`),
     check("connection_grants_status_check", sql`${table.status} in ('active', 'revoked', 'expired', 'needs_reauthorization')`),
     check("connection_grants_subject_check", sql`(${table.kind} = 'user' and ${table.subjectUserId} is not null) or (${table.kind} = 'workspace' and ${table.subjectUserId} is null)`),
@@ -213,6 +219,10 @@ export const toolOauthStates = pgTable(
   "tool_oauth_states",
   {
     state: text("state").primaryKey(),
+    redirectUri: text("redirect_uri"),
+    externalBindingId: uuid("external_binding_id").references(() => connectionWorkspaceBindings.id, { onDelete: "restrict" }),
+    externalOperationId: text("external_operation_id"),
+    consentGeneration: integer("consent_generation"),
     companyId: uuid("company_id").notNull().references(() => companies.id, { onDelete: "cascade" }),
     connectionId: uuid("connection_id").notNull().references(() => toolConnections.id, { onDelete: "cascade" }),
     codeVerifier: text("code_verifier").notNull(),

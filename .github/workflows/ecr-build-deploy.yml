@@ -8,6 +8,7 @@
 #
 # Trigger via `gh workflow run ecr-build-deploy.yml -f tag=vX.Y.Z`.
 # Set `deploy_enabled=false` to build/push only without deploying.
+# Set `bridge_enabled=false` as well for an independent shared-service image.
 name: ecr-build-deploy
 
 on:
@@ -19,6 +20,11 @@ on:
         default: "v0.1.0-pilot"
       deploy_enabled:
         description: "Deploy to rho-cluster after push"
+        type: boolean
+        required: false
+        default: true
+      bridge_enabled:
+        description: "Build the Crew–Pilot work bridge (requires the matching Crew runtime tag)"
         type: boolean
         required: false
         default: true
@@ -115,6 +121,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push
+        id: image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -123,6 +130,9 @@ jobs:
           target: production
           platforms: linux/amd64
           push: true
+          provenance: mode=max
+          sbom: true
+          labels: org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             PILOT_BUILD_VERSION=${{ inputs.tag }}
             PILOT_BUILD_COMMIT=${{ github.sha }}
@@ -133,7 +143,35 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Record published image
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+          IMAGE_TAG: ${{ inputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re
+          digest = os.environ["IMAGE_DIGEST"]
+          if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
+              raise SystemExit("missing published image digest")
+          receipt = {"source_sha": os.environ["SOURCE_SHA"],
+                     "run_id": os.environ["GITHUB_RUN_ID"],
+                     "run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+                     "image": os.environ["ECR_REGISTRY"] + "/pilot@" + digest,
+                     "tag": os.environ["IMAGE_TAG"]}
+          with open("pilot-image.json", "w") as output:
+              json.dump(receipt, output, indent=2)
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pilot-image-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: pilot-image.json
+          if-no-files-found: error
+          retention-days: 90
+
   bridge-build-and-push:
+    if: ${{ inputs.bridge_enabled }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

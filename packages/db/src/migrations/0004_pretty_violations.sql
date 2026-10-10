@@ -1,0 +1,9 @@
+ALTER TABLE "connection_resources" ADD CONSTRAINT "connection_resources_consent_uq" UNIQUE("binding_id","connection_id","consent_id");--> statement-breakpoint
+ALTER TABLE "connection_grants" ADD CONSTRAINT "connection_grants_connection_id_uq" UNIQUE("connection_id","id");--> statement-breakpoint
+ALTER TABLE "tool_connections" ADD CONSTRAINT "tool_connections_external_resource_uq" UNIQUE("external_binding_id","id");--> statement-breakpoint
+ALTER TABLE "connection_agent_access" DROP CONSTRAINT "connection_agent_access_resource_fk";
+--> statement-breakpoint
+ALTER TABLE "connection_agent_access" ADD CONSTRAINT "connection_agent_access_resource_fk" FOREIGN KEY ("binding_id","connection_id","consent_id") REFERENCES "public"."connection_resources"("binding_id","connection_id","consent_id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "connection_resources" ADD CONSTRAINT "connection_resources_external_fk" FOREIGN KEY ("binding_id","connection_id") REFERENCES "public"."tool_connections"("external_binding_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "connection_resources" ADD CONSTRAINT "connection_resources_consent_fk" FOREIGN KEY ("connection_id","consent_id") REFERENCES "public"."connection_grants"("connection_id","id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "tool_connections" ADD CONSTRAINT "tool_connections_external_company_fk" FOREIGN KEY ("company_id","external_binding_id") REFERENCES "public"."connection_workspace_bindings"("company_id","id") ON DELETE restrict ON UPDATE no action;

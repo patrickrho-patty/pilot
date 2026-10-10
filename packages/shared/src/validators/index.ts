@@ -936,3 +936,6 @@ export {
 } from "./tool-access.js";
 export * from "./skill-policy.js";
 export * from "./app-definition.js";
+export * from "./connection-workspaces.js";
+
+export * from "./connection-actions.js";

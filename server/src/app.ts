@@ -1,3 +1,4 @@
+import { connectionWorkspaceRoutes } from "./routes/connection-workspaces.js";
 import express, { Router, type Request as ExpressRequest } from "express";
 import { createServer as createHttpServer, type Server as HttpServer } from "node:http";
 import path from "node:path";
@@ -333,6 +334,13 @@ export async function createApp(
   // Default is unset → Express trusts nothing, which is the only safe choice
   // when the server may be reachable without a known reverse proxy in front.
   applyTrustProxy(app, parseTrustProxyEnv(process.env.TRUST_PROXY));
+
+  // This capability-bearing private bridge terminates errors before native body logging,
+  // sessions, board mutation guards and subscription middleware.
+  app.use("/api/connection-workspaces", privateHostnameGuard({
+    enabled: shouldEnablePrivateHostnameGuard({deploymentMode: opts.deploymentMode, deploymentExposure: opts.deploymentExposure}),
+    allowedHostnames: opts.allowedHostnames, bindHost: opts.bindHost,
+  }), connectionWorkspaceRoutes(db));
 
   app.use(COMPANY_IMPORT_API_PATH, express.json({
     limit: PORTABLE_JSON_BODY_LIMIT,

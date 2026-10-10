@@ -2561,3 +2561,7 @@ export {
   rewriteUrlHostToLoopback,
 } from "./runtime-exposure/loopback-bind.js";
 export { applyLegacyPilotEnvAliases } from "./env-alias.js";
+export * from "./validators/connection-workspaces.js";
+export type * from "./types/connection-workspaces.js";
+
+export * from "./validators/connection-actions.js";
