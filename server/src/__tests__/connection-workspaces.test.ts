@@ -148,6 +148,22 @@ describe("Crew workspace Connections", () => {
     ).toBe("denied");
     expect(await db.select().from(connectionResources).where(eq(connectionResources.bindingId, b.id))).toHaveLength(0);
   });
+  it("lists setup permissions before approval without granting access", async () => {
+    const b = await fixture();
+    const catalog = await manage(b, "catalog.get", {});
+    expect(catalog.apps).toEqual([
+      { appId: "gmail", displayName: "Gmail", enabled: false, actions: ["read", "search", "write", "send"], outcome: "ready" },
+      { appId: "patty-kb", displayName: "Patty KB", enabled: false, actions: ["read", "search"], outcome: "requires-setup" },
+    ]);
+    expect(await db.select().from(connectionAvailability).where(eq(connectionAvailability.bindingId, b.id))).toHaveLength(0);
+    expect((await manage(b, "connection.create-personal", { appId: "gmail", displayName: "My Gmail" })).outcome).toBe("denied");
+    expect(await db.select().from(connectionResources).where(eq(connectionResources.bindingId, b.id))).toHaveLength(0);
+    expect(await db.select().from(connectionAgentAccess).where(eq(connectionAgentAccess.bindingId, b.id))).toHaveLength(0);
+    await manage(b, "availability.set", { appId: "gmail", enabled: true, actions: ["read"] });
+    expect((await manage(b, "catalog.get", {})).apps?.find((a) => a.appId === "gmail")).toMatchObject({ enabled: true, actions: ["read"] });
+    await manage(b, "availability.set", { appId: "gmail", enabled: false, actions: ["read"] });
+    expect((await manage(b, "catalog.get", {})).apps?.find((a) => a.appId === "gmail")).toMatchObject({ enabled: false, actions: ["read"] });
+  });
   it("members cannot change availability, see another owner, or substitute ownership", async () => {
     const b = await fixture();
     const id = await personal(b);

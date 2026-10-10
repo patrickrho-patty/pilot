@@ -341,7 +341,9 @@ export function connectionWorkspaceService(
             appId: app.appId,
             displayName: app.displayName,
             enabled: availability?.enabled ?? false,
-            actions: availability?.actions ?? [],
+            // Before approval, advertise setup choices without enabling the app.
+            // The frozen Crew catalog contract requires a nonempty action list.
+            actions: availability?.actions ?? [...app.actions],
             outcome: ready ? "ready" : "requires-setup",
           });
         }

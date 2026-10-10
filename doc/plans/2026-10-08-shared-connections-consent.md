@@ -10,6 +10,12 @@ Task 3 adds a private Crew bridge to canonical Connections storage. Native Pilot
 
 Operation results use the frozen `crew.connections-result/v1` safe metadata fields. No native connection object, credential reference, code, state, token, provider payload or unencrypted authorization URL enters the operation journal. The owner-private authorization URL is reconstructed from canonical state for exact-intent retries. New operations serialize under the binding row, and the mutation and durable receipt commit together. Replays still require fresh current authority; another intent using the same caller request UUID conflicts. Database lock and statement deadlines bound the publication transactions.
 
+Catalog entries always contain a nonempty action list, as required by the Crew
+relay and desktop contract. When no workspace policy exists, the list contains
+the registered app's setup choices and `enabled` remains false. Reading the
+catalog creates no policy, connection, consent or agent grant. Once a policy
+exists, the catalog returns that policy's exact actions, including when disabled.
+
 ## Storage and consent lifecycle
 
 `connection_availability` records admin approval of an app and read/search actions. `connection_resources` binds a canonical connection and user consent to one workspace and immutable owner account. `connection_agent_access` pins the managed agent public key, actions, consent ID and consent generation. `connection_approval_requests` contains only safe approval metadata. `connection_operations` is the durable metadata-only exact-intent journal.
