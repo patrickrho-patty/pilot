@@ -7081,6 +7081,8 @@ describeEmbeddedPostgres("workspace runtime service control persistence", () => 
     }
   }, 20_000);
 
+  // This integration watchdog covers 32 real, independently budgeted readiness, stability,
+  // and termination attempts plus fixture overhead; it is not a product latency deadline.
   it("does not accept an occupied allocated port when listener ownership is unavailable", async () => {
     const fixture = await createRuntimeFixture();
     const cleanupRuntimeHome = await createRuntimeHome();
@@ -7121,7 +7123,7 @@ describeEmbeddedPostgres("workspace runtime service control persistence", () => 
       await cleanupRuntimeHome();
       await fixture.cleanup();
     }
-  }, 20_000);
+  }, WORKSPACE_RUNTIME_PORT_ALLOCATION_ATTEMPTS * (5_000 + 250 + 2_000 + 2_000) + 30_000);
 
   it("returns a bounded structured conflict and exposes only same-company workspace references", async () => {
     const fixture = await createRuntimeFixture({
