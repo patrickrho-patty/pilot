@@ -5,7 +5,7 @@ import path from "node:path";
 import { execute } from "@pilotai/adapter-pi-local/server";
 
 async function writeFakePiCommand(commandPath: string): Promise<void> {
-  const script = `#!/usr/bin/env node
+  const script = `#!${process.execPath}
 if (process.argv.includes("--list-models")) {
   console.log("provider  model");
   console.log("google    gemini-3-flash-preview");
@@ -28,7 +28,7 @@ process.exit(0);
 }
 
 async function writeEnvDumpPiCommand(commandPath: string, envDumpPath: string): Promise<void> {
-  const script = `#!/usr/bin/env node
+  const script = `#!${process.execPath}
 const fs = require("node:fs");
 if (process.argv.includes("--list-models")) {
   console.log("provider  model");
