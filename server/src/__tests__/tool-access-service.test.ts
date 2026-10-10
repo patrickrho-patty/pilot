@@ -4930,6 +4930,7 @@ describeEmbeddedPostgres("tool access service", () => {
 
     await db.insert(toolOauthStates).values({
       state: "legacy-smoke-state",
+      redirectUri: "http://pilot.test/api/tools/oauth/callback",
       companyId: company.id,
       connectionId: connection!.id,
       codeVerifier: "legacy-smoke-code-verifier",
