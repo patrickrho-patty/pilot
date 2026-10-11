@@ -69,10 +69,26 @@ export const connectionExecutionContextSchema = z.object({
 }).strict().refine((context) => context.expiresAt > context.issuedAt && context.expiresAt - context.issuedAt <= 60,
   "Authority lifetime must be positive and at most sixty seconds");
 
+/** Workspace services use current turn identity, without claiming a private audience or user consent. */
+export const connectionWorkspaceExecutionContextSchema = z.object({
+  schema: z.literal("crew.connection-workspace-execution/v1"),
+  ...common,
+  action: z.literal("web-search.search"),
+  agentPubkey: hex,
+  enrollmentId: uuid,
+  generation: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  channelId: uuid,
+  conversationId: connectionAuthorityIdSchema,
+  turnId: uuid,
+  sourceMemberAccountIds: uniqueIds,
+}).strict().refine((context) => context.expiresAt > context.issuedAt && context.expiresAt - context.issuedAt <= 60,
+  "Authority lifetime must be positive and at most sixty seconds");
+
 /** Purpose-specific, short-lived identity; expiry is additionally checked at use. */
 export const connectionAuthorityContextSchema = z.discriminatedUnion("schema", [
   connectionManagementContextSchema,
   connectionExecutionContextSchema,
+  connectionWorkspaceExecutionContextSchema,
 ]);
 
 export const connectionAuthorityResponseSchema = z.object({

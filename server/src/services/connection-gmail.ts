@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { boundedConnectionText, connectionTextFits } from "./connection-result-text.js";
 
 const headers = z
   .array(z.object({ name: z.string().max(128), value: z.string().max(4096) }))
@@ -20,8 +21,8 @@ const MAX_DEPTH = 8;
 const MAX_PARTS = 64;
 const MAX_TEXT_BYTES = 16384;
 
-/** Return bounded inline plain text; attachments are never decoded or fetched. */
-export function gmailMessage(raw: unknown) {
+/** Return bounded inline plain text and optional draft identity; attachments are never decoded or fetched. */
+export function gmailMessage(raw: unknown, draftIdentity?: { draftId: string; messageId: string }) {
   const value = z
     .object({
       id: z.string().regex(/^[a-fA-F0-9]{1,64}$/),
@@ -121,7 +122,14 @@ export function gmailMessage(raw: unknown) {
     }
   }
   if (stack.length) truncated = true;
-  return {
+  const bodyStatus: "complete" | "truncated" | "unsupported" =
+    truncated || (found && unsupported)
+      ? "truncated"
+      : found
+        ? "complete"
+        : "unsupported";
+  const result = {
+    ...draftIdentity,
     id: value.id,
     threadId: value.threadId,
     snippet: value.snippet,
@@ -131,12 +139,19 @@ export function gmailMessage(raw: unknown) {
         )
       : undefined,
     text: found ? chunks.join("") : undefined,
-    // "complete" describes inline plain text, not HTML or excluded attachments.
-    bodyStatus:
-      truncated || (found && unsupported)
-        ? "truncated"
-        : found
-          ? "complete"
-          : "unsupported",
+    // "complete" excludes HTML and attachments, but never truncated reported data.
+    bodyStatus,
   };
+  const fits = () => connectionTextFits(JSON.stringify(result));
+  if (fits()) return result;
+  result.bodyStatus = "truncated";
+  // Retain body content before oversized metadata; consumers must know that the
+  // reported message is incomplete before offering a destructive draft revision.
+  while (result.headers?.length && !fits()) result.headers.pop();
+  if (!fits()) result.snippet = undefined;
+  if (result.text && !fits()) {
+    result.text = boundedConnectionText(result.text, (text) =>
+      JSON.stringify({ ...result, text }));
+  }
+  return result;
 }

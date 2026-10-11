@@ -52,6 +52,9 @@ beforeAll(async () => {
       } else if (mode === "stall") {
         res.writeHead(200);
         res.write("{");
+      } else if (mode === "invalid-status") {
+        res.writeHead(600);
+        res.end('{"ok":true}');
       } else {
         res.end('{"ok":true}');
       }
@@ -107,6 +110,10 @@ it("bounds an unfinished response body by the same deadline", async () => {
   const start = Date.now();
   await expect(connectionDirectFetch(url)).rejects.toThrow();
   expect(Date.now() - start).toBeLessThan(6500);
+});
+it("contains an HTTP status that the Fetch Response contract rejects", async () => {
+  mode = "invalid-status";
+  await expect(connectionDirectFetch(url)).rejects.toThrow("Connection transport unavailable");
 });
 it("refuses an untrusted server certificate", async () => {
   mode = "ok";

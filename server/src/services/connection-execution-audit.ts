@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { toolAccessAuditEvents, type Db } from "@pilotai/db";
 import type {
   ConnectionExecutionContext,
+  ConnectionWorkspaceExecutionContext,
   ConnectionWorkspaceBinding,
 } from "@pilotai/shared";
 import { HttpError } from "../errors.js";
@@ -17,7 +18,7 @@ export class ConnectionProviderFailure extends HttpError {
 /** Persist before work; interrupted attempts remain uncertain, never guessed successful. */
 export async function auditConnectionExecution<T>(
   db: Db,
-  identity: { b: ConnectionWorkspaceBinding; c: ConnectionExecutionContext },
+  identity: { b: ConnectionWorkspaceBinding; c: ConnectionExecutionContext | ConnectionWorkspaceExecutionContext },
   action: string,
   operation: "prepare" | "execute",
   work: (

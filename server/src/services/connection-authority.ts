@@ -112,7 +112,8 @@ export function connectionAuthorityService(db: Db, options: ConnectionAuthorityS
         timeout,
       ]);
 
-      const schema = expected.purpose === "management" ? "crew.connection-management/v1" : "crew.connection-execution/v1";
+      const schema = expected.purpose === "management" ? "crew.connection-management/v1"
+        : expected.action === "web-search.search" ? "crew.connection-workspace-execution/v1" : "crew.connection-execution/v1";
       if (verdict.schema !== schema
         || verdict.action !== expected.action
         || verdict.accountsOrganizationId !== binding.accountsOrganizationId

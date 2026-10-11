@@ -98,6 +98,29 @@ describe("owner Gmail drafting, revision and immediate send", () => {
     ).toBe(403);
     expect(calls).toBe(0);
   });
+  it("budgets draft identifiers with escaped contents and refuses to overwrite a truncated draft", async () => {
+    const { call } = await fixture();
+    let writes = 0;
+    f.providerFetch = async (_url, init) => {
+      if ((init?.method ?? "GET") !== "GET") writes++;
+      const value = current();
+      value.id = "r".repeat(128);
+      value.message.payload.body.data = Buffer.from("\u0001".repeat(16000)).toString("base64url");
+      return Response.json(value);
+    };
+    const read = await call("connections_gmail_read_draft", { draftId: "r".repeat(128) });
+    expect(read.status).toBe(200);
+    expect(Buffer.byteLength(read.body.content[0].text)).toBeLessThanOrEqual(32768);
+    expect(JSON.parse(read.body.content[0].text)).toMatchObject({
+      draftId: "r".repeat(128), messageId: "a123", bodyStatus: "truncated",
+    });
+    const revision = await call("connections_gmail_update_draft", {
+      ...mail(), draftId: "r".repeat(128), expectedMessageId: "a123",
+    });
+    expect(revision.status).toBe(409);
+    expect(writes).toBe(0);
+  });
+
   it("creates, reads, revises and sends the exact latest owner draft; receipts and audit contain no content", async () => {
     const { b, call } = await fixture();
     const requests: { url: string; method: string; body: unknown }[] = [];

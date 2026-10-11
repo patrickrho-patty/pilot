@@ -3,7 +3,7 @@ import {
   connectionCredentialsUsable,
 } from "./connection-readiness.js";
 import { createHash, randomUUID } from "node:crypto";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, ne, or, sql } from "drizzle-orm";
 import {
   companySecrets,
   connectionAgentAccess,
@@ -29,10 +29,15 @@ import {
   type ConnectionOutcome,
   type ConnectionManagementContext,
   type ConnectionWorkspaceBinding,
+  type ConnectionAction,
 } from "@pilotai/shared";
 import { badRequest, conflict, forbidden } from "../errors.js";
 import { connectionAuthorityService } from "./connection-authority.js";
 import { connectionDirectFetch } from "./connection-direct-tls.js";
+import {
+  sharedConnectionApps,
+  sharedConnectionCredential,
+} from "./connection-shared-services.js";
 import {
   registeredConnectionConfiguration,
   connectionRegistry,
@@ -97,6 +102,33 @@ export function connectionWorkspaceService(
   const providerFetch = options.providerFetch ?? connectionDirectFetch;
   const admin = (c: ConnectionManagementContext) =>
     c.role === "owner" || c.role === "admin";
+  async function setAvailability(
+    tx: Db,
+    bindingId: string,
+    policy: { appId: string; enabled: boolean; actions: ConnectionAction[] },
+  ) {
+    const actions = JSON.stringify(policy.actions);
+    await tx
+      .insert(connectionAvailability)
+      .values({ bindingId, ...policy })
+      .onConflictDoUpdate({
+        target: [
+          connectionAvailability.bindingId,
+          connectionAvailability.appId,
+        ],
+        // The logical identity is binding/app. Rotating the private row identity
+        // fences old snapshots even when permissions are revoked and restored.
+        set: {
+          id: randomUUID(),
+          enabled: policy.enabled,
+          actions: policy.actions,
+        },
+        setWhere: or(
+          ne(connectionAvailability.enabled, policy.enabled),
+          sql`NOT (${connectionAvailability.actions} @> ${actions}::jsonb AND ${connectionAvailability.actions} <@ ${actions}::jsonb)`,
+        ),
+      });
+  }
   async function registered(
     tx: Db,
     b: ConnectionWorkspaceBinding,
@@ -347,11 +379,39 @@ export function connectionWorkspaceService(
             outcome: ready ? "ready" : "requires-setup",
           });
         }
+        for (const app of sharedConnectionApps) {
+          const availability = await policy(tx, b.id, app.appId);
+          apps.push({
+            appId: app.appId,
+            displayName: app.displayName,
+            enabled: availability?.enabled ?? false,
+            actions: [...app.actions],
+            outcome: (await sharedConnectionCredential(tx, b, app.appId))
+              ? "ready"
+              : "requires-setup",
+          });
+        }
         return result("ready", { apps });
       }
       case "availability.set": {
         if (!admin(c)) return result("denied");
         const p = control.parameters;
+        const shared = sharedConnectionApps.find(
+          (app) => app.appId === p.appId,
+        );
+        if (shared) {
+          if (
+            p.actions.some(
+              (action) =>
+                !(shared.actions as readonly string[]).includes(action),
+            )
+          )
+            return result("denied");
+          if (p.enabled && !(await sharedConnectionCredential(tx, b, p.appId)))
+            return result("requires-setup");
+          await setAvailability(tx, b.id, p);
+          return result("complete");
+        }
         const { app, ready } = await registered(tx, b, p.appId);
         if (
           !app ||
@@ -359,16 +419,7 @@ export function connectionWorkspaceService(
         )
           return result("denied");
         if (p.enabled && !ready) return result("requires-setup");
-        await tx
-          .insert(connectionAvailability)
-          .values({ bindingId: b.id, ...p })
-          .onConflictDoUpdate({
-            target: [
-              connectionAvailability.bindingId,
-              connectionAvailability.appId,
-            ],
-            set: { enabled: p.enabled, actions: p.actions },
-          });
+        await setAvailability(tx, b.id, p);
         return result("complete");
       }
       case "connections.list":
@@ -615,7 +666,16 @@ export function connectionWorkspaceService(
               connectionAgentAccess.connectionId,
               connectionAgentAccess.agentPubkey,
             ],
-            set: values,
+            set: { id: randomUUID(), ...values },
+            setWhere: or(
+              ne(connectionAgentAccess.consentId, values.consentId),
+              ne(
+                connectionAgentAccess.consentGeneration,
+                values.consentGeneration,
+              ),
+              eq(connectionAgentAccess.revoked, true),
+              sql`NOT (${connectionAgentAccess.actions} @> ${JSON.stringify(values.actions)}::jsonb AND ${connectionAgentAccess.actions} <@ ${JSON.stringify(values.actions)}::jsonb)`,
+            ),
           });
         return result("complete");
       }
@@ -681,21 +741,11 @@ export function connectionWorkspaceService(
           const actions = [
             ...new Set([...(current?.actions ?? []), ...request.actions]),
           ];
-          await tx
-            .insert(connectionAvailability)
-            .values({
-              bindingId: b.id,
-              appId: request.appId,
-              enabled: true,
-              actions,
-            })
-            .onConflictDoUpdate({
-              target: [
-                connectionAvailability.bindingId,
-                connectionAvailability.appId,
-              ],
-              set: { enabled: true, actions },
-            });
+          await setAvailability(tx, b.id, {
+            appId: request.appId,
+            enabled: true,
+            actions,
+          });
         }
         await tx
           .update(connectionApprovalRequests)

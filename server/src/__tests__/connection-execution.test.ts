@@ -182,6 +182,42 @@ describe("Crew personal execution", () => {
     expect(reads).toBe(1);
   });
 
+  it("fits Korean metadata and escaped Gmail bodies inside the actual Crew result ceiling", async () => {
+    const { b } = await f.connected();
+    const app = express();
+    app.use("/api/connection-workspaces", connectionWorkspaceRoutes(f.db, {
+      authorityFetch: f.authorityFetch, providerFetch: f.resourceFetch,
+    }));
+    for (const body of ["본문".repeat(2000), "\u0001".repeat(16000), '"'.repeat(16351)]) {
+      const includeMetadata = !body.startsWith('"');
+      const payload = {
+        id: "a123", threadId: "b123", snippet: includeMetadata ? "요약".repeat(1300) : undefined,
+        payload: {
+          mimeType: "text/plain",
+          headers: includeMetadata
+            ? ["From", "To", "Cc", "Subject"].map((name) => ({ name, value: "가".repeat(1500) }))
+            : undefined,
+          body: { data: Buffer.from(body).toString("base64url") },
+        },
+      };
+      expect(Buffer.byteLength(JSON.stringify(payload))).toBeLessThan(65536);
+      f.providerFetch = async () => Response.json(payload);
+      const response = await request(app).post(`/api/connection-workspaces/${b.id}/execute`)
+        .send(f.execution(b, "connections_gmail_read", { messageId: "a123" }));
+      expect(response.status).toBe(200);
+      expect(Buffer.byteLength(response.text)).toBeLessThanOrEqual(65536);
+      const text = response.body.content[0].text;
+      expect(Buffer.byteLength(text)).toBeLessThanOrEqual(32768);
+      const message = JSON.parse(text);
+      expect(message.bodyStatus).toBe("truncated");
+      expect(message.text).not.toContain("�");
+      expect(message.text.length).toBeGreaterThan(0);
+      expect(text).not.toContain("owner-access");
+      const audit = await f.db.select().from(secretAccessEvents).where(eq(secretAccessEvents.companyId, b.companyId));
+      expect(JSON.stringify(audit)).not.toContain(body);
+    }
+  });
+
   it("prepares only current eligible strict requests without provider or vault access", async () => {
     const { b, id } = await f.connected();
     let calls = 0;
@@ -438,6 +474,61 @@ describe("Crew personal execution", () => {
     expect(response.status).toBe(403);
     expect(JSON.stringify(response.body)).not.toContain("a123");
   });
+
+  it("withholds an in-flight Gmail result when workspace policy is disabled and restored", async () => {
+    const { b } = await f.connected();
+    f.providerFetch = async () => {
+      for (const enabled of [false, true]) await f.manage(b, "availability.set", {
+        appId: "gmail", enabled, actions: ["read", "search"],
+      });
+      return Response.json({ messages: [{ id: "a123", threadId: "b123" }] });
+    };
+    const app = express();
+    app.use("/api/connection-workspaces", connectionWorkspaceRoutes(f.db, {
+      authorityFetch: f.authorityFetch, providerFetch: f.resourceFetch,
+    }));
+    const response = await request(app).post(`/api/connection-workspaces/${b.id}/execute`).send(f.execution(b));
+    expect(response.status).toBe(403);
+    expect(response.body).not.toHaveProperty("content");
+  });
+
+  it("withholds an in-flight Gmail result when owner access is revoked and regranted", async () => {
+    const { b, id } = await f.connected();
+    f.providerFetch = async () => {
+      await f.manage(b, "access.revoke", { connectionId: id, agentPubkey: "c".repeat(64) });
+      await f.manage(b, "access.grant", {
+        connectionId: id, agentPubkey: "c".repeat(64), actions: ["read", "search"],
+      });
+      return Response.json({ messages: [{ id: "a123", threadId: "b123" }] });
+    };
+    const app = express();
+    app.use("/api/connection-workspaces", connectionWorkspaceRoutes(f.db, {
+      authorityFetch: f.authorityFetch, providerFetch: f.resourceFetch,
+    }));
+    const response = await request(app).post(`/api/connection-workspaces/${b.id}/execute`).send(f.execution(b));
+    expect(response.status).toBe(403);
+    expect(response.body).not.toHaveProperty("content");
+  });
+
+  it("keeps an in-flight Gmail result eligible after identical permission saves", async () => {
+    const { b, id } = await f.connected();
+    f.providerFetch = async () => {
+      await f.manage(b, "availability.set", {
+        appId: "gmail", enabled: true, actions: ["search", "read"],
+      });
+      await f.manage(b, "access.grant", {
+        connectionId: id, agentPubkey: "c".repeat(64), actions: ["search", "read"],
+      });
+      return Response.json({ messages: [{ id: "a123", threadId: "b123" }] });
+    };
+    const app = express();
+    app.use("/api/connection-workspaces", connectionWorkspaceRoutes(f.db, {
+      authorityFetch: f.authorityFetch, providerFetch: f.resourceFetch,
+    }));
+    const response = await request(app).post(`/api/connection-workspaces/${b.id}/execute`).send(f.execution(b));
+    expect(response.status).toBe(200);
+    expect(JSON.parse(response.body.content[0].text).messages).toEqual([{ id: "a123", threadId: "b123" }]);
+  });
   it.each([
     "reconnect",
     "disable",
@@ -623,6 +714,8 @@ describe("Crew personal execution", () => {
     );
     let reads = 0;
     let changed = false;
+    let pageText = "Useful owner-private KB page";
+    let pageBlocks = 1;
     f.providerFetch = async (url, init) => {
       if (String(url).endsWith("/certs")) return Response.json({ keys: [jwk] });
       expect(String(url)).toBe("https://mcp.kb.patty.io/mcp");
@@ -663,7 +756,7 @@ describe("Crew personal execution", () => {
         jsonrpc: "2.0",
         id: req.id,
         result: {
-          content: [{ type: "text", text: "Useful owner-private KB page" }],
+          content: Array.from({ length: pageBlocks }, () => ({ type: "text", text: pageText })),
           isError: false,
         },
       });
@@ -690,9 +783,33 @@ describe("Crew personal execution", () => {
       "Useful owner-private KB page",
     );
     expect(reads).toBe(1);
+    pageText = "문서 내용 🙂\n".repeat(2000);
+    expect(Buffer.byteLength(pageText)).toBeGreaterThan(32768);
+    const boundedPage = await execute();
+    expect(boundedPage.status).toBe(200);
+    expect(Buffer.byteLength(boundedPage.body.content[0].text)).toBeLessThanOrEqual(32768);
+    expect(boundedPage.body.content[0].text).toContain("[Content truncated");
+    expect(boundedPage.body.content[0].text).not.toContain("�");
+    expect(reads).toBe(2);
+    // The existing 48KiB aggregate upstream ceiling leaves sufficient room for
+    // the Crew envelope, even for sixteen blocks of heavily escaped content.
+    pageText = '"'.repeat(1519);
+    pageBlocks = 16;
+    const upstreamBytes = Buffer.byteLength(JSON.stringify({
+      content: Array.from({ length: pageBlocks }, () => ({ type: "text", text: pageText })),
+      isError: false,
+    }));
+    expect(upstreamBytes).toBeGreaterThan(49000);
+    expect(upstreamBytes).toBeLessThanOrEqual(49152);
+    const aggregatePage = await execute();
+    expect(aggregatePage.status).toBe(200);
+    expect(aggregatePage.body.content).toHaveLength(16);
+    expect(Buffer.byteLength(aggregatePage.text)).toBeLessThanOrEqual(65536);
+    expect(aggregatePage.body.content.every((block: { text: string }) => block.text === pageText)).toBe(true);
+    expect(reads).toBe(3);
     changed = true;
     expect((await execute()).status).toBe(403);
-    expect(reads).toBe(1);
+    expect(reads).toBe(3);
     changed = false;
     const [row] = await f.db
       .select()
@@ -725,7 +842,7 @@ describe("Crew personal execution", () => {
         : previous(url, init);
     expect((await execute()).status).toBe(403);
     expect(refreshes).toBe(1);
-    expect(reads).toBe(1);
+    expect(reads).toBe(3);
     const [resource] = await f.db
       .select()
       .from(connectionResources)

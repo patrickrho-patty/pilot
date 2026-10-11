@@ -2,6 +2,7 @@ import { z } from "zod";
 import { forbidden } from "../errors.js";
 import { kbSchemas } from "./connection-kb-schemas.js";
 import { verifyConnectionKbIdentity } from "./connection-registry.js";
+import { boundedConnectionText } from "./connection-result-text.js";
 import type { ConnectionCredentialContext } from "./connection-credentials.js";
 const bounded = z
   .string()
@@ -210,5 +211,5 @@ export async function kbRead(
     );
   if (result.isError || Buffer.byteLength(JSON.stringify(result)) > 49152)
     throw denied();
-  return result.content;
+  return result.content.map((block) => ({ ...block, text: boundedConnectionText(block.text) }));
 }

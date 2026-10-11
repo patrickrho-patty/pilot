@@ -257,3 +257,33 @@ recipients and credentials are not copied into mutation or audit records.
 Creation/revision supports bounded complete plain text; unsupported HTML or
 attachment drafts are refused before replacement. Live acceptance still requires
 the coordinated service/runtime release and owner consent round trip.
+
+### Crew workspace web search
+
+Web search is a company-funded workspace service. An operator provisions the
+encrypted company secret `crew_serper_api_key`; a workspace owner or admin then
+activates `web-search` through the existing `availability.set` operation. It is
+disabled by default. Every agent receives the fixed `dev__connections_web_search`
+tool within the platform-approved runtime ceiling without editing stored agent
+configuration. Members do not create connections, authorize OAuth, select an
+account, or grant each agent access to this service.
+
+The broker calls only `https://google.serper.dev/search`. It accepts a bounded
+public query and optional result count, language and country. No account ID,
+provider URL or credential can be supplied as a tool argument. The credential
+is resolved inside Pilot's encrypted vault and never enters the model, harness,
+desktop, search results or tool audit. Search query contents are not stored in
+the audit; requester, agent, workspace, channel, conversation and turn IDs are.
+
+This fixed action uses `crew.connection-workspace-execution/v1` authority,
+derived from the claimed turn's current member and channel access. It deliberately
+has no personal DM audience claim. Personal Gmail and KB tools still require
+`crew.connection-execution/v1`, immutable owner-agent DM authority and owner
+consent/grants. Multiple distinct human sources are denied instead of silently
+attributing a joint turn to one user. Current workspace policy, binding, member
+access, active generation and credential version are rechecked on every search;
+changes while a request is in flight withhold its result. Disabling one workspace
+does not change another workspace's policy, even when they share a company vault.
+
+See [the workspace web-search contract](../plans/2026-10-11-crew-workspace-web-search.md)
+for the wire shape, release requirements and acceptance boundary.

@@ -12,6 +12,7 @@ import {
 } from "@pilotai/db";
 import { connectionAuthorityService } from "./connection-authority.js";
 import { connectionDirectFetch } from "./connection-direct-tls.js";
+import { serperConnectionService, serperTool } from "./connection-serper.js";
 import {
   connectionRegistrationReady,
   registeredConnectionConfiguration,
@@ -105,6 +106,7 @@ export function connectionExecutionService(
     fetch: options.authorityFetch,
   });
   const provider = options.providerFetch ?? connectionDirectFetch;
+  const shared = serperConnectionService(db, options);
   async function executionIdentity(
     bindingId: string,
     token: string,
@@ -249,7 +251,23 @@ export function connectionExecutionService(
     }
     return { b, c, r, app, registrationSecretVersion };
   }
+  function checkCurrentSelection(
+    before: Awaited<ReturnType<typeof resolve>>,
+    current: Awaited<ReturnType<typeof resolve>>,
+  ) {
+    if (
+      JSON.stringify(current.b) !== JSON.stringify(before.b) ||
+      current.r.consent.id !== before.r.consent.id ||
+      current.r.consent.consentGeneration !== before.r.consent.consentGeneration ||
+      current.r.availability.id !== before.r.availability.id ||
+      current.r.grant.id !== before.r.grant.id ||
+      JSON.stringify(current.r.registration) !== JSON.stringify(before.r.registration) ||
+      current.registrationSecretVersion !== before.registrationSecretVersion
+    ) throw denied();
+  }
   async function execute(bindingId: string, raw: unknown) {
+    if (raw && typeof raw === "object" && "tool" in raw && raw.tool === serperTool.name)
+      return shared.execute(bindingId, raw);
     const input = envelope.parse(raw);
     const tool = connectionTools.find((t) => t.name === input.tool);
     if (!tool) throw denied();
@@ -263,9 +281,12 @@ export function connectionExecutionService(
         const args = tool.schema.parse(input.arguments);
         const before = await resolve(bindingId, input.token, tool, identity);
         await phase("credentials");
-        const access = await connectionAccessToken(db, before, provider, () =>
-          resolve(bindingId, input.token, tool),
-        );
+        const currentSelection = async () => {
+          const current = await resolve(bindingId, input.token, tool);
+          checkCurrentSelection(before, current);
+          return current;
+        };
+        const access = await connectionAccessToken(db, before, provider, currentSelection);
         if ("upstream" in tool) {
           await phase("provider");
           let content;
@@ -275,15 +296,7 @@ export function connectionExecutionService(
             throw new ConnectionProviderFailure("uncertain");
           }
           await phase("result");
-          const after = await resolve(bindingId, input.token, tool);
-          if (
-            after.r.consent.consentGeneration !==
-              before.r.consent.consentGeneration ||
-            JSON.stringify(after.r.registration) !==
-              JSON.stringify(before.r.registration) ||
-            after.registrationSecretVersion !== before.registrationSecretVersion
-          )
-            throw denied();
+          await currentSelection();
           return {
             schema: "crew.connections-execution-result/v1",
             content,
@@ -299,31 +312,10 @@ export function connectionExecutionService(
             tool,
             args,
             provider,
-            async () => {
-              const current = await resolve(bindingId, input.token, tool);
-              if (
-                current.r.consent.id !== before.r.consent.id ||
-                current.r.consent.consentGeneration !==
-                  before.r.consent.consentGeneration ||
-                JSON.stringify(current.r.registration) !==
-                  JSON.stringify(before.r.registration) ||
-                current.registrationSecretVersion !==
-                  before.registrationSecretVersion
-              )
-                throw denied();
-            },
+            currentSelection,
           );
           await phase("result");
-          const after = await resolve(bindingId, input.token, tool);
-          if (
-            after.r.consent.id !== before.r.consent.id ||
-            after.r.consent.consentGeneration !==
-              before.r.consent.consentGeneration ||
-            JSON.stringify(after.r.registration) !==
-              JSON.stringify(before.r.registration) ||
-            after.registrationSecretVersion !== before.registrationSecretVersion
-          )
-            throw denied();
+          await currentSelection();
           return {
             schema: "crew.connections-execution-result/v1",
             content: [{ type: "text", text: JSON.stringify(data) }],
@@ -364,16 +356,7 @@ export function connectionExecutionService(
           throw new ConnectionProviderFailure("uncertain");
         }
         await phase("result");
-        const after = await resolve(bindingId, input.token, tool);
-        if (
-          after.r.consent.id !== before.r.consent.id ||
-          after.r.consent.consentGeneration !==
-            before.r.consent.consentGeneration ||
-          JSON.stringify(after.r.registration) !==
-            JSON.stringify(before.r.registration) ||
-          after.registrationSecretVersion !== before.registrationSecretVersion
-        )
-          throw denied();
+        await currentSelection();
         const data =
           "query" in gmailArgs
             ? z
@@ -401,6 +384,8 @@ export function connectionExecutionService(
     );
   }
   async function catalog(bindingId: string, raw: unknown) {
+    if (raw && typeof raw === "object" && "tool" in raw && raw.tool === serperTool.name)
+      return shared.catalog(bindingId, raw);
     const input = z
       .object({
         schema: z.literal("crew.connections-catalog/v1"),
@@ -430,6 +415,8 @@ export function connectionExecutionService(
   }
   // Content-free eligibility is not an execution lease. Execute resolves again.
   async function prepare(bindingId: string, raw: unknown) {
+    if (raw && typeof raw === "object" && "tool" in raw && raw.tool === serperTool.name)
+      return shared.prepare(bindingId, raw);
     const input = envelope
       .extend({ schema: z.literal("crew.connections-prepare/v1") })
       .parse(raw);

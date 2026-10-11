@@ -232,11 +232,7 @@ export async function gmailWrite(
     const value = draft.parse(
       await request(provider, access, `/drafts/${id}?format=full`),
     );
-    return {
-      draftId: value.id,
-      messageId: value.message.id,
-      ...gmailMessage(value.message),
-    };
+    return gmailMessage(value.message, { draftId: value.id, messageId: value.message.id });
   }
   if (!key) throw conflict("Gmail mutation operation identity is required");
   const digest = createHash("sha256")

@@ -29,7 +29,8 @@ export const connectionDirectFetch: typeof fetch = async (input, init = {}) => {
         signal: init.signal ?? undefined,
       },
       (res) => {
-        if ((res.statusCode ?? 500) >= 300 && (res.statusCode ?? 500) < 400) {
+        const status = res.statusCode ?? 502;
+        if (status < 200 || status > 599 || (status >= 300 && status < 400)) {
           fail();
           return;
         }
@@ -45,15 +46,21 @@ export const connectionDirectFetch: typeof fetch = async (input, init = {}) => {
         res.on("aborted", fail);
         res.on("end", () => {
           if (settled) return;
+          let response: Response;
+          try {
+            const headers = new Headers();
+            for (const [key, value] of Object.entries(res.headers)) {
+              if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(",") : value);
+            }
+            response = new Response([204, 205].includes(status) ? null : Buffer.concat(chunks), { status, headers });
+          } catch {
+            fail();
+            return;
+          }
           settled = true;
           clearTimeout(timer);
           agent.destroy();
-          const headers = new Headers();
-          for (const [key, value] of Object.entries(res.headers)) {
-            if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(",") : value);
-          }
-          const status = res.statusCode ?? 502;
-          resolve(new Response([204, 205, 304].includes(status) ? null : Buffer.concat(chunks), { status, headers }));
+          resolve(response);
         });
       },
     );

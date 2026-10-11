@@ -139,6 +139,7 @@ describe("Crew workspace Connections", () => {
     expect(catalog.apps?.map((x) => [x.appId, x.outcome])).toEqual([
       ["gmail", "requires-setup"],
       ["patty-kb", "requires-setup"],
+      ["web-search", "requires-setup"],
     ]);
     expect((await manage(b, "availability.set", { appId: "gmail", enabled: true, actions: ["read"] })).outcome).toBe(
       "requires-setup",
@@ -154,6 +155,7 @@ describe("Crew workspace Connections", () => {
     expect(catalog.apps).toEqual([
       { appId: "gmail", displayName: "Gmail", enabled: false, actions: ["read", "search", "write", "send"], outcome: "ready" },
       { appId: "patty-kb", displayName: "Patty KB", enabled: false, actions: ["read", "search"], outcome: "requires-setup" },
+      { appId: "web-search", displayName: "Web Search (Serper)", enabled: false, actions: ["search"], outcome: "requires-setup" },
     ]);
     expect(await db.select().from(connectionAvailability).where(eq(connectionAvailability.bindingId, b.id))).toHaveLength(0);
     expect((await manage(b, "connection.create-personal", { appId: "gmail", displayName: "My Gmail" })).outcome).toBe("denied");
@@ -288,7 +290,7 @@ describe("Crew workspace Connections", () => {
     const response = await request(app).post(`/api/connection-workspaces/${b.id}/manage`).send(envelopeBody);
     expect(response.status).toBe(200);
     expect(response.headers["cache-control"]).toBe("no-store");
-    expect(response.body.apps).toHaveLength(2);
+    expect(response.body.apps).toHaveLength(3);
     const changed = await request(app)
       .post(`/api/connection-workspaces/${b.id}/manage`)
       .send({ ...envelopeBody, control: envelopeBody.control + " " });

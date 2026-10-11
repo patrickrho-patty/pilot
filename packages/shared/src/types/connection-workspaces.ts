@@ -3,6 +3,7 @@ import type {
   connectionAuthorityContextSchema,
   connectionAuthorityResponseSchema,
   connectionExecutionContextSchema,
+  connectionWorkspaceExecutionContextSchema,
   connectionIntrospectionRequestSchema,
   connectionManagementContextSchema,
   connectionWorkspaceBindingSchema,
@@ -15,6 +16,8 @@ export type ConnectionWorkspaceBinding = z.infer<typeof connectionWorkspaceBindi
 export type ConnectionManagementContext = z.infer<typeof connectionManagementContextSchema>;
 /** Current durable Crew turn identity, without synthetic Pilot agent or run rows. */
 export type ConnectionExecutionContext = z.infer<typeof connectionExecutionContextSchema>;
+/** Attribution for an administrator-enabled shared service; no personal account grant. */
+export type ConnectionWorkspaceExecutionContext = z.infer<typeof connectionWorkspaceExecutionContextSchema>;
 export type ConnectionAuthorityContext = z.infer<typeof connectionAuthorityContextSchema>;
 export type ConnectionAuthorityResponse = z.infer<typeof connectionAuthorityResponseSchema>;
 export type ConnectionIntrospectionRequest = z.infer<typeof connectionIntrospectionRequestSchema>;
