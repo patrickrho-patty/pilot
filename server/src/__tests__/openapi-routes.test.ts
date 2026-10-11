@@ -24,6 +24,7 @@ const apiPrefixes: Record<string, string> = {
   "built-in-agents.ts": "/api",
   "cloud.ts": "/api/cloud",
   "companies.ts": "/api/companies",
+  "connection-workspaces.ts": "/api/connection-workspaces",
   "company-skills.ts": "/api",
   "company-skill-policy.ts": "/api",
   "costs.ts": "/api",
@@ -74,6 +75,17 @@ const explicitOpenApiCoverageExclusions = new Set([
   "smoke-lab.ts",
 ]);
 
+// This opaque-capability bridge has a separate shared Connections contract;
+// native Board/agent authentication in the public OpenAPI document does not apply.
+// Exclude only these exact routes so an additional private endpoint still fails coverage.
+const privateConnectionWorkspaceRoutes = new Set([
+  "POST /api/connection-workspaces/{bindingId}/manage",
+  "POST /api/connection-workspaces/{bindingId}/oauth-complete",
+  "POST /api/connection-workspaces/{bindingId}/catalog",
+  "POST /api/connection-workspaces/{bindingId}/prepare",
+  "POST /api/connection-workspaces/{bindingId}/execute",
+]);
+
 // The set of contract-first routes whose OpenAPI document leads the mounted
 // request handler. The company-and-environment Claude setup-token login routes
 // now have request handlers, so the set is empty. A new contract-first route
@@ -122,6 +134,7 @@ function resolveMountedPath(file: string, prefix: string, routePath: string) {
 
 function loadActualRoutes() {
   const routes = new Set<string>();
+  const privateRoutes = new Set<string>();
   const unknownRouteFiles: string[] = [];
 
   for (const file of fs.readdirSync(ROUTES_DIR).filter((entry) => entry.endsWith(".ts"))) {
@@ -138,7 +151,12 @@ function loadActualRoutes() {
     for (const match of source.matchAll(ROUTE_LITERAL_PATTERN)) {
       const method = match[1].toUpperCase();
       const routePath = match[2];
-      routes.add(`${method} ${normalizeExpressPath(resolveMountedPath(file, prefix, routePath))}`);
+      const route = `${method} ${normalizeExpressPath(resolveMountedPath(file, prefix, routePath))}`;
+      if (file === "connection-workspaces.ts") {
+        privateRoutes.add(route);
+        if (privateConnectionWorkspaceRoutes.has(route)) continue;
+      }
+      routes.add(route);
     }
 
     if (file === "companies.ts" && source.includes("router.post(COMPANY_IMPORT_ROUTE_PATH")) {
@@ -149,7 +167,7 @@ function loadActualRoutes() {
     }
   }
 
-  return { routes, unknownRouteFiles: unknownRouteFiles.sort() };
+  return { routes, privateRoutes, unknownRouteFiles: unknownRouteFiles.sort() };
 }
 
 function loadSpecRoutes() {
@@ -273,6 +291,18 @@ describe("openapi routes", () => {
       missingInSpec: [],
       extraInSpec: [],
     });
+  });
+
+  it("keeps the exact five private Connections bridge routes in their separate contract", () => {
+    const { privateRoutes } = loadActualRoutes();
+    const { routes: specRoutes } = loadSpecRoutes();
+    const source = fs.readFileSync(path.join(ROUTES_DIR, "connection-workspaces.ts"), "utf8");
+    const methodCalls = source.match(/router\.(get|post|put|patch|delete|head|options|trace|connect|all|route)\(/g) ?? [];
+
+    expect([...privateRoutes].sort()).toEqual([...privateConnectionWorkspaceRoutes].sort());
+    // Non-literal paths, duplicate routes, and router.route declarations cannot hide behind the exclusion.
+    expect(methodCalls).toHaveLength(privateConnectionWorkspaceRoutes.size);
+    expect([...specRoutes].filter((route) => route.includes(" /api/connection-workspaces/"))).toEqual([]);
   });
 
   it("documents auth and reviewed response-code invariants", () => {
