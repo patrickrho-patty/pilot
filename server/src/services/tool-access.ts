@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { consolidateConnectionGmailAccount } from "./connection-account-lifecycle.js";
 import { readFileSync } from "node:fs";
 import { and, asc, desc, eq, gt, gte, inArray, lt, max, ne, sql } from "drizzle-orm";
 import type { Db } from "@pilotai/db";
@@ -5802,6 +5803,7 @@ export function toolAccessService(db: Db, options: ToolAccessServiceOptions = {}
           config: {...connection.config, oauth: {...oauthConfig(connection), expiresAt, scope: token.scope ?? (stateRow.requestedScopes ?? endpoints.scopes).join(" "), tokenType: token.tokenType}},
           updatedAt: new Date(),
         }).where(eq(toolConnections.id, connection.id));
+        if (stateRow.externalBindingId && identity) await consolidateConnectionGmailAccount(db, stateRow.externalBindingId, stateRow.subjectUserId, connection.id, identity);
         if (stateRow.interactionId) {
           await db.update(issueThreadInteractions).set({
             status: "accepted",

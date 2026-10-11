@@ -51,6 +51,18 @@ MCP is a transport, not a product category. "Install the Discord app",
 "connect Google Drive", and "add an MCP endpoint" all produce governed
 connections with different transport/auth values.
 
+Crew personal Gmail connections identify the mailbox using Google's authenticated
+`users/me/profile` response under the existing Gmail scope. The verified email
+is the account label. Completing another sign-in to the same mailbox consolidates
+unused authorizations within that exact workspace and credential owner; separate
+mailboxes and other owners remain independent. Existing effective agent grants
+stay on their original consent and are never combined or copied. If historical
+duplicates already have separate effective grants, both remain visible for the
+owner to resolve. Unfinished, never-authorized attempts are reused, and revoked
+connections are excluded from the account inventory. Retired resources and their
+consolidation audit records remain stored.
+
+
 ## Layer Stack
 
 When you are unsure where a change belongs, place it on the narrowest layer that

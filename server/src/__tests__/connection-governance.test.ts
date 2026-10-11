@@ -232,8 +232,10 @@ describe("external Connections governance", () => {
     await entered;
     expect((await inventory(b)).connections?.[0].outcome).toBe("ready");
     expect((await prepare(b)).status).toBe(200);
-    f.providerFetch = async () =>
-      Response.json({
+    f.providerFetch = async (url) =>
+      String(url).includes("/users/me/profile")
+        ? Response.json({ emailAddress: "owner@example.com" })
+        : Response.json({
         access_token: "new-owner-access",
         refresh_token: "new-refresh",
         expires_in: 3600,
@@ -323,6 +325,10 @@ describe("external Connections governance", () => {
   });
   it("denies two owner resources and recovers after the competing grant is revoked", async () => {
     const { b, id } = await f.connected();
+    // This scenario requires two distinct mailboxes, not a repeated sign-in.
+    f.providerFetch = async (url) => String(url).includes("/users/me/profile")
+      ? Response.json({ emailAddress: "second@example.com" })
+      : Response.json({ access_token: "second-access", refresh_token: "second-refresh", scope: "https://www.googleapis.com/auth/gmail.readonly" });
     const second = await f.personal(b);
     const started = await f.manage(b, "connection.authorize", {
       connectionId: second,

@@ -34,6 +34,7 @@ import {
 import { badRequest, conflict, forbidden } from "../errors.js";
 import { connectionAuthorityService } from "./connection-authority.js";
 import { connectionDirectFetch } from "./connection-direct-tls.js";
+import { verifyConnectionGmailIdentity } from "./connection-gmail-identity.js";
 import {
   sharedConnectionApps,
   sharedConnectionCredential,
@@ -233,6 +234,7 @@ export function connectionWorkspaceService(
           eq(connectionResources.bindingId, b.id),
           eq(connectionResources.ownerAccountId, c.requesterAccountId),
           id ? eq(connectionResources.connectionId, id) : undefined,
+          id ? undefined : ne(connectionGrants.status, "revoked"),
         ),
       )
       .limit(100);
@@ -438,6 +440,12 @@ export function connectionWorkspaceService(
         if (!ready || !registration) return result("requires-setup");
         if (!(await policy(tx, b.id, p.appId))?.enabled)
           return result("denied");
+        const [unfinished] = await tx.select({ id: connectionResources.connectionId }).from(connectionResources)
+          .innerJoin(connectionGrants, eq(connectionGrants.id, connectionResources.consentId))
+          .where(and(eq(connectionResources.bindingId, b.id), eq(connectionResources.ownerAccountId, c.requesterAccountId), eq(connectionResources.appId, p.appId),
+            eq(connectionGrants.subjectUserId, c.requesterAccountId), eq(connectionGrants.kind, "user"), eq(connectionGrants.status, "needs_reauthorization"),
+            sql`${connectionGrants.providerTenant} IS NULL`, sql`jsonb_array_length(${connectionGrants.credentialSecretRefs}) = 0`)).limit(1);
+        if (unfinished) return result("complete", { connections: await inventory(tx, b, c, unfinished.id) });
         const uid = randomUUID();
         const [application] = await tx
           .insert(toolApplications)
@@ -952,7 +960,7 @@ export function connectionWorkspaceService(
         r.resource.appId === "patty-kb"
           ? (token) =>
               verifyConnectionKbIdentity(token, registration, providerFetch)
-          : undefined,
+          : r.resource.appId === "gmail" ? (token) => verifyConnectionGmailIdentity(token, providerFetch) : undefined,
     }).completeOAuthCallback({
       state: callback.state,
       ...("code" in callback

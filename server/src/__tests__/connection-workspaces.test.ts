@@ -38,8 +38,9 @@ describe("Crew workspace Connections", () => {
       valid: true,
       context: contexts.get(JSON.parse(String(init?.body)).token),
     });
-  let providerFetch: typeof fetch = async () =>
-    Response.json({
+  let profileEmail = "owner@example.com";
+  let providerFetch: typeof fetch = async (url) =>
+    String(url).includes("/users/me/profile") ? Response.json({ emailAddress: profileEmail }) : Response.json({
       access_token: "owner-access",
       refresh_token: "owner-refresh",
       scope: "https://www.googleapis.com/auth/gmail.readonly",
@@ -121,6 +122,101 @@ describe("Crew workspace Connections", () => {
   }
   const manage = (b: Awaited<ReturnType<typeof fixture>>, op: string, p: unknown, actor = "owner", role = "admin") =>
     service().manage(b.id, envelope(b, op, p, actor, role));
+
+  it("reuses unfinished personal attempts for the same owner and app", async () => {
+    const b = await fixture();
+    const first = await personal(b);
+    const next = await manage(b, "connection.create-personal", { appId: "gmail", displayName: "Gmail" });
+    expect(next.connections?.[0].connectionId).toBe(first);
+    expect(await db.select().from(connectionResources).where(eq(connectionResources.bindingId, b.id))).toHaveLength(1);
+  });
+  it("consolidates repeated Gmail sign-ins by verified mailbox without transferring grants", async () => {
+    const previous = providerFetch;
+    providerFetch = async url => String(url).includes("/users/me/profile")
+      ? Response.json({ emailAddress: "patrick@patty.io" })
+      : Response.json({ access_token: "synthetic-access", refresh_token: "synthetic-refresh" });
+    try {
+      const b = await fixture();
+      const connect = async () => {
+        const id = await personal(b);
+        const auth = await manage(b, "connection.authorize", { connectionId: id });
+        await service().complete(b.id, completion(b, new URL(auth.authorizationUrl!).searchParams.get("state")!));
+        return id;
+      };
+      const first = await connect(), latest = await connect();
+      expect(first).not.toBe(latest);
+      const list = await manage(b, "connections.list", { scope: "personal" });
+      expect(list.connections).toEqual([{ connectionId: latest, appId: "gmail", displayName: "patrick@patty.io", scope: "personal", outcome: "ready" }]);
+      expect(await db.select().from(connectionResources).where(eq(connectionResources.bindingId, b.id))).toHaveLength(2);
+      expect(await db.select().from(connectionAgentAccess).where(eq(connectionAgentAccess.bindingId, b.id))).toHaveLength(0);
+      const [old] = await db.select().from(connectionGrants).where(eq(connectionGrants.connectionId, first));
+      expect(old).toMatchObject({ status: "revoked", credentialSecretRefs: [] });
+    } finally { providerFetch = previous; }
+  });
+  it("preserves an existing agent grant when the owner signs into that Gmail again", async () => {
+    const previous = providerFetch;
+    providerFetch = async url => String(url).includes("/users/me/profile")
+      ? Response.json({ emailAddress: "granted@example.com" })
+      : Response.json({ access_token: "synthetic-access", refresh_token: "synthetic-refresh" });
+    try {
+      const b = await fixture();
+      const connect = async () => {
+        const id = await personal(b), auth = await manage(b, "connection.authorize", { connectionId: id });
+        await service().complete(b.id, completion(b, new URL(auth.authorizationUrl!).searchParams.get("state")!));
+        return id;
+      };
+      const first = await connect();
+      await manage(b, "access.grant", { connectionId: first, agentPubkey: "c".repeat(64), actions: ["read"] });
+      const before = (await manage(b, "access.list", {})).access;
+      const duplicate = await connect();
+      expect((await manage(b, "connections.list", { scope: "personal" })).connections?.map(c => c.connectionId)).toEqual([first]);
+      expect((await manage(b, "access.list", {})).access).toEqual(before);
+      expect((await manage(b, "access.list", { connectionId: duplicate })).access).toEqual([]);
+    } finally { providerFetch = previous; }
+  });
+  it("never consolidates the same verified mailbox across owners or workspaces", async () => {
+    const previous = providerFetch;
+    providerFetch = async url => String(url).includes("/users/me/profile")
+      ? Response.json({ emailAddress: "shared@example.com" })
+      : Response.json({ access_token: "synthetic-access", refresh_token: "synthetic-refresh" });
+    try {
+      const b = await fixture(), otherWorkspace = await fixture();
+      for (const workspace of [b, otherWorkspace])
+        await manage(workspace, "availability.set", { appId: "gmail", enabled: true, actions: ["read"] });
+      const connect = async (workspace: typeof b, owner: string) => {
+        const result = await manage(workspace, "connection.create-personal", { appId: "gmail", displayName: "Gmail" }, owner, "member");
+        const id = result.connections![0].connectionId;
+        const auth = await manage(workspace, "connection.authorize", { connectionId: id }, owner, "member");
+        await service().complete(workspace.id, completion(workspace, new URL(auth.authorizationUrl!).searchParams.get("state")!, owner));
+        return id;
+      };
+      const first = await connect(b, "owner"), otherOwner = await connect(b, "other"), elsewhere = await connect(otherWorkspace, "owner");
+      const latest = await connect(b, "owner");
+      expect(latest).not.toBe(first);
+      for (const [workspace, owner, expected] of [[b, "owner", latest], [b, "other", otherOwner], [otherWorkspace, "owner", elsewhere]] as const)
+        expect((await manage(workspace, "connections.list", { scope: "personal" }, owner, "member")).connections?.map(row => row.connectionId)).toEqual([expected]);
+    } finally { providerFetch = previous; }
+  });
+  it("keeps different Gmail mailboxes separate and hides disconnected entries", async () => {
+    const previous = providerFetch;
+    let email = "first@example.com";
+    providerFetch = async url => String(url).includes("/users/me/profile")
+      ? Response.json({ emailAddress: email })
+      : Response.json({ access_token: "synthetic-access", refresh_token: "synthetic-refresh" });
+    try {
+      const b = await fixture();
+      const connect = async () => {
+        const id = await personal(b), auth = await manage(b, "connection.authorize", { connectionId: id });
+        await service().complete(b.id, completion(b, new URL(auth.authorizationUrl!).searchParams.get("state")!));
+        return id;
+      };
+      const first = await connect(); email = "second@example.com"; const second = await connect();
+      expect((await manage(b, "connections.list", { scope: "personal" })).connections?.map(c => c.displayName).sort()).toEqual(["first@example.com", "second@example.com"]);
+      await manage(b, "connection.disconnect", { connectionId: first });
+      expect((await manage(b, "connections.list", { scope: "personal" })).connections?.map(c => c.connectionId)).toEqual([second]);
+      expect((await manage(b, "connections.list", { scope: "personal" }, "other", "member")).connections).toEqual([]);
+    } finally { providerFetch = previous; }
+  });
   async function personal(b: Awaited<ReturnType<typeof fixture>>) {
     await manage(b, "availability.set", { appId: "gmail", enabled: true, actions: ["read", "search"] });
     const r = await manage(b, "connection.create-personal", { appId: "gmail", displayName: "My Gmail" });
@@ -278,9 +374,7 @@ describe("Crew workspace Connections", () => {
         .from(companySecrets)
         .where(and(eq(companySecrets.companyId, b.companyId), eq(companySecrets.scope, "user"))),
     ).toHaveLength(0);
-    expect((await manage(b, "connections.list", { scope: "personal" })).connections![0].outcome).toBe(
-      "authorization-required",
-    );
+    expect((await manage(b, "connections.list", { scope: "personal" })).connections).toEqual([]);
   });
   it("private HTTP routes enforce original digest, body bounds and no native login", async () => {
     const b = await fixture();
@@ -352,7 +446,7 @@ describe("Crew workspace Connections", () => {
   it("database prevents a resource or grant from borrowing another binding or consent", async () => {
     const b = await fixture();
     const id = await personal(b);
-    const second = await personal(b);
+    const second = (await manage(b, "connection.create-personal", { appId: "gmail", displayName: "Other owner" }, "other", "member")).connections![0].connectionId;
     const [other] = await db
       .insert(connectionWorkspaceBindings)
       .values({
@@ -486,7 +580,10 @@ describe("Crew workspace Connections", () => {
   async function activePersonal(b: Awaited<ReturnType<typeof fixture>>) {
     const id = await personal(b);
     const auth = await manage(b, "connection.authorize", { connectionId: id });
-    await service().complete(b.id, completion(b, new URL(auth.authorizationUrl!).searchParams.get("state")!));
+    const previous = providerFetch, email = `${randomUUID()}@example.com`;
+    providerFetch = (url, init) => String(url).includes("/users/me/profile") ? Promise.resolve(Response.json({ emailAddress: email })) : previous(url, init);
+    try { await service().complete(b.id, completion(b, new URL(auth.authorizationUrl!).searchParams.get("state")!)); }
+    finally { providerFetch = previous; }
     const [resource] = await db.select().from(connectionResources).where(eq(connectionResources.connectionId, id));
     const [consent] = await db.select().from(connectionGrants).where(eq(connectionGrants.id, resource.consentId));
     expect(consent).toMatchObject({ status: "active", subjectUserId: "owner" });

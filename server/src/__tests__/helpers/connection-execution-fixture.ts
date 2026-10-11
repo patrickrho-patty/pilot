@@ -169,8 +169,10 @@ export function connectionExecutionFixture() {
     };
   }
   async function connected(actions = ["read", "search"]) {
-    providerFetch = async () =>
-      Response.json({
+    providerFetch = async (url) =>
+      String(url).startsWith("https://gmail.googleapis.com/gmail/v1/users/me/profile")
+        ? Response.json({ emailAddress: "owner@example.com" })
+        : Response.json({
         access_token: "owner-access",
         refresh_token: "owner-refresh",
         expires_in: 3600,
